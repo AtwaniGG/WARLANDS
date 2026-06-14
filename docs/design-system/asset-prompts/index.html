@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>WARLANDS — Asset Generation Brief</title>
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  body { background: var(--panel-void); }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 24px 80px; }
+
+  header.hero {
+    position: sticky; top: 0; z-index: 10;
+    background: rgba(10,13,20,0.92); backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--hairline);
+  }
+  .hero-inner { max-width: 1180px; margin: 0 auto; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand .mark { font-family: var(--font-display); font-weight: 700; font-size: 22px; letter-spacing: -0.01em; text-transform: uppercase; color: var(--amber); }
+  .brand .sub { font-family: var(--font-display); font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--text-muted); }
+  .hero-actions { display: flex; align-items: center; gap: 10px; }
+  .count { font-family: var(--font-mono); font-size: 11px; color: var(--text-lo); }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 7px; cursor: pointer;
+    font-family: var(--font-ui); font-size: 12px; font-weight: 600;
+    padding: 8px 14px; border-radius: var(--radius-sm); border: 1px solid transparent;
+    background: var(--amber); color: var(--cta-fg);
+    transition: background var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+  }
+  .btn:hover { background: var(--cta-bg-hover); transform: translateY(-1px); }
+  .btn.ghost { background: transparent; border-color: var(--hairline); color: var(--text-secondary); }
+  .btn.ghost:hover { background: var(--surface-raised); color: var(--text-primary); }
+
+  .intro { padding: 28px 0 8px; }
+  .intro h1 { font-family: var(--font-display); font-weight: 700; font-size: 34px; line-height: 1.05; text-transform: uppercase; letter-spacing: -0.01em; color: var(--text-hi); margin: 0 0 12px; max-width: 760px; }
+  .intro p { font-size: 14px; color: var(--text-lo); max-width: 760px; line-height: 1.6; margin: 0 0 8px; }
+  .intro code { font-family: var(--font-mono); font-size: 12px; color: var(--amber-text); }
+
+  .style-card {
+    margin: 22px 0 8px; padding: 16px 18px; border-radius: var(--radius-lg);
+    border: 1px solid var(--hairline); background: var(--panel);
+    display: grid; grid-template-columns: 1fr 1fr; gap: 18px;
+  }
+  .style-card h3 { font-family: var(--font-display); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); margin: 0 0 8px; }
+  .style-card p { font-size: 12px; color: var(--text-lo); line-height: 1.6; margin: 0; }
+  .swatches { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 4px; }
+  .sw { display: flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 10px; color: var(--text-lo); }
+  .sw i { width: 14px; height: 14px; border-radius: 3px; display: inline-block; }
+
+  .sec { margin-top: 40px; }
+  .sec-head { display: flex; align-items: baseline; gap: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--hairline); margin-bottom: 18px; }
+  .sec-head h2 { font-family: var(--font-display); font-weight: 700; font-size: 20px; text-transform: uppercase; letter-spacing: 0.02em; color: var(--text-hi); margin: 0; }
+  .sec-head .n { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); }
+  .sec-head .copyall { margin-left: auto; }
+
+  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } .style-card { grid-template-columns: 1fr; } }
+
+  .card { border: 1px solid var(--hairline); border-radius: var(--radius-lg); background: var(--panel); overflow: hidden; display: flex; flex-direction: column; }
+  .card-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 13px; border-bottom: 1px solid var(--hairline); background: rgba(0,0,0,0.18); }
+  .fname { font-family: var(--font-mono); font-size: 11px; color: var(--amber-text); word-break: break-all; }
+  .spec { font-family: var(--font-mono); font-size: 9px; color: var(--text-muted); white-space: nowrap; padding: 2px 6px; border: 1px solid var(--hairline); border-radius: var(--radius-sm); }
+  .card-body { padding: 13px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
+  .prompt { font-size: 12px; color: var(--text-secondary); line-height: 1.55; margin: 0; }
+  .read { font-size: 11px; color: var(--text-muted); line-height: 1.5; border-left: 2px solid var(--hairline); padding-left: 9px; }
+  .read b { color: var(--text-lo); font-weight: 600; }
+  .card-foot { padding: 0 13px 13px; }
+  .copy { width: 100%; justify-content: center; }
+  .copy.copied { background: var(--success); color: #04140b; }
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="hero-inner">
+    <div class="brand">
+      <span class="mark">WARLANDS</span>
+      <span class="sub">Asset Brief</span>
+    </div>
+    <div class="hero-actions">
+      <span class="count" id="count"></span>
+      <button class="btn ghost" id="copyAllBtn">Copy all prompts</button>
+      <a class="btn" href="warlands-asset-manifest.csv" download>Download CSV manifest</a>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <section class="intro">
+    <h1>2D asset generation brief</h1>
+    <p>Model-ready prompts (Midjourney / DALL·E / SDXL) to replace the emoji &amp; flat-color placeholders, with exact filenames and pixel specs. Every prompt carries the shared style stem and palette so the set stays cohesive. Each asset lists how it must read at game zoom.</p>
+    <p>Drop generated files at the listed <code>public/assets/…</code> paths. Use the per-asset <b>Copy prompt</b> button, or grab the whole set as a CSV (<code>filename,spec,group,prompt</code>) for batch import.</p>
+
+    <div class="style-card">
+      <div>
+        <h3>Global style — every asset</h3>
+        <p>Gritty militarized near-future dieselpunk, lightly stylized for readability. Silhouette-first (readable as solid black at 32px). Desaturated world; color is a sparse signal. PBR-plausible materials, subtle grain. No neon/fantasy/cartoon gloss, no centered-on-gradient, no rainbow, no lens flare, no AI-melted detail. <b>Max 2 accent colors per asset.</b></p>
+      </div>
+      <div>
+        <h3>Palette anchors</h3>
+        <div class="swatches">
+          <span class="sw"><i style="background:#2a2f3a"></i>gunmetal</span>
+          <span class="sw"><i style="background:#4b515c"></i>ash</span>
+          <span class="sw"><i style="background:#5c6347"></i>olive</span>
+          <span class="sw"><i style="background:#c9a14a"></i>sand</span>
+          <span class="sw"><i style="background:#8b8f96"></i>concrete</span>
+        </div>
+        <div class="swatches" style="margin-top:8px">
+          <span class="sw"><i style="background:#f5b301"></i>amber·own</span>
+          <span class="sw"><i style="background:#9c2b2b"></i>blood·war</span>
+          <span class="sw"><i style="background:#3f9aa6"></i>teal·trade</span>
+          <span class="sw"><i style="background:#6ee7a8"></i>toxic·tech</span>
+          <span class="sw"><i style="background:#4a90d9"></i>sky·ally</span>
+          <span class="sw"><i style="background:#8b5cf6"></i>violet·rare</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div id="sections"></div>
+</div>
+
+<script src="assets-data.js"></script>
+<script>
+  const A = window.WL_ASSETS || [];
+  document.getElementById("count").textContent = A.length + " assets";
+
+  const ORDER = ["Terrain","Buildings — Economy","Buildings — Allegiance","Units","Resources","Commanders","Brand & Key Art"];
+  const groups = {};
+  A.forEach(a => (groups[a.group] = groups[a.group] || []).push(a));
+
+  function copyText(text, btn, label) {
+    const done = () => { if (!btn) return; const t = btn.textContent; btn.textContent = label || "Copied ✓"; btn.classList.add("copied"); setTimeout(() => { btn.textContent = t; btn.classList.remove("copied"); }, 1100); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, () => fallback(text, done));
+    } else fallback(text, done);
+  }
+  function fallback(text, done) {
+    const ta = document.createElement("textarea");
+    ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); } catch (e) {}
+    document.body.removeChild(ta); done();
+  }
+
+  const root = document.getElementById("sections");
+  ORDER.filter(g => groups[g]).forEach(g => {
+    const items = groups[g];
+    const sec = document.createElement("section");
+    sec.className = "sec";
+    sec.innerHTML =
+      '<div class="sec-head"><h2>' + g + '</h2><span class="n">' + items.length + ' assets</span>' +
+      '<button class="btn ghost copyall">Copy section</button></div>' +
+      '<div class="grid"></div>';
+    const grid = sec.querySelector(".grid");
+    items.forEach(a => {
+      const card = document.createElement("div");
+      card.className = "card";
+      card.innerHTML =
+        '<div class="card-top"><span class="fname"></span><span class="spec"></span></div>' +
+        '<div class="card-body"><p class="prompt"></p><div class="read"><b>Reads:</b> <span class="rt"></span></div></div>' +
+        '<div class="card-foot"><button class="btn copy">Copy prompt</button></div>';
+      card.querySelector(".fname").textContent = a.file;
+      card.querySelector(".spec").textContent = a.spec;
+      card.querySelector(".prompt").textContent = a.prompt;
+      card.querySelector(".rt").textContent = a.read;
+      card.querySelector(".copy").addEventListener("click", e => copyText(a.prompt, e.currentTarget, "Copied ✓"));
+      grid.appendChild(card);
+    });
+    sec.querySelector(".copyall").addEventListener("click", e =>
+      copyText(items.map(a => a.file + "\n" + a.prompt).join("\n\n"), e.currentTarget, "Section copied ✓"));
+    root.appendChild(sec);
+  });
+
+  document.getElementById("copyAllBtn").addEventListener("click", e =>
+    copyText(A.map(a => a.file + "\n" + a.prompt).join("\n\n"), e.currentTarget, "All copied ✓"));
+</script>
+</body>
+</html>

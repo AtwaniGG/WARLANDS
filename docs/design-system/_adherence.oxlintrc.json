@@ -16,6 +16,7 @@
         "patterns": [
           {
             "group": [
+              "asset-prompts/**",
               "components/core/**",
               "components/game/**",
               "ui_kits/warlands-game/**"

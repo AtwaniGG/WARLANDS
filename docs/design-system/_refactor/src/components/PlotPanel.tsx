@@ -7,7 +7,6 @@ import { RESOURCES, type ResourceId } from "@/game/resources";
 import { upgradeCost, diminishingReturns } from "@/game/formulas";
 import { MilitaryPanel, RaidPanel, EmpirePlotPanel } from "./MilitaryPanel";
 import { Badge, Button, ResourceChip } from "./ui";
-import { ResourceIcon, BuildingIcon } from "./GameIcons";
 
 function num(n: number | undefined) {
   return Math.floor(n ?? 0).toLocaleString();
@@ -123,7 +122,7 @@ export function PlotPanel() {
             .map((r) => (
               <ResourceChip
                 key={r}
-                icon={<ResourceIcon id={r} size={15} />}
+                icon={RESOURCES[r].icon}
                 name={RESOURCES[r].name}
                 amount={num(plot.resources[r])}
                 tier={RESOURCES[r].tier}
@@ -150,7 +149,7 @@ export function PlotPanel() {
                 style={{ borderRadius: "var(--radius-sm)", background: "rgba(26,32,48,0.5)", fontSize: "12px" }}
               >
                 <div className="flex items-center justify-between">
-                  <span className="inline-flex items-center gap-1.5"><BuildingIcon id={b.id} size={18} /> {bd.name} <span style={{ color: "var(--text-muted)" }}>L{b.level}</span></span>
+                  <span>{bd.icon} {bd.name} <span style={{ color: "var(--text-muted)" }}>L{b.level}</span></span>
                   {b.level < bd.maxLevel && (
                     <Button variant="info" size="sm" disabled={war < cost} onClick={() => upgrade(selected, i)}>
                       ⬆ {num(cost)}
@@ -173,7 +172,7 @@ export function PlotPanel() {
                           background: b.activeProduct === p ? "#15803d" : "var(--surface-raised)",
                         }}
                       >
-                        <ResourceIcon id={p} size={13} /> {RESOURCES[p].name}
+                        {RESOURCES[p].icon} {RESOURCES[p].name}
                       </button>
                     ))}
                   </div>
@@ -210,7 +209,7 @@ export function PlotPanel() {
                   opacity: blocked ? 0.4 : 1,
                 }}
               >
-                <span className="inline-flex items-center gap-1.5"><BuildingIcon id={id} size={18} /> {bd.name}</span>
+                <span>{bd.icon} {bd.name}</span>
                 <span className="wl-num" style={{ fontSize: "10px", color: "var(--text-lo)" }}>{num(bd.baseCost)}$ {resCost && `· ${resCost}`}</span>
               </button>
             );

@@ -1,0 +1,514 @@
+<!-- @dsCard group="Brand" viewport="1000x1320" name="Sprite System — Silhouettes" subtitle="45 game-ready sprites: 9 terrain hexes, 6 unit tokens, 20 resources, 10 buildings" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>WARLANDS — Sprite System</title>
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--panel-void);
+    color: var(--text-primary);
+    font-family: var(--font-ui);
+    -webkit-font-smoothing: antialiased;
+    position: relative;
+  }
+  /* subtle grain over everything (Art Direction Bible — noise on all surfaces) */
+  body::after {
+    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 50; opacity: 0.05;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 30px clamp(18px, 4vw, 40px) 56px; }
+
+  /* ---- Masthead ---------------------------------------------------- */
+  .mast { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px;
+          padding-bottom: 18px; border-bottom: 1px solid var(--hairline); flex-wrap: wrap; }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .logo { width: 46px; height: 46px; flex: none; }
+  .wordmark { font-family: var(--font-display); font-weight: var(--fw-black); font-size: 42px;
+              letter-spacing: var(--tracking-tighter); text-transform: uppercase; color: var(--amber);
+              line-height: 0.92; margin: 0; }
+  .sub { font-family: var(--font-mono); font-size: var(--text-2xs); letter-spacing: 0.14em;
+         text-transform: uppercase; color: var(--text-lo); margin-top: 5px; }
+  .meta { display: flex; gap: 7px; }
+  .chiplet { border: 1px solid var(--hairline); background: var(--panel); border-radius: var(--radius-sm);
+             padding: 6px 9px; min-width: 64px; }
+  .chiplet .k { font-family: var(--font-display); font-size: 8px; letter-spacing: 0.12em;
+                text-transform: uppercase; color: var(--text-muted); }
+  .chiplet .v { font-family: var(--font-mono); font-size: 12px; color: var(--text-hi);
+                font-variant-numeric: tabular-nums; margin-top: 2px; }
+
+  /* ---- Palette strip ----------------------------------------------- */
+  .palette { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 18px; }
+  @media (max-width: 720px) { .palette { grid-template-columns: 1fr; } }
+  .pgroup { background: var(--panel); border: 1px solid var(--hairline); border-radius: var(--radius-md);
+            padding: 12px 13px; }
+  .pgroup > .cap { font-family: var(--font-display); font-weight: var(--fw-semibold); font-size: 9px;
+                   letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px; }
+  .swrow { display: flex; flex-wrap: wrap; gap: 8px 14px; }
+  .sw { display: flex; align-items: center; gap: 7px; }
+  .sw .chip2 { width: 22px; height: 22px; border-radius: var(--radius-sm); flex: none;
+               box-shadow: var(--edge-inset), 0 1px 2px rgba(0,0,0,.5); }
+  .sw .lab { line-height: 1.15; }
+  .sw .lab b { display: block; font-family: var(--font-ui); font-weight: 600; font-size: 11px; color: var(--text-hi); white-space: nowrap; }
+  .sw .lab span { font-family: var(--font-mono); font-size: 9px; color: var(--text-muted); }
+
+  /* ---- Section blocks ---------------------------------------------- */
+  .block { margin-top: 34px; }
+  .bhead { display: flex; align-items: baseline; gap: 12px; margin-bottom: 14px; }
+  .bidx { font-family: var(--font-display); font-weight: var(--fw-bold); font-size: 26px;
+          color: var(--ash); line-height: 1; font-variant-numeric: tabular-nums; }
+  .btitle { font-family: var(--font-display); font-weight: var(--fw-bold); font-size: 18px;
+            letter-spacing: var(--tracking-tight); text-transform: uppercase; color: var(--text-hi); white-space: nowrap; }
+  .brule { flex: 1; height: 1px; background: var(--hairline); }
+  .bcount { font-family: var(--font-mono); font-size: var(--text-2xs); letter-spacing: 0.08em;
+            text-transform: uppercase; color: var(--text-muted); }
+
+  .grid { display: grid; gap: 12px; }
+  .g-terrain { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+  .g-units   { grid-template-columns: repeat(auto-fill, minmax(146px, 1fr)); }
+  .g-res     { grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); }
+  .g-bld     { grid-template-columns: repeat(auto-fill, minmax(146px, 1fr)); }
+
+  .cell { position: relative; background: var(--panel); border: 1px solid var(--hairline);
+          border-radius: var(--radius-md); padding: 14px 10px 11px; display: flex; flex-direction: column;
+          align-items: center; gap: 10px; box-shadow: var(--edge-inset);
+          transition: transform var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out),
+                      background var(--dur-fast) var(--ease-out); }
+  .cell:hover { transform: translateY(-2px); border-color: var(--border-strong); background: var(--panel-2); }
+  .art { display: grid; place-items: center; }
+  .a-hex { height: 116px; } .a-tok { height: 102px; } .a-res { height: 88px; } .a-bld { height: 96px; }
+  .chipbg { width: 84px; height: 84px; display: grid; place-items: center; border-radius: var(--radius-md);
+            background: var(--surface-sunken); border: 1px solid var(--hairline);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.04); }
+  .s-hex { width: 116px; height: 116px; display: block; }
+  .s-tok { width: 100px; height: 100px; display: block; }
+  .s-res { width: 60px; height: 60px; display: block; }
+  .s-bld { width: 92px; height: 92px; display: block; }
+  cap, .capwrap { width: 100%; }
+  .nm { font-family: var(--font-display); font-weight: var(--fw-semibold); font-size: 12px;
+        letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-hi); text-align: center;
+        line-height: 1.12; }
+  .cd { display: block; font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.1em;
+        color: var(--text-muted); text-align: center; margin-top: 3px; }
+
+  /* ---- Footer ------------------------------------------------------ */
+  .foot { margin-top: 38px; padding-top: 16px; border-top: 1px solid var(--hairline);
+          display: flex; flex-wrap: wrap; gap: 10px 24px; justify-content: space-between;
+          font-family: var(--font-mono); font-size: var(--text-2xs); letter-spacing: 0.06em;
+          color: var(--text-muted); text-transform: uppercase; }
+  .foot .specs { display: flex; flex-wrap: wrap; gap: 6px 18px; }
+  .foot .specs span::before { content: "› "; color: var(--ash); }
+</style>
+</head>
+<body>
+
+<!-- ============================ SPRITE DEFS ============================ -->
+<svg style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+  <defs>
+    <clipPath id="hx"><polygon points="50,3 95,26.5 95,73.5 50,97 5,73.5 5,26.5" /></clipPath>
+  </defs>
+
+  <!-- ---------- TERRAIN (pointy-top hexes, base = terrain token) ---------- -->
+  <symbol id="t-plains" viewBox="0 0 100 100">
+    <g clip-path="url(#hx)">
+      <rect width="100" height="100" fill="var(--terrain-plains)"/>
+      <path d="M0 64 H100 V100 H0 Z" fill="#6b7644"/>
+      <g stroke="var(--sand)" stroke-width="2.4" stroke-linecap="round" fill="none" opacity="0.85">
+        <path d="M30 66 V58 M34 66 V61 M26 66 V61"/><path d="M52 74 V66 M56 74 V69 M48 74 V69"/><path d="M68 60 V52 M72 60 V55 M64 60 V55"/>
+      </g>
+    </g>
+    <polygon points="50,3 95,26.5 95,73.5 50,97 5,73.5 5,26.5" fill="none" stroke="#0c0f16" stroke-width="3"/>
+  </symbol>
+  <symbol id="t-forest" viewBox="0 0 100 100">
+    <g clip-path="url(#hx)">
+      <rect width="100" height="100" fill="var(--terrain-forest)"/>
+      <g fill="#244a2e"><circle cx="36" cy="42" r="11"/><circle cx="52" cy="35" r="12"/><circle cx="66" cy="45" r="10"/><circle cx="42" cy="60" r="11"/><circle cx="60" cy="62" r="10"/><circle cx="50" cy="52" r="8"/></g>
+      <g fill="#3f7a4d"><circle cx="36" cy="42" r="4"/><circle cx="52" cy="35" r="4.5"/><circle cx="66" cy="45" r="3.4"/><circle cx="42" cy="60" r="4"/><circle cx="60" cy="62" r="3.6"/></g>
+    </g>
+    <polygon points="50,3 95,26.5 95,73.5 50,97 5,73.5 5,26.5" fill="none" stroke="#0c0f16" stroke-width="3"/>
+  </symbol>
+  <symbol id="t-river" viewBox="0 0 100 100">
+    <g clip-path="url(#hx)">
+      <rect width="100" height="100" fill="var(--terrain-river)"/>
+      <path d="M30 4 C 44 24, 30 40, 48 56 C 64 70, 60 84, 72 98" fill="none" stroke="#1d5570" stroke-width="20" stroke-linecap="round"/>
+      <path d="M30 4 C 44 24, 30 40, 48 56 C 64 70, 60 84, 72 98" fill="none" stroke="#3f86a8" stroke-width="9" stroke-linecap="round"/>
+      <g stroke="#79b6cf" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.7"><path d="M40 30 q4 4 -1 8"/><path d="M52 60 q4 4 -1 8"/></g>
+    </g>
+    <polygon points="50,3 95,26.5 95,73.5 50,97 5,73.5 5,26.5" fill="none" stroke="#0c0f16" stroke-width="3"/>
+  </symbol>
+  <symbol id="t-mountain" viewBox="0 0 100 100">
+    <g clip-path="url(#hx)">
+      <rect width="100" height="100" fill="var(--terrain-mountain)"/>
+      <polygon points="50,20 78,72 22,72" fill="#818691"/><polygon points="50,20 78,72 50,72" fill="#565a63"/>
+      <polygon points="30,42 50,76 10,76" fill="#787d87"/><polygon points="30,42 50,76 30,76" fill="#51555e"/>
+      <polygon points="72,40 92,76 52,76" fill="#787d87"/><polygon points="72,40 92,76 72,76" fill="#51555e"/>
+      <polygon points="50,20 59,37 41,37" fill="#b8bcc3"/><polygon points="30,42 37,55 23,55" fill="#a3a8b0"/><polygon points="72,40 79,53 65,53" fill="#a3a8b0"/>
+    </g>
+    <polygon points="50,3 95,26.5 95,73.5 50,97 5,73.5 5,26.5" fill="none" stroke="#0c0f16" stroke-width="3"/>
+  </symbol>
+  <symbol id="t-desert" viewBox="0 0 100 100">
+    <g clip-path="url(#hx)">
+      <rect width="100" height="100" fill="var(--terrain-desert)"/>
+      <path d="M0 42 Q 50 32 100 44 L100 60 Q 50 50 0 60 Z" fill="#b7913f"/>
+      <ellipse cx="40" cy="60" rx="16" ry="9" fill="#1c2028"/><ellipse cx="64" cy="42" rx="9" ry="5.5" fill="#1c2028"/>
+      <ellipse cx="36" cy="57" rx="6" ry="2.6" fill="var(--amber)" opacity="0.5"/>
+    </g>
+    <polygon points="50,3 95,26.5 95,73.5 50,97 5,73.5 5,26.5" fill="none" stroke="#0c0f16" stroke-width="3"/>
+  </symbol>
+  <symbol id="t-coastal" viewBox="0 0 100 100">
+    <g clip-path="url(#hx)">
+      <rect width="100" height="100" fill="var(--terrain-coastal)"/>
+      <path d="M0 0 H100 V26 C 76 32, 60 48, 44 56 C 28 64, 16 82, 0 90 Z" fill="var(--olive-drab)"/>
+      <path d="M100 26 C 76 32, 60 48, 44 56 C 28 64, 16 82, 0 90" fill="none" stroke="var(--sand)" stroke-width="5"/>
+      <g stroke="#6fc0cb" stroke-width="2.4" fill="none" stroke-linecap="round" opacity="0.8"><path d="M58 72 q6 -4 12 0"/><path d="M70 82 q6 -4 12 0"/></g>
+    </g>
+    <polygon points="50,3 95,26.5 95,73.5 50,97 5,73.5 5,26.5" fill="none" stroke="#0c0f16" stroke-width="3"/>
+  </symbol>
+  <symbol id="t-industrial" viewBox="0 0 100 100">
+    <g clip-path="url(#hx)">
+      <rect width="100" height="100" fill="var(--terrain-industrial)"/>
+      <g stroke="#5e3f2a" stroke-width="2" opacity="0.7"><path d="M0 46 H100 M0 22 H100 M68 0 V100 M32 0 V100"/></g>
+      <g fill="#6e472f" stroke="#4a2f1f" stroke-width="2"><rect x="20" y="24" width="22" height="18"/><rect x="50" y="20" width="16" height="24"/><rect x="24" y="50" width="28" height="20"/><rect x="60" y="50" width="18" height="20"/></g>
+      <rect x="69" y="26" width="8" height="8" fill="var(--amber)"/>
+    </g>
+    <polygon points="50,3 95,26.5 95,73.5 50,97 5,73.5 5,26.5" fill="none" stroke="#0c0f16" stroke-width="3"/>
+  </symbol>
+  <symbol id="t-techruins" viewBox="0 0 100 100">
+    <g clip-path="url(#hx)">
+      <rect width="100" height="100" fill="var(--terrain-techruins)"/>
+      <g fill="#4a3c70"><polygon points="16,32 40,26 36,46 14,50"/><polygon points="60,52 84,46 88,68 62,72"/></g>
+      <g stroke="var(--toxic)" stroke-width="2.4" fill="none" stroke-linecap="round" opacity="0.9"><path d="M26 44 H46 V60 H64"/><path d="M32 70 V54 H50"/></g>
+      <g fill="var(--toxic)"><rect x="44" y="42" width="4.5" height="4.5"/><rect x="62" y="58" width="4.5" height="4.5"/><rect x="48" y="68" width="4.5" height="4.5"/></g>
+    </g>
+    <polygon points="50,3 95,26.5 95,73.5 50,97 5,73.5 5,26.5" fill="none" stroke="#0c0f16" stroke-width="3"/>
+  </symbol>
+  <symbol id="t-warzone" viewBox="0 0 100 100">
+    <g clip-path="url(#hx)">
+      <rect width="100" height="100" fill="var(--terrain-warzone)"/>
+      <ellipse cx="52" cy="52" rx="40" ry="32" fill="#5e1b1b"/>
+      <g fill="#2a0f0f"><circle cx="40" cy="46" r="9"/><circle cx="64" cy="60" r="7"/><circle cx="54" cy="34" r="5"/></g>
+      <g fill="#160808"><circle cx="40" cy="46" r="4"/><circle cx="64" cy="60" r="3"/></g>
+      <g fill="var(--amber)" opacity="0.75"><circle cx="33" cy="62" r="1.6"/><circle cx="70" cy="42" r="1.4"/><circle cx="48" cy="70" r="1.2"/></g>
+    </g>
+    <polygon points="50,3 95,26.5 95,73.5 50,97 5,73.5 5,26.5" fill="none" stroke="#0c0f16" stroke-width="3"/>
+  </symbol>
+
+  <!-- ---------- UNIT TOKENS (round counter + steel silhouette) ---------- -->
+  <symbol id="u-infantry" viewBox="0 0 100 100">
+    <circle cx="50" cy="50" r="45" fill="#10141d"/><circle cx="50" cy="50" r="45" fill="none" stroke="#2a3346" stroke-width="2"/><circle cx="50" cy="50" r="41" fill="none" stroke="var(--teal)" stroke-width="1.5" opacity="0.5"/>
+    <ellipse cx="50" cy="58" rx="15" ry="11" fill="#454b57"/>
+    <rect x="47.5" y="28" width="5" height="32" rx="2" fill="#1c212b" transform="rotate(24 50 48)"/>
+    <circle cx="50" cy="46" r="9.5" fill="#8b8f96"/><circle cx="50" cy="46" r="3.6" fill="#5b616d"/>
+  </symbol>
+  <symbol id="u-tank" viewBox="0 0 100 100">
+    <circle cx="50" cy="50" r="45" fill="#10141d"/><circle cx="50" cy="50" r="45" fill="none" stroke="#2a3346" stroke-width="2"/><circle cx="50" cy="50" r="41" fill="none" stroke="var(--blood)" stroke-width="1.5" opacity="0.5"/>
+    <rect x="25" y="26" width="9" height="48" rx="3" fill="#1c212b"/><rect x="66" y="26" width="9" height="48" rx="3" fill="#1c212b"/>
+    <rect x="33" y="32" width="34" height="38" rx="4" fill="#5a616e"/><rect x="33" y="32" width="34" height="8" rx="4" fill="#7a808c"/>
+    <rect x="47" y="16" width="6" height="36" rx="2" fill="#1c212b"/><circle cx="50" cy="51" r="12" fill="#8b8f96"/>
+  </symbol>
+  <symbol id="u-artillery" viewBox="0 0 100 100">
+    <circle cx="50" cy="50" r="45" fill="#10141d"/><circle cx="50" cy="50" r="45" fill="none" stroke="#2a3346" stroke-width="2"/><circle cx="50" cy="50" r="41" fill="none" stroke="var(--blood)" stroke-width="1.5" opacity="0.5"/>
+    <path d="M36 70 l-9 12 M64 70 l9 12" stroke="#1c212b" stroke-width="4.5" stroke-linecap="round"/>
+    <rect x="34" y="44" width="32" height="28" rx="4" fill="#5a616e"/>
+    <rect x="47" y="12" width="6" height="46" rx="2" fill="#1c212b"/><circle cx="50" cy="57" r="9" fill="#8b8f96"/>
+  </symbol>
+  <symbol id="u-aircraft" viewBox="0 0 100 100">
+    <circle cx="50" cy="50" r="45" fill="#10141d"/><circle cx="50" cy="50" r="45" fill="none" stroke="#2a3346" stroke-width="2"/><circle cx="50" cy="50" r="41" fill="none" stroke="var(--sky)" stroke-width="1.5" opacity="0.5"/>
+    <path d="M50 40 L86 64 L50 53 Z" fill="#5a616e"/><path d="M50 40 L14 64 L50 53 Z" fill="#5a616e"/><path d="M50 62 L60 78 L50 72 L40 78 Z" fill="#5a616e"/>
+    <path d="M50 16 L56 54 L50 62 L44 54 Z" fill="#8b8f96"/><circle cx="50" cy="26" r="3" fill="var(--sky)"/>
+  </symbol>
+  <symbol id="u-drone" viewBox="0 0 100 100">
+    <circle cx="50" cy="50" r="45" fill="#10141d"/><circle cx="50" cy="50" r="45" fill="none" stroke="#2a3346" stroke-width="2"/><circle cx="50" cy="50" r="41" fill="none" stroke="var(--toxic)" stroke-width="1.5" opacity="0.5"/>
+    <g stroke="#454b57" stroke-width="6" stroke-linecap="round"><path d="M32 32 L68 68 M68 32 L32 68"/></g>
+    <g fill="none" stroke="#8b8f96" stroke-width="3"><circle cx="32" cy="32" r="9"/><circle cx="68" cy="32" r="9"/><circle cx="32" cy="68" r="9"/><circle cx="68" cy="68" r="9"/></g>
+    <rect x="42" y="42" width="16" height="16" rx="3" fill="var(--toxic)"/>
+  </symbol>
+  <symbol id="u-engineer" viewBox="0 0 100 100">
+    <circle cx="50" cy="50" r="45" fill="#10141d"/><circle cx="50" cy="50" r="45" fill="none" stroke="#2a3346" stroke-width="2"/><circle cx="50" cy="50" r="41" fill="none" stroke="var(--amber)" stroke-width="1.5" opacity="0.5"/>
+    <rect x="32" y="34" width="36" height="34" rx="5" fill="#5a616e"/><rect x="22" y="26" width="56" height="8" rx="2" fill="var(--sand)"/>
+    <g stroke="var(--amber)" stroke-width="4" stroke-linecap="round"><path d="M50 39 V45 M50 59 V65 M37 52 H43 M57 52 H63"/></g>
+    <circle cx="50" cy="52" r="9" fill="var(--amber)"/><circle cx="50" cy="52" r="3.6" fill="#1c212b"/>
+  </symbol>
+
+  <!-- ---------- RESOURCES (silhouette glyph + signal accent) ---------- -->
+  <symbol id="r-food" viewBox="0 0 100 100">
+    <rect x="33" y="30" width="34" height="42" rx="4" fill="#8b8f96"/><rect x="33" y="30" width="34" height="10" rx="4" fill="#c2c8d2"/>
+    <rect x="37" y="46" width="26" height="14" rx="2" fill="var(--amber)"/><rect x="33" y="30" width="34" height="42" rx="4" fill="none" stroke="#2a2f3a" stroke-width="2"/>
+  </symbol>
+  <symbol id="r-water" viewBox="0 0 100 100">
+    <path d="M50 22 C 68 46, 64 78, 50 78 C 36 78, 32 46, 50 22 Z" fill="var(--sky)"/>
+    <path d="M42 52 C 42 63, 47 69, 53 67" fill="none" stroke="#bcd8f3" stroke-width="4" stroke-linecap="round"/>
+  </symbol>
+  <symbol id="r-wood" viewBox="0 0 100 100">
+    <g stroke="#3e3322" stroke-width="2"><circle cx="39" cy="60" r="13" fill="#6b5840"/><circle cx="61" cy="60" r="13" fill="#6b5840"/><circle cx="50" cy="40" r="13" fill="#7e6a4c"/></g>
+    <g fill="#4a3c28"><circle cx="39" cy="60" r="5"/><circle cx="61" cy="60" r="5"/><circle cx="50" cy="40" r="5"/></g>
+  </symbol>
+  <symbol id="r-stone" viewBox="0 0 100 100">
+    <polygon points="30,66 24,46 40,30 62,28 76,46 70,68 49,76" fill="#8b8f96"/>
+    <polygon points="40,30 62,28 52,48 41,46" fill="#c2c8d2"/><polygon points="52,48 70,68 49,76 30,66 41,46" fill="#5d626b"/>
+  </symbol>
+  <symbol id="r-iron" viewBox="0 0 100 100">
+    <polygon points="28,64 26,44 44,32 64,34 74,52 66,70 46,74" fill="#5d626b"/><polygon points="44,32 64,34 56,50 45,48" fill="#868c95"/>
+    <g fill="#aeb6c2"><circle cx="40" cy="60" r="3.4"/><circle cx="58" cy="62" r="2.8"/><circle cx="62" cy="46" r="2.4"/></g>
+  </symbol>
+  <symbol id="r-rare" viewBox="0 0 100 100">
+    <rect x="28" y="56" width="44" height="9" rx="2" fill="#4a318a"/>
+    <polygon points="50,20 60,48 40,48" fill="var(--violet)"/><polygon points="50,20 60,48 50,48" fill="#6a40c0"/>
+    <polygon points="34,32 44,56 24,56" fill="#9d74f5"/><polygon points="34,32 44,56 34,56" fill="#6a40c0"/>
+    <polygon points="66,32 76,56 56,56" fill="#9d74f5"/><polygon points="66,32 76,56 66,56" fill="#6a40c0"/>
+  </symbol>
+  <symbol id="r-oil" viewBox="0 0 100 100">
+    <path d="M50 22 C 68 46, 64 78, 50 78 C 36 78, 32 46, 50 22 Z" fill="#161a22"/>
+    <path d="M43 50 C 43 60, 47 66, 52 65" fill="none" stroke="var(--amber)" stroke-width="3.5" stroke-linecap="round" opacity="0.85"/>
+  </symbol>
+  <symbol id="r-data" viewBox="0 0 100 100">
+    <g stroke="var(--teal)" stroke-width="3" stroke-linecap="round"><path d="M40 30 V24 M50 30 V24 M60 30 V24 M40 76 V70 M50 76 V70 M60 76 V70"/><path d="M30 40 H24 M30 50 H24 M30 60 H24 M76 40 H70 M76 50 H70 M76 60 H70"/></g>
+    <rect x="32" y="32" width="36" height="36" rx="3" fill="#1d2c30"/><rect x="41" y="41" width="18" height="18" rx="2" fill="var(--teal)"/>
+  </symbol>
+  <symbol id="r-fuel" viewBox="0 0 100 100">
+    <path d="M34 30 H64 a3 3 0 0 1 3 3 V72 a3 3 0 0 1 -3 3 H34 a3 3 0 0 1 -3 -3 V33 a3 3 0 0 1 3 -3 Z" fill="var(--amber)"/>
+    <rect x="41" y="25" width="14" height="8" rx="2" fill="#a9780a"/>
+    <path d="M42 42 L58 64 M58 42 L42 64" stroke="#a9780a" stroke-width="3"/><path d="M64 36 q8 0 8 10 v6" fill="none" stroke="#a9780a" stroke-width="4"/>
+  </symbol>
+  <symbol id="r-steel" viewBox="0 0 100 100">
+    <g fill="#8b8f96"><rect x="28" y="28" width="44" height="10" rx="1"/><rect x="28" y="62" width="44" height="10" rx="1"/><rect x="44" y="34" width="12" height="32"/></g>
+    <rect x="28" y="28" width="44" height="4" fill="#c2c8d2"/>
+  </symbol>
+  <symbol id="r-electronics" viewBox="0 0 100 100">
+    <rect x="28" y="28" width="44" height="44" rx="3" fill="#16241d"/>
+    <g stroke="var(--toxic)" stroke-width="2" fill="none" stroke-linecap="round"><path d="M34 36 H46 V48"/><path d="M64 38 V52 H52"/><path d="M36 64 H50"/></g>
+    <g fill="var(--toxic)"><circle cx="34" cy="36" r="2.4"/><circle cx="64" cy="38" r="2.4"/><circle cx="50" cy="64" r="2.4"/></g>
+    <rect x="44" y="44" width="14" height="12" rx="1" fill="#234037" stroke="var(--toxic)" stroke-width="1.5"/>
+  </symbol>
+  <symbol id="r-machine" viewBox="0 0 100 100">
+    <g fill="#8b8f96"><rect x="46" y="22" width="8" height="56" rx="2"/><rect x="22" y="46" width="56" height="8" rx="2"/><rect x="46" y="22" width="8" height="56" rx="2" transform="rotate(45 50 50)"/><rect x="22" y="46" width="56" height="8" rx="2" transform="rotate(45 50 50)"/><circle cx="50" cy="50" r="19"/></g>
+    <circle cx="50" cy="50" r="19" fill="none" stroke="#c2c8d2" stroke-width="2"/><circle cx="50" cy="50" r="7" fill="#1b1e25"/>
+  </symbol>
+  <symbol id="r-ammo" viewBox="0 0 100 100">
+    <g><rect x="31" y="46" width="10" height="28" rx="2" fill="var(--sand)"/><polygon points="31,46 36,30 41,46" fill="#9aa0a8"/><rect x="45" y="46" width="10" height="28" rx="2" fill="var(--sand)"/><polygon points="45,46 50,30 55,46" fill="#9aa0a8"/><rect x="59" y="46" width="10" height="28" rx="2" fill="var(--sand)"/><polygon points="59,46 64,30 69,46" fill="#9aa0a8"/></g>
+    <g fill="#a07f33"><rect x="31" y="68" width="10" height="4"/><rect x="45" y="68" width="10" height="4"/><rect x="59" y="68" width="10" height="4"/></g>
+  </symbol>
+  <symbol id="r-chemicals" viewBox="0 0 100 100">
+    <path d="M44 26 H56 V46 L70 72 a4 4 0 0 1 -3.5 6 H33.5 A4 4 0 0 1 30 72 L44 46 Z" fill="#2a2f3a" stroke="#8b8f96" stroke-width="2"/>
+    <path d="M37 58 H63 L69 71 a3 3 0 0 1 -2.6 5 H35.6 A3 3 0 0 1 33 71 Z" fill="var(--toxic)"/>
+    <rect x="42" y="22" width="16" height="6" rx="2" fill="#8b8f96"/><circle cx="46" cy="66" r="2" fill="#bdf5d6"/><circle cx="55" cy="69" r="1.6" fill="#bdf5d6"/>
+  </symbol>
+  <symbol id="r-rifles" viewBox="0 0 100 100">
+    <g fill="#5a616e"><rect x="20" y="47" width="54" height="7" rx="2"/><rect x="70" y="44" width="9" height="4"/><polygon points="20,47 14,44 14,57 22,54"/><rect x="38" y="54" width="6" height="13" rx="2"/><path d="M30 54 l-4 12 h6 l3 -12 z"/></g>
+    <rect x="48" y="43" width="9" height="4" fill="var(--sand)"/>
+  </symbol>
+  <symbol id="r-tanks" viewBox="0 0 100 100">
+    <rect x="30" y="30" width="8" height="40" rx="2" fill="#21262f"/><rect x="62" y="30" width="8" height="40" rx="2" fill="#21262f"/>
+    <rect x="36" y="34" width="28" height="34" rx="3" fill="#5a616e"/><rect x="47" y="20" width="6" height="32" rx="2" fill="#21262f"/><circle cx="50" cy="50" r="11" fill="#8b8f96"/>
+  </symbol>
+  <symbol id="r-drones" viewBox="0 0 100 100">
+    <g stroke="#5a616e" stroke-width="6" stroke-linecap="round"><path d="M32 32 L68 68 M68 32 L32 68"/></g>
+    <g fill="none" stroke="#8b8f96" stroke-width="3"><circle cx="32" cy="32" r="9"/><circle cx="68" cy="32" r="9"/><circle cx="32" cy="68" r="9"/><circle cx="68" cy="68" r="9"/></g>
+    <rect x="42" y="42" width="16" height="16" rx="3" fill="var(--toxic)"/>
+  </symbol>
+  <symbol id="r-aircraft" viewBox="0 0 100 100">
+    <path d="M50 40 L84 62 L50 52 Z" fill="#5a616e"/><path d="M50 40 L16 62 L50 52 Z" fill="#5a616e"/><path d="M50 60 L59 74 L50 69 L41 74 Z" fill="#5a616e"/>
+    <path d="M50 18 L55 52 L50 60 L45 52 Z" fill="#8b8f96"/><circle cx="50" cy="26" r="3" fill="var(--sky)"/>
+  </symbol>
+  <symbol id="r-turrets" viewBox="0 0 100 100">
+    <ellipse cx="50" cy="64" rx="20" ry="10" fill="#3a4150"/><circle cx="50" cy="56" r="16" fill="#5a616e"/><circle cx="50" cy="56" r="9" fill="#8b8f96"/>
+    <rect x="47" y="22" width="6" height="36" rx="2" fill="#21262f"/><rect x="46" y="22" width="8" height="5" fill="var(--amber)"/>
+  </symbol>
+  <symbol id="r-bcomp" viewBox="0 0 100 100">
+    <g fill="#6b5840" stroke="#4a3c28" stroke-width="1.5"><rect x="28" y="54" width="18" height="11"/><rect x="48" y="54" width="18" height="11"/><rect x="38" y="65" width="18" height="11"/><rect x="58" y="65" width="14" height="11"/><rect x="28" y="65" width="8" height="11"/></g>
+    <rect x="32" y="26" width="40" height="8" rx="1" fill="#8b8f96" transform="rotate(-18 52 30)"/><rect x="34" y="28" width="36" height="3" fill="#c2c8d2" transform="rotate(-18 52 30)"/>
+  </symbol>
+
+  <!-- ---------- BUILDINGS (footprint silhouette + signal) ---------- -->
+  <symbol id="b-hq" viewBox="0 0 100 100">
+    <rect x="29" y="24" width="2.5" height="16" fill="#8b8f96"/><polygon points="31.5,25 44,28 31.5,33" fill="var(--blood)"/>
+    <rect x="68" y="22" width="3" height="18" fill="#8b8f96"/><circle cx="69.5" cy="22" r="3" fill="var(--amber)"/>
+    <rect x="26" y="38" width="48" height="38" rx="3" fill="var(--olive-drab)"/><rect x="26" y="38" width="48" height="11" fill="#6f7757"/>
+    <polygon points="50,48 52.9,56 61.4,56.3 54.8,61.5 57.1,69.7 50,65 42.9,69.7 45.2,61.5 38.6,56.3 47.1,56" fill="var(--amber)"/>
+  </symbol>
+  <symbol id="b-farm" viewBox="0 0 100 100">
+    <rect x="24" y="36" width="40" height="40" rx="2" fill="var(--olive-drab)"/>
+    <g stroke="var(--sand)" stroke-width="3"><path d="M31 40 V72 M39 40 V72 M47 40 V72 M55 40 V72"/></g>
+    <rect x="64" y="32" width="14" height="44" rx="7" fill="#8b8f96"/><ellipse cx="71" cy="32" rx="7" ry="3.5" fill="#c2c8d2"/>
+  </symbol>
+  <symbol id="b-mine" viewBox="0 0 100 100">
+    <polygon points="18,74 44,30 70,74" fill="#787d87"/><polygon points="44,30 70,74 50,74" fill="#565a63"/>
+    <polygon points="44,30 51,42 37,42" fill="#b8bcc3"/>
+    <path d="M38 74 V62 a8 8 0 0 1 16 0 V74 Z" fill="#10131a"/>
+    <g fill="var(--amber)"><circle cx="60" cy="52" r="2.4"/><circle cx="66" cy="60" r="1.8"/></g>
+  </symbol>
+  <symbol id="b-derrick" viewBox="0 0 100 100">
+    <rect x="26" y="70" width="48" height="6" fill="#3a4150"/>
+    <g stroke="#5a616e" stroke-width="4" fill="none" stroke-linejoin="round"><path d="M38 70 L48 26 L52 26 L62 70"/><path d="M41 56 L59 56 M43 44 L57 44 M45 34 L55 34"/></g>
+    <rect x="46" y="20" width="8" height="8" fill="#5a616e"/>
+    <path d="M50 70 q14 0 14 -10" stroke="var(--amber)" stroke-width="4" fill="none"/><circle cx="64" cy="60" r="4" fill="var(--amber)"/>
+  </symbol>
+  <symbol id="b-refinery" viewBox="0 0 100 100">
+    <circle cx="36" cy="58" r="15" fill="#8b8f96"/><circle cx="36" cy="58" r="15" fill="none" stroke="#5d626b" stroke-width="3"/><circle cx="36" cy="58" r="6" fill="#5d626b"/>
+    <circle cx="64" cy="62" r="11" fill="#8b8f96"/><circle cx="64" cy="62" r="11" fill="none" stroke="#5d626b" stroke-width="3"/>
+    <rect x="46" y="24" width="10" height="30" rx="2" fill="#5d626b"/><path d="M51 30 H72 V44" stroke="var(--teal)" stroke-width="3" fill="none"/>
+  </symbol>
+  <symbol id="b-foundry" viewBox="0 0 100 100">
+    <circle cx="61.5" cy="22" r="4" fill="#3a4150"/><circle cx="68" cy="16" r="3" fill="#2f3744"/>
+    <rect x="26" y="42" width="48" height="34" rx="2" fill="#3a4150"/><rect x="56" y="24" width="11" height="20" fill="#2a2f3a"/>
+    <rect x="32" y="52" width="16" height="24" rx="1" fill="var(--amber)"/><rect x="54" y="52" width="14" height="14" rx="1" fill="#5a616e"/>
+  </symbol>
+  <symbol id="b-factory" viewBox="0 0 100 100">
+    <rect x="66" y="26" width="8" height="22" fill="#2a2f3a"/>
+    <rect x="24" y="48" width="52" height="28" fill="#3a4150"/>
+    <path d="M24 48 L34 36 V48 Z M38 48 L48 36 V48 Z M52 48 L62 36 V48 Z M66 48 L76 36 V48 Z" fill="#5a616e"/>
+    <g fill="var(--amber)"><rect x="30" y="58" width="7" height="7"/><rect x="44" y="58" width="7" height="7"/><rect x="58" y="58" width="7" height="7"/></g>
+  </symbol>
+  <symbol id="b-warehouse" viewBox="0 0 100 100">
+    <polygon points="24,42 50,28 76,42" fill="#9aa0a8"/><rect x="26" y="42" width="48" height="34" fill="#6b6f78"/>
+    <rect x="40" y="50" width="20" height="26" fill="#3a4150"/><g stroke="#5a616e" stroke-width="2"><path d="M40 56 H60 M40 62 H60 M40 68 H60"/></g>
+    <rect x="28" y="64" width="9" height="12" fill="var(--sand)"/><rect x="63" y="64" width="9" height="12" fill="var(--sand)"/>
+  </symbol>
+  <symbol id="b-radar" viewBox="0 0 100 100">
+    <rect x="40" y="60" width="20" height="16" rx="2" fill="#3a4150"/><rect x="47" y="44" width="6" height="20" fill="#5a616e" transform="rotate(20 50 54)"/>
+    <path d="M28 58 Q 44 18 74 38" fill="none" stroke="var(--teal)" stroke-width="6" stroke-linecap="round"/><path d="M30 54 Q 44 24 68 40" fill="none" stroke="#6fc0cb" stroke-width="2"/>
+    <g fill="none" stroke="var(--teal)" stroke-width="2" opacity="0.7"><path d="M66 24 a10 10 0 0 1 6 9"/><path d="M70 18 a16 16 0 0 1 8 13"/></g>
+  </symbol>
+  <symbol id="b-fortress" viewBox="0 0 100 100">
+    <g fill="#54585f"><rect x="22" y="32" width="10" height="44"/><rect x="68" y="32" width="10" height="44"/></g>
+    <rect x="26" y="34" width="48" height="42" fill="#6b6f78"/><rect x="26" y="34" width="48" height="6" fill="#818691"/>
+    <g fill="#10131a"><rect x="30" y="30" width="6" height="6"/><rect x="42" y="30" width="6" height="6"/><rect x="54" y="30" width="6" height="6"/><rect x="66" y="30" width="6" height="6"/></g>
+    <g fill="#10131a"><rect x="24" y="28" width="3.5" height="5"/><rect x="29" y="28" width="3.5" height="5"/><rect x="69" y="28" width="3.5" height="5"/><rect x="74.5" y="28" width="3.5" height="5"/></g>
+    <rect x="42" y="44" width="16" height="12" fill="#3a4150"/><rect x="44" y="56" width="12" height="20" rx="6" fill="#10131a"/>
+  </symbol>
+</svg>
+
+<!-- ============================ PAGE ============================ -->
+<div class="wrap">
+
+  <header class="mast">
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 48 48" aria-hidden="true">
+        <polygon points="24,3 42,13.5 42,34.5 24,45 6,34.5 6,13.5" fill="none" stroke="var(--amber)" stroke-width="2.5"/>
+        <path d="M15 31 L24 15 L33 31" fill="none" stroke="var(--text-hi)" stroke-width="3" stroke-linejoin="round"/>
+        <path d="M19 26 H29" stroke="var(--text-hi)" stroke-width="3"/>
+      </svg>
+      <div>
+        <h1 class="wordmark">WARLANDS</h1>
+        <div class="sub">Sprite System · Silhouette Asset Sheet</div>
+      </div>
+    </div>
+    <div class="meta">
+      <div class="chiplet"><div class="k">Rev</div><div class="v">1.0</div></div>
+      <div class="chiplet"><div class="k">Projection</div><div class="v">ORTHO</div></div>
+      <div class="chiplet"><div class="k">Sprites</div><div class="v">45</div></div>
+    </div>
+  </header>
+
+  <section class="palette">
+    <div class="pgroup">
+      <div class="cap">Base · the desaturated war world</div>
+      <div class="swrow">
+        <div class="sw"><div class="chip2" style="background:var(--gunmetal)"></div><div class="lab"><b>Gunmetal</b><span>#2a2f3a</span></div></div>
+        <div class="sw"><div class="chip2" style="background:var(--olive-drab)"></div><div class="lab"><b>Olive Drab</b><span>#5c6347</span></div></div>
+        <div class="sw"><div class="chip2" style="background:var(--sand)"></div><div class="lab"><b>Sand</b><span>#c9a14a</span></div></div>
+        <div class="sw"><div class="chip2" style="background:var(--concrete)"></div><div class="lab"><b>Concrete</b><span>#8b8f96</span></div></div>
+        <div class="sw"><div class="chip2" style="background:var(--ash)"></div><div class="lab"><b>Ash</b><span>#4b515c</span></div></div>
+        <div class="sw"><div class="chip2" style="background:var(--dirt-brown)"></div><div class="lab"><b>Dirt</b><span>#6b5840</span></div></div>
+      </div>
+    </div>
+    <div class="pgroup">
+      <div class="cap">Signal accents · color = information</div>
+      <div class="swrow">
+        <div class="sw"><div class="chip2" style="background:var(--amber)"></div><div class="lab"><b>Amber</b><span>#f5b301</span></div></div>
+        <div class="sw"><div class="chip2" style="background:var(--blood)"></div><div class="lab"><b>Blood</b><span>#9c2b2b</span></div></div>
+        <div class="sw"><div class="chip2" style="background:var(--teal)"></div><div class="lab"><b>Teal</b><span>#3f9aa6</span></div></div>
+        <div class="sw"><div class="chip2" style="background:var(--toxic)"></div><div class="lab"><b>Toxic</b><span>#6ee7a8</span></div></div>
+        <div class="sw"><div class="chip2" style="background:var(--sky)"></div><div class="lab"><b>Sky</b><span>#4a90d9</span></div></div>
+        <div class="sw"><div class="chip2" style="background:var(--violet)"></div><div class="lab"><b>Violet</b><span>#8b5cf6</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TERRAIN -->
+  <section class="block">
+    <div class="bhead"><span class="bidx">01</span><span class="btitle">Terrain · Hex Tiles</span><span class="brule"></span><span class="bcount">09 · pointy-top</span></div>
+    <div class="grid g-terrain">
+      <figure class="cell"><div class="art a-hex"><svg class="s-hex"><use href="#t-plains"/></svg></div><div class="capwrap"><div class="nm">Plains</div><span class="cd">TRN·01</span></div></figure>
+      <figure class="cell"><div class="art a-hex"><svg class="s-hex"><use href="#t-forest"/></svg></div><div class="capwrap"><div class="nm">Forest</div><span class="cd">TRN·02</span></div></figure>
+      <figure class="cell"><div class="art a-hex"><svg class="s-hex"><use href="#t-river"/></svg></div><div class="capwrap"><div class="nm">River</div><span class="cd">TRN·03</span></div></figure>
+      <figure class="cell"><div class="art a-hex"><svg class="s-hex"><use href="#t-mountain"/></svg></div><div class="capwrap"><div class="nm">Mountain</div><span class="cd">TRN·04</span></div></figure>
+      <figure class="cell"><div class="art a-hex"><svg class="s-hex"><use href="#t-desert"/></svg></div><div class="capwrap"><div class="nm">Oil Desert</div><span class="cd">TRN·05</span></div></figure>
+      <figure class="cell"><div class="art a-hex"><svg class="s-hex"><use href="#t-coastal"/></svg></div><div class="capwrap"><div class="nm">Coastal</div><span class="cd">TRN·06</span></div></figure>
+      <figure class="cell"><div class="art a-hex"><svg class="s-hex"><use href="#t-industrial"/></svg></div><div class="capwrap"><div class="nm">Industrial</div><span class="cd">TRN·07</span></div></figure>
+      <figure class="cell"><div class="art a-hex"><svg class="s-hex"><use href="#t-techruins"/></svg></div><div class="capwrap"><div class="nm">Tech Ruins</div><span class="cd">TRN·08</span></div></figure>
+      <figure class="cell"><div class="art a-hex"><svg class="s-hex"><use href="#t-warzone"/></svg></div><div class="capwrap"><div class="nm">Scorched</div><span class="cd">TRN·09</span></div></figure>
+    </div>
+  </section>
+
+  <!-- UNITS -->
+  <section class="block">
+    <div class="bhead"><span class="bidx">02</span><span class="btitle">Units · Combat Tokens</span><span class="brule"></span><span class="bcount">06 · round counter</span></div>
+    <div class="grid g-units">
+      <figure class="cell"><div class="art a-tok"><svg class="s-tok"><use href="#u-infantry"/></svg></div><div class="capwrap"><div class="nm">Infantry</div><span class="cd">UNT·01</span></div></figure>
+      <figure class="cell"><div class="art a-tok"><svg class="s-tok"><use href="#u-tank"/></svg></div><div class="capwrap"><div class="nm">Tank</div><span class="cd">UNT·02</span></div></figure>
+      <figure class="cell"><div class="art a-tok"><svg class="s-tok"><use href="#u-artillery"/></svg></div><div class="capwrap"><div class="nm">Artillery</div><span class="cd">UNT·03</span></div></figure>
+      <figure class="cell"><div class="art a-tok"><svg class="s-tok"><use href="#u-aircraft"/></svg></div><div class="capwrap"><div class="nm">Aircraft</div><span class="cd">UNT·04</span></div></figure>
+      <figure class="cell"><div class="art a-tok"><svg class="s-tok"><use href="#u-drone"/></svg></div><div class="capwrap"><div class="nm">Recon Drone</div><span class="cd">UNT·05</span></div></figure>
+      <figure class="cell"><div class="art a-tok"><svg class="s-tok"><use href="#u-engineer"/></svg></div><div class="capwrap"><div class="nm">Engineer</div><span class="cd">UNT·06</span></div></figure>
+    </div>
+  </section>
+
+  <!-- RESOURCES -->
+  <section class="block">
+    <div class="bhead"><span class="bidx">03</span><span class="btitle">Resources · Stockpile</span><span class="brule"></span><span class="bcount">20 · raw → finished</span></div>
+    <div class="grid g-res">
+      <figure class="cell"><div class="art a-res"><div class="chipbg"><svg class="s-res"><use href="#r-food"/></svg></div></div><div class="capwrap"><div class="nm">Food</div><span class="cd">RES·01</span></div></figure>
+      <figure class="cell"><div class="art a-res"><div class="chipbg"><svg class="s-res"><use href="#r-water"/></svg></div></div><div class="capwrap"><div class="nm">Water</div><span class="cd">RES·02</span></div></figure>
+      <figure class="cell"><div class="art a-res"><div class="chipbg"><svg class="s-res"><use href="#r-wood"/></svg></div></div><div class="capwrap"><div class="nm">Wood</div><span class="cd">RES·03</span></div></figure>
+      <figure class="cell"><div class="art a-res"><div class="chipbg"><svg class="s-res"><use href="#r-stone"/></svg></div></div><div class="capwrap"><div class="nm">Stone</div><span class="cd">RES·04</span></div></figure>
+      <figure class="cell"><div class="art a-res"><div class="chipbg"><svg class="s-res"><use href="#r-iron"/></svg></div></div><div class="capwrap"><div class="nm">Iron</div><span class="cd">RES·05</span></div></figure>
+      <figure class="cell"><div class="art a-res"><div class="chipbg"><svg class="s-res"><use href="#r-rare"/></svg></div></div><div class="capwrap"><div class="nm">Rare Minerals</div><span class="cd">RES·06</span></div></figure>
+      <figure class="cell"><div class="art a-res"><div class="chipbg"><svg class="s-res"><use href="#r-oil"/></svg></div></div><div class="capwrap"><div class="nm">Oil</div><span class="cd">RES·07</span></div></figure>
+      <figure class="cell"><div class="art a-res"><div class="chipbg"><svg class="s-res"><use href="#r-data"/></svg></div></div><div class="capwrap"><div class="nm">Data Chips</div><span class="cd">RES·08</span></div></figure>
+      <figure class="cell"><div class="art a-res"><div class="chipbg"><svg class="s-res"><use href="#r-fuel"/></svg></div></div><div class="capwrap"><div class="nm">Fuel</div><span class="cd">RES·09</span></div></figure>
+      <figure class="cell"><div class="art a-res"><div class="chipbg"><svg class="s-res"><use href="#r-steel"/></svg></div></div><div class="capwrap"><div class="nm">Steel</div><span class="cd">RES·10</span></div></figure>
+      <figure class="cell"><div class="art a-res"><div class="chipbg"><svg class="s-res"><use href="#r-electronics"/></svg></div></div><div class="capwrap"><div class="nm">Electronics</div><span class="cd">RES·11</span></div></figure>
+      <figure class="cell"><div class="art a-res"><div class="chipbg"><svg class="s-res"><use href="#r-machine"/></svg></div></div><div class="capwrap"><div class="nm">Machine Parts</div><span class="cd">RES·12</span></div></figure>
+      <figure class="cell"><div class="art a-res"><div class="chipbg"><svg class="s-res"><use href="#r-ammo"/></svg></div></div><div class="capwrap"><div class="nm">Ammunition</div><span class="cd">RES·13</span></div></figure>
+      <figure class="cell"><div class="art a-res"><div class="chipbg"><svg class="s-res"><use href="#r-chemicals"/></svg></div></div><div class="capwrap"><div class="nm">Chemicals</div><span class="cd">RES·14</span></div></figure>
+      <figure class="cell"><div class="art a-res"><div class="chipbg"><svg class="s-res"><use href="#r-rifles"/></svg></div></div><div class="capwrap"><div class="nm">Rifles</div><span class="cd">RES·15</span></div></figure>
+      <figure class="cell"><div class="art a-res"><div class="chipbg"><svg class="s-res"><use href="#r-tanks"/></svg></div></div><div class="capwrap"><div class="nm">Tanks</div><span class="cd">RES·16</span></div></figure>
+      <figure class="cell"><div class="art a-res"><div class="chipbg"><svg class="s-res"><use href="#r-drones"/></svg></div></div><div class="capwrap"><div class="nm">Drones</div><span class="cd">RES·17</span></div></figure>
+      <figure class="cell"><div class="art a-res"><div class="chipbg"><svg class="s-res"><use href="#r-aircraft"/></svg></div></div><div class="capwrap"><div class="nm">Aircraft</div><span class="cd">RES·18</span></div></figure>
+      <figure class="cell"><div class="art a-res"><div class="chipbg"><svg class="s-res"><use href="#r-turrets"/></svg></div></div><div class="capwrap"><div class="nm">Turrets</div><span class="cd">RES·19</span></div></figure>
+      <figure class="cell"><div class="art a-res"><div class="chipbg"><svg class="s-res"><use href="#r-bcomp"/></svg></div></div><div class="capwrap"><div class="nm">Bldg. Components</div><span class="cd">RES·20</span></div></figure>
+    </div>
+  </section>
+
+  <!-- BUILDINGS -->
+  <section class="block">
+    <div class="bhead"><span class="bidx">04</span><span class="btitle">Buildings · Structures</span><span class="brule"></span><span class="bcount">10 · top-down footprint</span></div>
+    <div class="grid g-bld">
+      <figure class="cell"><div class="art a-bld"><svg class="s-bld"><use href="#b-hq"/></svg></div><div class="capwrap"><div class="nm">HQ Camp</div><span class="cd">BLD·01</span></div></figure>
+      <figure class="cell"><div class="art a-bld"><svg class="s-bld"><use href="#b-farm"/></svg></div><div class="capwrap"><div class="nm">Farm</div><span class="cd">BLD·02</span></div></figure>
+      <figure class="cell"><div class="art a-bld"><svg class="s-bld"><use href="#b-mine"/></svg></div><div class="capwrap"><div class="nm">Mine</div><span class="cd">BLD·03</span></div></figure>
+      <figure class="cell"><div class="art a-bld"><svg class="s-bld"><use href="#b-derrick"/></svg></div><div class="capwrap"><div class="nm">Oil Derrick</div><span class="cd">BLD·04</span></div></figure>
+      <figure class="cell"><div class="art a-bld"><svg class="s-bld"><use href="#b-refinery"/></svg></div><div class="capwrap"><div class="nm">Refinery</div><span class="cd">BLD·05</span></div></figure>
+      <figure class="cell"><div class="art a-bld"><svg class="s-bld"><use href="#b-foundry"/></svg></div><div class="capwrap"><div class="nm">Foundry</div><span class="cd">BLD·06</span></div></figure>
+      <figure class="cell"><div class="art a-bld"><svg class="s-bld"><use href="#b-factory"/></svg></div><div class="capwrap"><div class="nm">Factory</div><span class="cd">BLD·07</span></div></figure>
+      <figure class="cell"><div class="art a-bld"><svg class="s-bld"><use href="#b-warehouse"/></svg></div><div class="capwrap"><div class="nm">Warehouse</div><span class="cd">BLD·08</span></div></figure>
+      <figure class="cell"><div class="art a-bld"><svg class="s-bld"><use href="#b-radar"/></svg></div><div class="capwrap"><div class="nm">Radar</div><span class="cd">BLD·09</span></div></figure>
+      <figure class="cell"><div class="art a-bld"><svg class="s-bld"><use href="#b-fortress"/></svg></div><div class="capwrap"><div class="nm">Fortress</div><span class="cd">BLD·10</span></div></figure>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <div class="specs">
+      <span>Orthographic top-down</span><span>NW key light</span><span>Flat 2-tone + 1 signal</span><span>Reads as silhouette @ 32px</span>
+    </div>
+    <div>WARLANDS · Art Direction Bible</div>
+  </footer>
+
+</div>
+</body>
+</html>

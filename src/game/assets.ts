@@ -9,11 +9,13 @@ import type { BuildingId } from "./buildings";
 import type { AllegianceBuildingId } from "./allegiance";
 import type { Rarity } from "./commanders";
 
-export const terrainArt = (id: TerrainId) => `/assets/terrain/${id}.png`;
-export const resourceArt = (id: ResourceId) => `/assets/resources/${id}.png`;
-export const unitArt = (id: UnitId) => `/assets/units/${id}.png`;
-export const buildingArt = (id: BuildingId) => `/assets/buildings/${id}.png`;
-export const allegianceBuildingArt = (id: AllegianceBuildingId) => `/assets/buildings/allegiance/${id}.png`;
+// Art ships as self-contained SVG (extracted from the design-system sprite sheet via
+// scripts/extract-art.mjs). Commander portraits have no vector source yet → fall back to emoji.
+export const terrainArt = (id: TerrainId) => `/assets/terrain/${id}.svg`;
+export const resourceArt = (id: ResourceId) => `/assets/resources/${id}.svg`;
+export const unitArt = (id: UnitId) => `/assets/units/${id}.svg`;
+export const buildingArt = (id: BuildingId) => `/assets/buildings/${id}.svg`;
+export const allegianceBuildingArt = (id: AllegianceBuildingId) => `/assets/buildings/allegiance/${id}.svg`;
 export const commanderPortrait = (n: number) => `/assets/commanders/portrait-${((n - 1) % 8) + 1}.png`;
 export const commanderFrame = (r: Rarity) => `/assets/commanders/frame-${r}.png`;
 

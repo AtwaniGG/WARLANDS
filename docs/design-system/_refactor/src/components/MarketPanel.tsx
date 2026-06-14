@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useGame } from "@/game/store";
 import { RESOURCES, RAW_RESOURCES, INTERMEDIATE_RESOURCES, FINISHED_RESOURCES, type ResourceId } from "@/game/resources";
 import { Button, Tabs, type TabItem } from "./ui";
-import { ResourceIcon } from "./GameIcons";
 
 function bestPrices(book: ReturnType<typeof useGame.getState>["book"], item: ResourceId) {
   const buys = book.filter((o) => o.side === "buy" && o.item === item).map((o) => o.price);
@@ -87,7 +86,7 @@ export function MarketPanel() {
               const hold = Math.floor(resourceTotal(item));
               return (
                 <tr key={item} style={{ borderTop: "1px solid var(--hairline)" }}>
-                  <td className="px-3 py-2"><span className="inline-flex items-center gap-1.5"><ResourceIcon id={item} size={15} /> {RESOURCES[item].name}</span></td>
+                  <td className="px-3 py-2">{RESOURCES[item].icon} {RESOURCES[item].name}</td>
                   <td className="wl-num px-2 py-2 text-right" style={{ color: "var(--text-lo)" }}>{hold.toLocaleString()}</td>
                   <td className="wl-num px-2 py-2 text-right" style={{ color: "var(--emerald-text)" }}>{bestBid?.toFixed(2) ?? "—"}</td>
                   <td className="wl-num px-2 py-2 text-right" style={{ color: "var(--text-muted)" }}>{ref[item].toFixed(2)}</td>
