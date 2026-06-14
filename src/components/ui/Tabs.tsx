@@ -32,6 +32,7 @@ export function Tabs<T extends string = string>({
         padding: "6px 12px",
         borderBottom: "1px solid var(--border-default)",
         background: "var(--bg-app)",
+        overflowX: "auto",
         ...style,
       }}
       {...rest}
