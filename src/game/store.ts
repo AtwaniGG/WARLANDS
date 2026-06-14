@@ -53,6 +53,7 @@ import {
   type TechId, type TechBonuses,
 } from "./research";
 import { eventById, rollEvent, EVENT_INTERVAL_TICKS } from "./events";
+import { ACHIEVEMENTS, QUESTS, EMPTY_STATS, type Stats } from "./achievements";
 
 export const WORLD_RADIUS = 9;
 export const RECRUIT_REROLL_COST = 500; // §13 sink
@@ -139,6 +140,9 @@ interface GameState {
   activeEventId: string | null; // current world event (GDD §9, §15.3)
   eventEndsAt: number; // tick the active event ends
   nextEventAt: number; // tick the next event may fire
+  stats: Stats; // lifetime stats (permanent account layer)
+  unlockedAchievements: string[]; // permanent
+  completedQuests: string[]; // permanent (one-time rewards)
   season: SeasonState;
   selectedHex: string | null;
   tick: number;
@@ -319,6 +323,32 @@ function applyCommanderXp(commanders: Commander[], commanderId: string | undefin
   });
 }
 
+/** Unlock newly-earned achievements & complete quests; returns deltas + reward + messages. */
+function checkProgress(state: { stats: Stats; unlockedAchievements: string[]; completedQuests: string[] }) {
+  const msgs: string[] = [];
+  let rewardWar = 0;
+  let achChanged = false;
+  let questChanged = false;
+  const newAch = [...state.unlockedAchievements];
+  for (const a of ACHIEVEMENTS) {
+    if (!newAch.includes(a.id) && state.stats[a.stat] >= a.threshold) {
+      newAch.push(a.id);
+      achChanged = true;
+      msgs.push(`${a.icon} Achievement unlocked: ${a.name}!`);
+    }
+  }
+  const newQuests = [...state.completedQuests];
+  for (const q of QUESTS) {
+    if (!newQuests.includes(q.id) && state.stats[q.stat] >= q.target) {
+      newQuests.push(q.id);
+      questChanged = true;
+      rewardWar += q.reward;
+      msgs.push(`✅ Quest complete: ${q.name} (+${q.reward.toLocaleString()} $WAR)`);
+    }
+  }
+  return { newAch, newQuests, rewardWar, msgs, achChanged, questChanged };
+}
+
 const INITIAL_WORLD = generateWorld(WORLD_RADIUS);
 
 /** Fresh economic/military/season state (everything except the derived world). */
@@ -360,6 +390,9 @@ export const useGame = create<GameState>()(
   ...freshState(),
   world: INITIAL_WORLD,
   commanders: [] as Commander[], // permanent — preserved across resetGame
+  stats: { ...EMPTY_STATS }, // permanent account layer
+  unlockedAchievements: [] as string[],
+  completedQuests: [] as string[],
 
   ownedPlots: () => Object.values(get().plots),
 
@@ -405,6 +438,7 @@ export const useGame = create<GameState>()(
       plots: { ...state.plots, [key]: plot },
       war: state.war - def.stake,
       warStaked: state.warStaked + def.stake,
+      stats: { ...state.stats, plotsClaimed: state.stats.plotsClaimed + 1 },
       selectedHex: key,
       log: [`Staked ${def.stake.toLocaleString()} $WAR → claimed ${def.name}. (DR ×${diminishingReturns(claimIndex).toFixed(2)})`, ...state.log].slice(0, 50),
     });
@@ -593,6 +627,9 @@ export const useGame = create<GameState>()(
       npcs,
       plots: { ...state.plots, [fromPlot]: { ...plot, army: plotArmy, resources } },
       commanders: result.attackerWins ? applyCommanderXp(state.commanders, cmd?.id, npc.tier * 40) : state.commanders,
+      stats: result.attackerWins
+        ? { ...state.stats, raidsWon: state.stats.raidsWon + (intent === "raid" ? 1 : 0), siegesWon: state.stats.siegesWon + (intent === "siege" ? 1 : 0) }
+        : state.stats,
       battleReport: { ...result, target: `Camp (${npc.q},${npc.r})` },
       season: result.attackerWins
         ? { ...state.season, scoreMilitary: state.season.scoreMilitary + npc.tier * 100 }
@@ -642,6 +679,7 @@ export const useGame = create<GameState>()(
       war: state.war - total,
       warBurned: state.warBurned + Math.round(fee * FEE_BURN_SHARE),
       seasonPool: state.seasonPool + (fee - Math.round(fee * FEE_BURN_SHARE)),
+      stats: { ...state.stats, trades: state.stats.trades + 1 },
       log: [`Bought ${filled} ${item} for ${Math.ceil(cost).toLocaleString()} $WAR (+${fee} fee).`, ...state.log].slice(0, 50),
     });
   },
@@ -686,6 +724,7 @@ export const useGame = create<GameState>()(
       warBurned: state.warBurned + Math.round(fee * FEE_BURN_SHARE),
       seasonPool: state.seasonPool + (fee - Math.round(fee * FEE_BURN_SHARE)),
       season: { ...state.season, scoreEcon: state.season.scoreEcon + net },
+      stats: { ...state.stats, trades: state.stats.trades + 1 },
       log: [`Sold ${sold} ${item} for ${net.toLocaleString()} $WAR (after ${fee} fee).`, ...state.log].slice(0, 50),
     });
   },
@@ -737,6 +776,7 @@ export const useGame = create<GameState>()(
     set({
       war: state.war + payout,
       seasonPool: state.seasonPool - payout, // remainder rolls into next season's pool
+      stats: { ...state.stats, seasonsPlayed: state.stats.seasonsPlayed + 1 },
       season: {
         index: state.season.index + 1,
         startTick: state.tick,
@@ -855,6 +895,7 @@ export const useGame = create<GameState>()(
         empires,
         plots: { ...state.plots, [fromPlot]: { ...plot, army: plotArmy, resources } },
         commanders: applyCommanderXp(state.commanders, cmd?.id, empire.tier * 80),
+        stats: { ...state.stats, empiresEliminated: state.stats.empiresEliminated + 1, siegesWon: state.stats.siegesWon + (intent === "siege" ? 1 : 0), raidsWon: state.stats.raidsWon + (intent === "raid" ? 1 : 0) },
         battleReport: { ...result, target: empire.name },
         season: { ...state.season, scoreMilitary: state.season.scoreMilitary + empire.tier * 250 },
         log: [`💀 ${empire.name} has been eliminated!`, ...state.log].slice(0, 50),
@@ -867,6 +908,9 @@ export const useGame = create<GameState>()(
       empires,
       plots: { ...state.plots, [fromPlot]: { ...plot, army: plotArmy, resources } },
       commanders: result.attackerWins ? applyCommanderXp(state.commanders, cmd?.id, empire.tier * 60) : state.commanders,
+      stats: result.attackerWins
+        ? { ...state.stats, raidsWon: state.stats.raidsWon + (intent === "raid" ? 1 : 0), siegesWon: state.stats.siegesWon + (intent === "siege" ? 1 : 0) }
+        : state.stats,
       battleReport: { ...result, target: `${empire.name} (${target.q},${target.r})` },
       season: result.attackerWins
         ? { ...state.season, scoreMilitary: state.season.scoreMilitary + empire.tier * 120 }
@@ -903,6 +947,7 @@ export const useGame = create<GameState>()(
       war: state.war - cost,
       warBurned: state.warBurned + Math.round(cost * 0.5),
       commanders: [...state.commanders, c],
+      stats: { ...state.stats, commandersRecruited: state.stats.commandersRecruited + 1 },
       recruitPool: state.recruitPool.filter((x) => x.id !== id),
       log: [`Recruited ${c.icon} ${c.name} (${c.rarity}).`, ...state.log].slice(0, 50),
     });
@@ -939,6 +984,7 @@ export const useGame = create<GameState>()(
       war: state.war - t.costWar,
       warBurned: state.warBurned + Math.round(t.costWar * 0.5),
       unlockedTech: [...state.unlockedTech, id],
+      stats: { ...state.stats, techsResearched: state.stats.techsResearched + 1 },
       log: [`🔬 Researched ${t.name} (${t.branch}).`, ...state.log].slice(0, 50),
     });
   },
@@ -1310,9 +1356,12 @@ export const useGame = create<GameState>()(
       eventMsgs.push(`${e.icon} World Event: ${e.name} — ${e.desc}`);
     }
 
+    // Achievements & quests (GDD §2 cadences)
+    const prog = checkProgress(state);
+
     const marketLog = marketWar > 0 ? [`Market: limit orders filled for +${marketWar.toLocaleString()} $WAR.`] : [];
-    const nextLog = eventMsgs.length || empLog.length || marketLog.length
-      ? [...eventMsgs, ...empLog, ...marketLog, ...state.log].slice(0, 50)
+    const nextLog = prog.msgs.length || eventMsgs.length || empLog.length || marketLog.length
+      ? [...prog.msgs, ...eventMsgs, ...empLog, ...marketLog, ...state.log].slice(0, 50)
       : state.log;
 
     set({
@@ -1326,9 +1375,11 @@ export const useGame = create<GameState>()(
       activeEventId,
       eventEndsAt,
       nextEventAt,
-      war: state.war + marketWar,
+      war: state.war + marketWar + prog.rewardWar,
       warBurned: state.warBurned + marketBurn,
       seasonPool: state.seasonPool + marketPool,
+      unlockedAchievements: prog.achChanged ? prog.newAch : state.unlockedAchievements,
+      completedQuests: prog.questChanged ? prog.newQuests : state.completedQuests,
       season: marketWar > 0 ? { ...state.season, scoreEcon: state.season.scoreEcon + marketWar } : state.season,
       log: nextLog,
     });
@@ -1365,6 +1416,9 @@ export const useGame = create<GameState>()(
         activeEventId: s.activeEventId,
         eventEndsAt: s.eventEndsAt,
         nextEventAt: s.nextEventAt,
+        stats: s.stats,
+        unlockedAchievements: s.unlockedAchievements,
+        completedQuests: s.completedQuests,
         season: s.season,
         selectedHex: s.selectedHex,
         tick: s.tick,

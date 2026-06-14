@@ -14,10 +14,11 @@ import { WalletPanel } from "./WalletPanel";
 import { DiplomacyPanel } from "./DiplomacyPanel";
 import { CommandersPanel } from "./CommandersPanel";
 import { ResearchPanel } from "./ResearchPanel";
+import { QuestsPanel } from "./QuestsPanel";
 import { EventBanner } from "./EventBanner";
 import { Tabs, type TabItem } from "./ui";
 
-type View = "map" | "market" | "research" | "allegiance" | "diplomacy" | "commanders" | "season" | "wallet";
+type View = "map" | "market" | "research" | "allegiance" | "diplomacy" | "commanders" | "quests" | "season" | "wallet";
 
 const TABS: TabItem<View>[] = [
   { id: "map", label: "World", icon: "🗺️" },
@@ -26,6 +27,7 @@ const TABS: TabItem<View>[] = [
   { id: "allegiance", label: "Allegiance", icon: "🤝" },
   { id: "diplomacy", label: "Diplomacy", icon: "⚔️" },
   { id: "commanders", label: "Commanders", icon: "🎖️" },
+  { id: "quests", label: "Quests", icon: "📜" },
   { id: "season", label: "Season", icon: "🏆" },
   { id: "wallet", label: "Wallet", icon: "🔗" },
 ];
@@ -65,6 +67,7 @@ export function GameShell() {
             {view === "allegiance" && <AllegiancePanel />}
             {view === "diplomacy" && <DiplomacyPanel />}
             {view === "commanders" && <CommandersPanel />}
+            {view === "quests" && <QuestsPanel />}
             {view === "season" && <SeasonPanel />}
             {view === "wallet" && <WalletPanel />}
           </div>
