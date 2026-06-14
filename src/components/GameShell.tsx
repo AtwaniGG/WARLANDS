@@ -21,6 +21,7 @@ import { LeaderboardPanel } from "./LeaderboardPanel";
 import { EventBanner } from "./EventBanner";
 import { SettingsEffects, SettingsModal } from "./SettingsModal";
 import { Toaster } from "./Toaster";
+import { TutorialOverlay } from "./TutorialOverlay";
 import { Tabs, type TabItem } from "./ui";
 
 type View = "map" | "market" | "research" | "allegiance" | "diplomacy" | "commanders" | "quests" | "stats" | "leaderboard" | "season" | "wallet";
@@ -63,6 +64,7 @@ export function GameShell() {
       <GameClock />
       <SettingsEffects />
       <Toaster />
+      <TutorialOverlay />
       <BattleReport />
       {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
       <TopBar onOpenSettings={() => setSettingsOpen(true)} />

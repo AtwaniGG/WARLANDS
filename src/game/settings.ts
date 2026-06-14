@@ -8,6 +8,7 @@ export interface Settings {
   reducedMotion: boolean;
   colorblind: boolean;
   speed: number; // tick-rate multiplier (0.5 .. 4)
+  tutorialDone: boolean;
   set: <K extends keyof Omit<Settings, "set">>(key: K, value: Settings[K]) => void;
 }
 
@@ -21,6 +22,7 @@ export const useSettings = create<Settings>()(
       reducedMotion: false,
       colorblind: false,
       speed: 1,
+      tutorialDone: false,
       set: (key, value) => set({ [key]: value } as Partial<Settings>),
     }),
     {
