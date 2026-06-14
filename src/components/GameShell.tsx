@@ -15,11 +15,13 @@ import { DiplomacyPanel } from "./DiplomacyPanel";
 import { CommandersPanel } from "./CommandersPanel";
 import { ResearchPanel } from "./ResearchPanel";
 import { QuestsPanel } from "./QuestsPanel";
+import { StatsPanel } from "./StatsPanel";
 import { EventBanner } from "./EventBanner";
 import { SettingsEffects } from "./SettingsModal";
+import { Toaster } from "./Toaster";
 import { Tabs, type TabItem } from "./ui";
 
-type View = "map" | "market" | "research" | "allegiance" | "diplomacy" | "commanders" | "quests" | "season" | "wallet";
+type View = "map" | "market" | "research" | "allegiance" | "diplomacy" | "commanders" | "quests" | "stats" | "season" | "wallet";
 
 const TABS: TabItem<View>[] = [
   { id: "map", label: "World", icon: "🗺️" },
@@ -29,6 +31,7 @@ const TABS: TabItem<View>[] = [
   { id: "diplomacy", label: "Diplomacy", icon: "⚔️" },
   { id: "commanders", label: "Commanders", icon: "🎖️" },
   { id: "quests", label: "Quests", icon: "📜" },
+  { id: "stats", label: "Stats", icon: "📊" },
   { id: "season", label: "Season", icon: "🏆" },
   { id: "wallet", label: "Wallet", icon: "🔗" },
 ];
@@ -40,6 +43,7 @@ export function GameShell() {
     <div className="flex h-dvh flex-col" style={{ background: "var(--panel-void)", color: "var(--text-hi)" }}>
       <GameClock />
       <SettingsEffects />
+      <Toaster />
       <BattleReport />
       <TopBar />
 
@@ -70,6 +74,7 @@ export function GameShell() {
             {view === "diplomacy" && <DiplomacyPanel />}
             {view === "commanders" && <CommandersPanel />}
             {view === "quests" && <QuestsPanel />}
+            {view === "stats" && <StatsPanel />}
             {view === "season" && <SeasonPanel />}
             {view === "wallet" && <WalletPanel />}
           </div>

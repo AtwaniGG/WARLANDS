@@ -72,6 +72,16 @@ export interface SeasonState {
   lastPayout: number | null;
 }
 
+/** A sampled snapshot for the stats dashboard charts. */
+export interface HistoryPoint {
+  tick: number;
+  war: number;
+  staked: number;
+  burned: number;
+  pool: number;
+  plots: number;
+}
+
 export interface AllegianceBuffs {
   production: number; // production multiplier bonus (e.g. 0.12)
   defense: number; // defense bonus
@@ -143,6 +153,7 @@ interface GameState {
   stats: Stats; // lifetime stats (permanent account layer)
   unlockedAchievements: string[]; // permanent
   completedQuests: string[]; // permanent (one-time rewards)
+  history: HistoryPoint[]; // sampled time-series for charts
   season: SeasonState;
   selectedHex: string | null;
   tick: number;
@@ -373,6 +384,7 @@ function freshState() {
     activeEventId: null as string | null,
     eventEndsAt: 0,
     nextEventAt: 25,
+    history: [] as HistoryPoint[],
     season: { index: 1, startTick: 0, lengthTicks: SEASON_TICKS, scoreEcon: 0, scoreMilitary: 0, lastPayout: null as number | null },
     selectedHex: null as string | null,
     tick: 0,
@@ -1359,6 +1371,21 @@ export const useGame = create<GameState>()(
     // Achievements & quests (GDD §2 cadences)
     const prog = checkProgress(state);
 
+    // Sample the macro time-series every 5 ticks for the stats dashboard.
+    const newWar = state.war + marketWar + prog.rewardWar;
+    let history = state.history;
+    if (nextTick % 5 === 0) {
+      const point: HistoryPoint = {
+        tick: nextTick,
+        war: newWar,
+        staked: state.warStaked,
+        burned: state.warBurned + marketBurn,
+        pool: state.seasonPool + marketPool,
+        plots: Object.keys(plots).length,
+      };
+      history = [...state.history, point].slice(-48);
+    }
+
     const marketLog = marketWar > 0 ? [`Market: limit orders filled for +${marketWar.toLocaleString()} $WAR.`] : [];
     const nextLog = prog.msgs.length || eventMsgs.length || empLog.length || marketLog.length
       ? [...prog.msgs, ...eventMsgs, ...empLog, ...marketLog, ...state.log].slice(0, 50)
@@ -1380,6 +1407,7 @@ export const useGame = create<GameState>()(
       seasonPool: state.seasonPool + marketPool,
       unlockedAchievements: prog.achChanged ? prog.newAch : state.unlockedAchievements,
       completedQuests: prog.questChanged ? prog.newQuests : state.completedQuests,
+      history,
       season: marketWar > 0 ? { ...state.season, scoreEcon: state.season.scoreEcon + marketWar } : state.season,
       log: nextLog,
     });
@@ -1419,6 +1447,7 @@ export const useGame = create<GameState>()(
         stats: s.stats,
         unlockedAchievements: s.unlockedAchievements,
         completedQuests: s.completedQuests,
+        history: s.history,
         season: s.season,
         selectedHex: s.selectedHex,
         tick: s.tick,
