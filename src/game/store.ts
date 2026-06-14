@@ -39,6 +39,10 @@ import {
   ALLEGIANCE_BUILDINGS, generateAiAllegiances, aiVotes, proposalPasses,
   type Allegiance, type GovModel, type AllegianceBuildingId, type Proposal,
 } from "./allegiance";
+import {
+  generateEmpires,
+  type Empire, type Stance,
+} from "./empire";
 
 export const WORLD_RADIUS = 9;
 export const TICK_MS = 1000; // 1 real second = 1 game tick (prototype speed)
@@ -116,6 +120,7 @@ interface GameState {
   book: MarketOrder[];
   allegiances: Record<string, Allegiance>;
   playerAllegianceId: string | null;
+  empires: Record<string, Empire>;
   season: SeasonState;
   selectedHex: string | null;
   tick: number;
@@ -149,6 +154,12 @@ interface GameState {
   // season actions (GDD §14-15)
   seasonScore: () => { econ: number; military: number; territory: number; allegiance: number; total: number };
   endSeason: () => void;
+
+  // diplomacy & rival empires (GDD §10.5-10.6)
+  empireAt: (key: string) => { empireId: string; empire: Empire } | null;
+  setStance: (empireId: string, stance: Stance) => void;
+  scoutEmpire: (empireId: string, fromPlot: string) => void;
+  raidEmpire: (targetKey: string, fromPlot: string, army: Army, intent: "raid" | "siege") => void;
 
   // meta
   resetGame: () => void;
@@ -206,6 +217,11 @@ function addRes(bag: ResourceBag, id: ResourceId, amt: number, cap: number): voi
   bag[id] = Math.min(cap, (bag[id] ?? 0) + amt);
 }
 
+/** Rough "richness" of a plot — total stored resources. Used to pick AI raid targets. */
+function resourceWorth(plot: Plot): number {
+  return Object.values(plot.resources).reduce((s, v) => s + (v ?? 0), 0);
+}
+
 /** Remove `qty` of an item from the player's plots (drawing from richest first). */
 function withdrawFromPlots(state: { plots: Record<string, Plot> }, item: ResourceId, qty: number): Record<string, Plot> {
   let remaining = qty;
@@ -256,13 +272,16 @@ const INITIAL_WORLD = generateWorld(WORLD_RADIUS);
 
 /** Fresh economic/military/season state (everything except the derived world). */
 function freshState() {
+  const npcs = generateNpcs(INITIAL_WORLD);
+  const empires = generateEmpires(INITIAL_WORLD, new Set(Object.keys(npcs)));
   return {
     war: STARTING_WAR,
     warStaked: 0,
     warBurned: 0,
     seasonPool: 0,
     plots: {} as Record<string, Plot>,
-    npcs: generateNpcs(INITIAL_WORLD),
+    npcs,
+    empires,
     refPrices: { ...BASE_PRICE },
     book: generateBook(BASE_PRICE, 99),
     allegiances: generateAiAllegiances(),
@@ -281,22 +300,8 @@ const noopStorage: StateStorage = { getItem: () => null, setItem: () => {}, remo
 export const useGame = create<GameState>()(
   persist(
     (set, get) => ({
+  ...freshState(),
   world: INITIAL_WORLD,
-  war: STARTING_WAR,
-  warStaked: 0,
-  warBurned: 0,
-  seasonPool: 0,
-  plots: {},
-  npcs: generateNpcs(INITIAL_WORLD),
-  refPrices: { ...BASE_PRICE },
-  book: generateBook(BASE_PRICE, 99),
-  allegiances: generateAiAllegiances(),
-  playerAllegianceId: null,
-  season: { index: 1, startTick: 0, lengthTicks: SEASON_TICKS, scoreEcon: 0, scoreMilitary: 0, lastPayout: null },
-  selectedHex: null,
-  tick: 0,
-  log: ["Welcome, Commander. Stake $WAR to claim your first plot."],
-  battleReport: null,
 
   ownedPlots: () => Object.values(get().plots),
 
@@ -687,6 +692,122 @@ export const useGame = create<GameState>()(
     });
   },
 
+  // ---------- Diplomacy & rival empires (GDD §10.5-10.6) ----------
+  empireAt: (key) => {
+    const empires = get().empires;
+    for (const e of Object.values(empires)) {
+      if (e.plots[key]) return { empireId: e.id, empire: e };
+    }
+    return null;
+  },
+
+  setStance: (empireId, stance) => {
+    const state = get();
+    const e = state.empires[empireId];
+    if (!e) return;
+    const verb = stance === "war" ? "declared WAR on" : stance === "ally" ? "allied with" : "made peace with";
+    set({
+      empires: { ...state.empires, [empireId]: { ...e, stance } },
+      log: [`Diplomacy: you ${verb} ${e.name}.`, ...state.log].slice(0, 50),
+    });
+  },
+
+  scoutEmpire: (empireId, fromPlot) => {
+    const state = get();
+    const e = state.empires[empireId];
+    if (!e || !state.plots[fromPlot]) return;
+    const cost = 80;
+    if (state.war < cost) {
+      set({ log: [`Need ${cost} $WAR to run espionage.`, ...state.log].slice(0, 50) });
+      return;
+    }
+    set({
+      war: state.war - cost,
+      warBurned: state.warBurned + cost,
+      empires: { ...state.empires, [empireId]: { ...e, scouted: true } },
+      log: [`Espionage on ${e.name}: ${Object.keys(e.plots).length} territories revealed.`, ...state.log].slice(0, 50),
+    });
+  },
+
+  raidEmpire: (targetKey, fromPlot, army, intent) => {
+    const state = get();
+    const found = get().empireAt(targetKey);
+    const plot = state.plots[fromPlot];
+    if (!found || !plot) return;
+    const { empireId, empire } = found;
+    const target = empire.plots[targetKey];
+    if (!target) return;
+    for (const id of UNIT_IDS) {
+      if ((army[id] ?? 0) > (plot.army[id] ?? 0)) return;
+    }
+    if (armySize(army) === 0) {
+      set({ log: ["Select units to send.", ...state.log].slice(0, 50) });
+      return;
+    }
+
+    const terrain = PLOT_TYPES[target.terrain];
+    const result = resolveBattle({
+      seed: (state.tick + 1) * 40503 + target.q * 31 + target.r * 7,
+      intent,
+      attacker: army,
+      defender: target.garrison,
+      terrainFactor: terrain.defenseMult >= 1 ? terrain.defenseMult : 1 - (1 - terrain.defenseMult) * 0.5,
+      scoutFactor: empire.scouted ? 1.1 : 0.97,
+      defenderStock: target.stock,
+      defensePct: 1,
+    });
+
+    // attacking an empire forces a state of war
+    const empires = { ...state.empires };
+    const e = { ...empire, stance: "war" as Stance, plots: { ...empire.plots } };
+
+    // return survivors to the launching plot, deduct sent army
+    const plotArmy: Army = { ...plot.army };
+    for (const id of UNIT_IDS) {
+      plotArmy[id] = (plotArmy[id] ?? 0) - (army[id] ?? 0) + (result.attackerSurvivors[id] ?? 0);
+      if (!plotArmy[id]) delete plotArmy[id];
+    }
+    const cap = get().storageCap(plot);
+    const resources = { ...plot.resources };
+    for (const [k, v] of Object.entries(result.loot)) addRes(resources, k as ResourceId, v as number, cap);
+
+    if (result.attackerWins) {
+      if (intent === "siege") {
+        // conquer the territory: empire loses the plot
+        delete e.plots[targetKey];
+      } else {
+        // raid: garrison depleted, stock looted
+        e.plots[targetKey] = { ...target, garrison: result.defenderSurvivors, stock: {} };
+      }
+    } else {
+      e.plots[targetKey] = { ...target, garrison: result.defenderSurvivors };
+    }
+
+    // eliminate empire if it lost all territory
+    if (Object.keys(e.plots).length === 0) {
+      delete empires[empireId];
+      set({
+        empires,
+        plots: { ...state.plots, [fromPlot]: { ...plot, army: plotArmy, resources } },
+        battleReport: { ...result, target: empire.name },
+        season: { ...state.season, scoreMilitary: state.season.scoreMilitary + empire.tier * 250 },
+        log: [`💀 ${empire.name} has been eliminated!`, ...state.log].slice(0, 50),
+      });
+      return;
+    }
+    empires[empireId] = e;
+
+    set({
+      empires,
+      plots: { ...state.plots, [fromPlot]: { ...plot, army: plotArmy, resources } },
+      battleReport: { ...result, target: `${empire.name} (${target.q},${target.r})` },
+      season: result.attackerWins
+        ? { ...state.season, scoreMilitary: state.season.scoreMilitary + empire.tier * 120 }
+        : state.season,
+      log: [`${intent === "siege" ? "Siege" : "Raid"} vs ${empire.name}: ${result.summary}`, ...state.log].slice(0, 50),
+    });
+  },
+
   resetGame: () => {
     set({ ...freshState(), log: ["New world generated. Stake $WAR to claim your first plot."] });
   },
@@ -815,6 +936,7 @@ export const useGame = create<GameState>()(
     const buffs = get().allegianceBuffs();
     const plots = { ...state.plots };
     const plotList = Object.values(plots);
+    const empLog: string[] = []; // empire-AI messages collected this tick
 
     for (const plot of plotList) {
       const cap = get().storageCap(plot);
@@ -956,6 +1078,65 @@ export const useGame = create<GameState>()(
       }
     }
 
+    // ---- Rival empires: passive regen + war retaliation (GDD §10.5) ----
+    let empires = state.empires;
+    {
+      const empCopy: typeof empires = {};
+      let empChanged = false;
+      const playerKeys = Object.keys(plots);
+      for (const [eid, e] of Object.entries(state.empires)) {
+        const ne = { ...e, plots: { ...e.plots } };
+        // light passive regrowth of garrisons every 10 ticks
+        if (nextTick % 10 === 0) {
+          for (const [k, ep] of Object.entries(ne.plots)) {
+            ne.plots[k] = { ...ep, garrison: { ...ep.garrison, infantry: (ep.garrison.infantry ?? 0) + e.tier } };
+          }
+          empChanged = true;
+        }
+        // war retaliation: strike the player's richest plot
+        if (e.stance === "war" && nextTick % 5 === 0 && playerKeys.length > 0) {
+          const r = ((nextTick * 9301 + e.tier * 49297) % 233280) / 233280;
+          if (r < 0.5) {
+            const strike: Army = {};
+            for (const ep of Object.values(e.plots)) {
+              for (const id of UNIT_IDS) strike[id] = (strike[id] ?? 0) + Math.floor((ep.garrison[id] ?? 0) * 0.2);
+            }
+            if (armySize(strike) > 0) {
+              const targetKey = playerKeys
+                .slice()
+                .sort((a, b) => resourceWorth(plots[b]) - resourceWorth(plots[a]))[0];
+              const tp = plots[targetKey];
+              const terrain = PLOT_TYPES[tp.terrain];
+              const res = resolveBattle({
+                seed: nextTick * 131 + e.tier * 17,
+                intent: "raid",
+                attacker: strike,
+                defender: tp.army,
+                terrainFactor: terrain.defenseMult,
+                defenderStock: tp.resources,
+                defensePct: tp.defensePct,
+              });
+              if (res.attackerWins) {
+                const looted = { ...tp.resources };
+                for (const [k, v] of Object.entries(res.loot)) {
+                  looted[k as ResourceId] = Math.max(0, (looted[k as ResourceId] ?? 0) - (v as number));
+                }
+                plots[targetKey] = { ...tp, resources: looted, army: res.defenderSurvivors };
+                empLog.unshift(`⚠️ ${e.name} raided ${tp.name} and stole resources!`);
+              } else {
+                plots[targetKey] = { ...tp, army: res.defenderSurvivors };
+                empLog.unshift(`🛡️ You repelled a raid from ${e.name}.`);
+              }
+            }
+          }
+        }
+        empCopy[eid] = ne;
+      }
+      if (empChanged || Object.values(state.empires).some((e) => e.stance === "war")) {
+        empires = empCopy;
+      }
+    }
+
     // NPC camps respawn 60 ticks after defeat (regenerated by deterministic gen seed)
     const npcs = { ...state.npcs };
     let respawned = false;
@@ -966,10 +1147,16 @@ export const useGame = create<GameState>()(
       }
     }
 
+    const marketLog = marketWar > 0 ? [`Market: limit orders filled for +${marketWar.toLocaleString()} $WAR.`] : [];
+    const nextLog = empLog.length || marketLog.length
+      ? [...empLog, ...marketLog, ...state.log].slice(0, 50)
+      : state.log;
+
     set({
       plots,
       npcs: respawned ? npcs : state.npcs,
       allegiances,
+      empires,
       tick: nextTick,
       refPrices,
       book,
@@ -977,7 +1164,7 @@ export const useGame = create<GameState>()(
       warBurned: state.warBurned + marketBurn,
       seasonPool: state.seasonPool + marketPool,
       season: marketWar > 0 ? { ...state.season, scoreEcon: state.season.scoreEcon + marketWar } : state.season,
-      log: marketWar > 0 ? [`Market: limit orders filled for +${marketWar.toLocaleString()} $WAR.`, ...state.log].slice(0, 50) : state.log,
+      log: nextLog,
     });
 
     // Auto-resolve the season when its window closes (GDD §15)
@@ -1004,6 +1191,7 @@ export const useGame = create<GameState>()(
         book: s.book,
         allegiances: s.allegiances,
         playerAllegianceId: s.playerAllegianceId,
+        empires: s.empires,
         season: s.season,
         selectedHex: s.selectedHex,
         tick: s.tick,

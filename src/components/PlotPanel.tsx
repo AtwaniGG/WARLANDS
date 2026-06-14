@@ -5,7 +5,7 @@ import { PLOT_TYPES } from "@/game/plotTypes";
 import { BUILDINGS, BUILDING_IDS, isBuildingAllowedOnTerrain } from "@/game/buildings";
 import { RESOURCES, type ResourceId } from "@/game/resources";
 import { upgradeCost, diminishingReturns } from "@/game/formulas";
-import { MilitaryPanel, RaidPanel } from "./MilitaryPanel";
+import { MilitaryPanel, RaidPanel, EmpirePlotPanel } from "./MilitaryPanel";
 
 function num(n: number | undefined) {
   return Math.floor(n ?? 0).toLocaleString();
@@ -23,6 +23,7 @@ export function PlotPanel() {
   const setFactoryProduct = useGame((s) => s.setFactoryProduct);
   const unstake = useGame((s) => s.unstake);
   const storageCap = useGame((s) => s.storageCap);
+  const empireAt = useGame((s) => s.empireAt);
 
   if (!selected) {
     return (
@@ -37,6 +38,18 @@ export function PlotPanel() {
   const def = PLOT_TYPES[hex.terrain];
   const plot = plots[selected];
   const npc = npcs[selected];
+  const empire = empireAt(selected);
+
+  // --- Rival empire territory: diplomacy + raid/siege, no claim ---
+  if (!plot && empire) {
+    return (
+      <div className="space-y-3 p-4">
+        <EmpirePlotPanel hexKey={selected} />
+        <div className="text-xs text-zinc-400">Hex ({hex.q}, {hex.r}) · {def.name} held by {empire.empire.name}.</div>
+        <p className="text-[11px] text-zinc-500">Conquer this empire&apos;s territory (siege) to open the land for claiming.</p>
+      </div>
+    );
+  }
 
   // --- Unclaimed: show stake/claim CTA (+ raid panel if a hostile camp sits here) ---
   if (!plot) {

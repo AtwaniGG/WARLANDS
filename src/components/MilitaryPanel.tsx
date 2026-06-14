@@ -146,3 +146,68 @@ function fullArmy(a: Army): Army {
   for (const id of UNIT_IDS) if (a[id]) out[id] = a[id];
   return out;
 }
+
+/** Shown when a rival-empire territory hex is selected. */
+export function EmpirePlotPanel({ hexKey }: { hexKey: string }) {
+  const found = useGame((s) => s.empireAt)(hexKey);
+  const plots = useGame((s) => s.plots);
+  const setStance = useGame((s) => s.setStance);
+  const scoutEmpire = useGame((s) => s.scoutEmpire);
+  const raidEmpire = useGame((s) => s.raidEmpire);
+
+  if (!found) return null;
+  const { empire } = found;
+  const owned = Object.entries(plots);
+  if (owned.length === 0) {
+    return (
+      <div className="space-y-2 rounded-md border p-3" style={{ borderColor: empire.color + "55" }}>
+        <div className="text-sm font-bold" style={{ color: empire.color }}>{empire.banner} {empire.name}</div>
+        <p className="text-xs text-zinc-500">Claim and garrison a plot before engaging an empire.</p>
+      </div>
+    );
+  }
+  const [baseKey, base] = owned.sort((a, b) => armySize(b[1].army) - armySize(a[1].army))[0];
+  const target = empire.plots[hexKey];
+
+  return (
+    <div className="space-y-2 rounded-md border p-3" style={{ borderColor: empire.color + "66", background: empire.color + "11" }}>
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-bold" style={{ color: empire.color }}>{empire.banner} {empire.name}</span>
+        <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${empire.stance === "war" ? "bg-red-900/60 text-red-200" : empire.stance === "ally" ? "bg-sky-900/60 text-sky-200" : "bg-zinc-800 text-zinc-300"}`}>
+          {empire.stance.toUpperCase()}
+        </span>
+      </div>
+
+      {empire.scouted && target ? (
+        <div className="text-xs text-zinc-300">
+          <span className="text-zinc-500">Garrison: </span>
+          {UNIT_IDS.filter((u) => (target.garrison[u] ?? 0) > 0).map((u) => `${UNITS[u].icon}${target.garrison[u]}`).join(" ")}
+        </div>
+      ) : (
+        <p className="text-xs text-zinc-400">Strength unknown. Run espionage (80 $WAR) to reveal garrisons.</p>
+      )}
+
+      <div className="flex flex-wrap gap-1">
+        <button onClick={() => scoutEmpire(empire.id, baseKey)} disabled={empire.scouted}
+          className="rounded bg-purple-800 px-2 py-1 text-[11px] font-semibold hover:bg-purple-700 disabled:opacity-40">🕵️ Espionage</button>
+        <button onClick={() => raidEmpire(hexKey, baseKey, fullArmy(base.army), "raid")} disabled={armySize(base.army) === 0}
+          className="rounded bg-amber-600 px-2 py-1 text-[11px] font-semibold text-black hover:bg-amber-500 disabled:opacity-40">🗡️ Raid</button>
+        <button onClick={() => raidEmpire(hexKey, baseKey, fullArmy(base.army), "siege")} disabled={armySize(base.army) === 0}
+          className="rounded bg-red-700 px-2 py-1 text-[11px] font-semibold hover:bg-red-600 disabled:opacity-40">🏰 Siege (conquer)</button>
+      </div>
+
+      <div className="flex flex-wrap gap-1 border-t border-zinc-800 pt-2">
+        {empire.stance !== "war" && (
+          <button onClick={() => setStance(empire.id, "war")} className="rounded border border-red-500/40 px-2 py-0.5 text-[10px] text-red-300 hover:bg-red-500/10">Declare War</button>
+        )}
+        {empire.stance === "war" && (
+          <button onClick={() => setStance(empire.id, "neutral")} className="rounded border border-zinc-600 px-2 py-0.5 text-[10px] text-zinc-300 hover:bg-zinc-800">Sue for Peace</button>
+        )}
+        {empire.stance !== "ally" && (
+          <button onClick={() => setStance(empire.id, "ally")} className="rounded border border-sky-500/40 px-2 py-0.5 text-[10px] text-sky-300 hover:bg-sky-500/10">Propose Alliance</button>
+        )}
+      </div>
+      <p className="text-[11px] text-zinc-500">Launching from <span className="text-zinc-300">{base.name}</span> · {armySize(base.army)} troops. Siege victories conquer the territory.</p>
+    </div>
+  );
+}

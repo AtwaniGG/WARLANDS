@@ -4,6 +4,7 @@ import { useMemo, useRef, useState, useCallback } from "react";
 import { useGame, WORLD_RADIUS } from "@/game/store";
 import { axialToPixel, hexKey, zoneForRing, type Hex } from "@/game/world";
 import { PLOT_TYPES } from "@/game/plotTypes";
+import { empireIndex } from "@/game/empire";
 
 const HEX_SIZE = 26;
 
@@ -20,8 +21,11 @@ export function HexMap() {
   const world = useGame((s) => s.world);
   const plots = useGame((s) => s.plots);
   const npcs = useGame((s) => s.npcs);
+  const empires = useGame((s) => s.empires);
   const selected = useGame((s) => s.selectedHex);
   const select = useGame((s) => s.select);
+
+  const empIdx = useMemo(() => empireIndex(empires), [empires]);
 
   const [view, setView] = useState({ x: 0, y: 0, scale: 1 });
   const [isDragging, setIsDragging] = useState(false);
@@ -81,31 +85,47 @@ export function HexMap() {
           const owned = plots[key];
           const npc = npcs[key];
           const npcActive = npc && npc.defeatedAtTick === null;
+          const empId = empIdx[key];
+          const empire = empId ? empires[empId] : undefined;
           const def = PLOT_TYPES[hex.terrain];
           const isSel = selected === key;
           const zone = zoneForRing(hex.ring, WORLD_RADIUS);
           const cx = x + offX;
           const cy = y + offY;
+          const stroke = isSel
+            ? "#ffd24a"
+            : owned
+              ? "#facc15"
+              : empire
+                ? empire.color
+                : npcActive
+                  ? "#dc2626"
+                  : "#1c2433";
           return (
             <g key={key} onClick={(e) => { e.stopPropagation(); select(key); }} style={{ cursor: "pointer" }}>
               <polygon
                 points={hexPoints(cx, cy, HEX_SIZE - 1)}
-                fill={def.color}
-                fillOpacity={owned ? 1 : 0.62}
-                stroke={isSel ? "#ffd24a" : owned ? "#facc15" : npcActive ? "#dc2626" : "#1c2433"}
-                strokeWidth={isSel ? 3 : owned || npcActive ? 2 : 1}
+                fill={empire ? empire.color : def.color}
+                fillOpacity={owned ? 1 : empire ? 0.78 : 0.62}
+                stroke={stroke}
+                strokeWidth={isSel ? 3 : owned || npcActive || empire ? 2 : 1}
               />
               {owned && (
                 <text x={cx} y={cy + 5} textAnchor="middle" fontSize={16} pointerEvents="none">
                   🏕️
                 </text>
               )}
-              {!owned && npcActive && (
+              {!owned && empire && (
+                <text x={cx} y={cy + 5} textAnchor="middle" fontSize={13} pointerEvents="none">
+                  {empire.banner}
+                </text>
+              )}
+              {!owned && !empire && npcActive && (
                 <text x={cx} y={cy + 5} textAnchor="middle" fontSize={14} pointerEvents="none">
                   💀
                 </text>
               )}
-              {zone === "crucible" && !owned && !npcActive && (
+              {zone === "crucible" && !owned && !npcActive && !empire && (
                 <text x={cx} y={cy + 4} textAnchor="middle" fontSize={11} fillOpacity={0.5} fill="#fff" pointerEvents="none">
                   ⚔
                 </text>
