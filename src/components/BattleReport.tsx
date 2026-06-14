@@ -1,8 +1,10 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useGame } from "@/game/store";
 import { UNITS, UNIT_IDS, type Army } from "@/game/units";
 import { RESOURCES, type ResourceId } from "@/game/resources";
+import { play } from "@/game/sound";
 import { Button } from "./ui";
 
 function Chip({ children }: { children: React.ReactNode }) {
@@ -28,6 +30,16 @@ function ArmyLine({ army, empty }: { army: Army; empty: string }) {
 export function BattleReport() {
   const report = useGame((s) => s.battleReport);
   const clear = useGame((s) => s.clearReport);
+  const lastWin = useRef<boolean | null>(null);
+
+  useEffect(() => {
+    if (report && lastWin.current !== report.attackerWins) {
+      play(report.attackerWins ? "victory" : "defeat");
+      lastWin.current = report.attackerWins;
+    }
+    if (!report) lastWin.current = null;
+  }, [report]);
+
   if (!report) return null;
 
   return (

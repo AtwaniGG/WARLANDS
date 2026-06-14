@@ -98,6 +98,19 @@ body {
   *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
 }
 
+/* Manual reduced-motion toggle (accessibility settings) */
+html.rm *, html.rm *::before, html.rm *::after {
+  animation-duration: 0.001ms !important;
+  transition-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+}
+
+/* Colorblind-safe remap: red→orange, green→blue (deuteranopia/protanopia friendly) */
+html.cb {
+  --blood: #d97706; --blood-text: #fb923c; --rim-enemy: #fb923c;
+  --success: #2563eb; --emerald-text: #60a5fa; --danger: #d97706; --danger-strong: #ea580c;
+}
+
 /* ============ WARLANDS landing atmosphere ============ */
 @keyframes wl-rise { from { opacity: 0; transform: translateY(22px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes wl-scan { 0% { transform: translateY(-10vh); opacity: 0; } 8% { opacity: 0.6; } 92% { opacity: 0.6; } 100% { transform: translateY(110vh); opacity: 0; } }

@@ -16,6 +16,7 @@ import { CommandersPanel } from "./CommandersPanel";
 import { ResearchPanel } from "./ResearchPanel";
 import { QuestsPanel } from "./QuestsPanel";
 import { EventBanner } from "./EventBanner";
+import { SettingsEffects } from "./SettingsModal";
 import { Tabs, type TabItem } from "./ui";
 
 type View = "map" | "market" | "research" | "allegiance" | "diplomacy" | "commanders" | "quests" | "season" | "wallet";
@@ -38,6 +39,7 @@ export function GameShell() {
   return (
     <div className="flex h-dvh flex-col" style={{ background: "var(--panel-void)", color: "var(--text-hi)" }}>
       <GameClock />
+      <SettingsEffects />
       <BattleReport />
       <TopBar />
 
