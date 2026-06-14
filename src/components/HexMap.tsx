@@ -5,6 +5,7 @@ import { useGame, WORLD_RADIUS } from "@/game/store";
 import { axialToPixel, hexKey, zoneForRing, type Hex } from "@/game/world";
 import { PLOT_TYPES } from "@/game/plotTypes";
 import { empireIndex } from "@/game/empire";
+import { Minimap } from "./Minimap";
 
 const HEX_SIZE = 26;
 
@@ -146,6 +147,8 @@ export function HexMap() {
           <span>· edge = newbie ring</span>
         </div>
       </div>
+
+      <Minimap />
     </div>
   );
 }
