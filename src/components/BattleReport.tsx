@@ -2,10 +2,11 @@
 
 import { useEffect, useRef } from "react";
 import { useGame } from "@/game/store";
-import { UNITS, UNIT_IDS, type Army } from "@/game/units";
+import { UNIT_IDS, type Army } from "@/game/units";
 import { RESOURCES, type ResourceId } from "@/game/resources";
 import { play } from "@/game/sound";
 import { Button } from "./ui";
+import { UnitIcon } from "./GameIcons";
 
 function Chip({ children }: { children: React.ReactNode }) {
   return (
@@ -21,7 +22,7 @@ function ArmyLine({ army, empty }: { army: Army; empty: string }) {
   return (
     <span className="flex flex-wrap gap-1">
       {items.map((u) => (
-        <Chip key={u}>{UNITS[u].icon} ×{army[u]}</Chip>
+        <Chip key={u}><UnitIcon id={u} size={14} /> ×{army[u]}</Chip>
       ))}
     </span>
   );

@@ -7,6 +7,7 @@ import { RESOURCES, type ResourceId } from "@/game/resources";
 import { upgradeCost, diminishingReturns } from "@/game/formulas";
 import { MilitaryPanel, RaidPanel, EmpirePlotPanel } from "./MilitaryPanel";
 import { Badge, Button, ResourceChip } from "./ui";
+import { ResourceIcon } from "./GameIcons";
 
 function num(n: number | undefined) {
   return Math.floor(n ?? 0).toLocaleString();
@@ -122,7 +123,7 @@ export function PlotPanel() {
             .map((r) => (
               <ResourceChip
                 key={r}
-                icon={RESOURCES[r].icon}
+                icon={<ResourceIcon id={r} size={15} />}
                 name={RESOURCES[r].name}
                 amount={num(plot.resources[r])}
                 tier={RESOURCES[r].tier}

@@ -5,6 +5,8 @@ import { useGame, WORLD_RADIUS } from "@/game/store";
 import { axialToPixel, hexKey, zoneForRing, type Hex } from "@/game/world";
 import { PLOT_TYPES } from "@/game/plotTypes";
 import { empireIndex } from "@/game/empire";
+import { terrainArt, TERRAIN_PROBE } from "@/game/assets";
+import { useImageReady } from "./Sprite";
 import { Minimap } from "./Minimap";
 
 const HEX_SIZE = 26;
@@ -27,6 +29,7 @@ export function HexMap() {
   const select = useGame((s) => s.select);
 
   const empIdx = useMemo(() => empireIndex(empires), [empires]);
+  const terrainReady = useImageReady(TERRAIN_PROBE) === "ok";
 
   const [view, setView] = useState({ x: 0, y: 0, scale: 1 });
   const [isDragging, setIsDragging] = useState(false);
@@ -82,6 +85,11 @@ export function HexMap() {
         style={{ transform: `translate(${view.x}px,${view.y}px) scale(${view.scale})`, cursor: isDragging ? "grabbing" : "grab" }}
         className="select-none transition-transform duration-75"
       >
+        <defs>
+          <clipPath id="wl-hexclip" clipPathUnits="userSpaceOnUse">
+            <polygon points={hexPoints(0, 0, HEX_SIZE - 1)} />
+          </clipPath>
+        </defs>
         {hexes.map(({ hex, x, y }) => {
           const key = hexKey(hex.q, hex.r);
           const owned = plots[key];
@@ -105,12 +113,25 @@ export function HexMap() {
                   : "var(--rim-neutral)";
           return (
             <g key={key} onClick={(e) => { e.stopPropagation(); select(key); }} style={{ cursor: "pointer" }}>
+              {terrainReady && (
+                <g transform={`translate(${cx},${cy})`} clipPath="url(#wl-hexclip)">
+                  <image
+                    href={terrainArt(hex.terrain)}
+                    x={-HEX_SIZE}
+                    y={-HEX_SIZE}
+                    width={HEX_SIZE * 2}
+                    height={HEX_SIZE * 2}
+                    preserveAspectRatio="xMidYMid slice"
+                  />
+                </g>
+              )}
               <polygon
                 points={hexPoints(cx, cy, HEX_SIZE - 1)}
                 strokeWidth={isSel ? 3 : owned || npcActive || empire ? 2 : 1}
                 style={{
                   fill: empire ? empire.color : def.color,
-                  fillOpacity: owned ? 1 : empire ? 0.78 : 0.62,
+                  // With real terrain art, only tint for ownership/empire; otherwise fill with terrain color.
+                  fillOpacity: terrainReady ? (owned ? 0 : empire ? 0.4 : 0) : owned ? 1 : empire ? 0.78 : 0.62,
                   stroke,
                 }}
               />

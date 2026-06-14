@@ -4,6 +4,7 @@ import { useGame } from "@/game/store";
 import { SKILLS, RARITY_META, xpForLevel, type Commander } from "@/game/commanders";
 import { PLOT_TYPES } from "@/game/plotTypes";
 import { Button, Panel, Badge } from "./ui";
+import { CommanderPortrait } from "./GameIcons";
 
 function rarityTone(r: Commander["rarity"]) {
   return r === "legendary" ? "amber" : r === "epic" ? "violet" : r === "rare" ? "sky" : "neutral";
@@ -42,7 +43,9 @@ export function CommandersPanel() {
               return (
                 <div key={c.id} className="p-3" style={{ borderRadius: "var(--radius-md)", border: `1px solid ${RARITY_META[c.rarity].color}55`, background: "var(--panel-2)" }}>
                   <div className="flex items-center justify-between">
-                    <span style={{ fontWeight: 600 }}>{c.icon} {c.name}</span>
+                    <span className="flex items-center gap-1.5" style={{ fontWeight: 600 }}>
+                      <CommanderPortrait id={c.id} fallback={c.icon} rarity={c.rarity} size={24} /> {c.name}
+                    </span>
                     <Badge tone={rarityTone(c.rarity)}>{c.rarity}</Badge>
                   </div>
                   <div className="mt-1" style={{ fontSize: "11px", color: "var(--text-lo)" }}>
@@ -90,7 +93,9 @@ export function CommandersPanel() {
             return (
               <div key={c.id} className="p-3" style={{ borderRadius: "var(--radius-md)", border: "1px solid var(--hairline)", background: "var(--panel-2)" }}>
                 <div className="flex items-center justify-between">
-                  <span style={{ fontWeight: 600 }}>{c.icon} {c.name}</span>
+                  <span className="flex items-center gap-1.5" style={{ fontWeight: 600 }}>
+                    <CommanderPortrait id={c.id} fallback={c.icon} rarity={c.rarity} size={24} /> {c.name}
+                  </span>
                   <Badge tone={rarityTone(c.rarity)}>{c.rarity}</Badge>
                 </div>
                 <div className="mt-1" style={{ fontSize: "11px", color: "var(--text-lo)" }}>{s.icon} {s.name} — {s.desc}</div>

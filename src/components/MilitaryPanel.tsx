@@ -4,6 +4,7 @@ import { useGame } from "@/game/store";
 import { UNITS, UNIT_IDS, armySize, type UnitId, type Army } from "@/game/units";
 import { RESOURCES, type ResourceId } from "@/game/resources";
 import { Badge, Button } from "./ui";
+import { UnitIcon } from "./GameIcons";
 
 /** A left-label / right-meta selectable row (train + construct share this shape). */
 function MenuRow({
@@ -72,7 +73,7 @@ export function MilitaryPanel({ plotKey }: { plotKey: string }) {
         <div className="flex flex-wrap gap-1">
           {UNIT_IDS.filter((u) => (plot.army[u] ?? 0) > 0).map((u) => (
             <UnitChip key={u}>
-              {UNITS[u].icon} {UNITS[u].name} ×{plot.army[u]}
+              <UnitIcon id={u} size={14} /> {UNITS[u].name} ×{plot.army[u]}
             </UnitChip>
           ))}
         </div>
@@ -101,7 +102,7 @@ export function MilitaryPanel({ plotKey }: { plotKey: string }) {
               key={u}
               onClick={() => trainUnit(plotKey, u as UnitId)}
               title={def.desc}
-              left={<>{def.icon} {def.name} <span style={{ color: "var(--text-muted)" }}>A{def.attack}/D{def.defense}</span></>}
+              left={<><UnitIcon id={def.id} size={14} /> {def.name} <span style={{ color: "var(--text-muted)" }}>A{def.attack}/D{def.defense}</span></>}
               right={<>{def.costWar}$ {costStr}</>}
             />
           );
@@ -150,7 +151,7 @@ export function RaidPanel({ npcKey }: { npcKey: string }) {
               <div className="mb-1" style={{ color: "var(--text-muted)" }}>Scouted garrison:</div>
               <div className="flex flex-wrap gap-1">
                 {UNIT_IDS.filter((u) => (npc.army[u] ?? 0) > 0).map((u) => (
-                  <UnitChip key={u}>{UNITS[u].icon}×{npc.army[u]}</UnitChip>
+                  <UnitChip key={u}><UnitIcon id={u} size={13} />×{npc.army[u]}</UnitChip>
                 ))}
               </div>
               <div className="mt-1" style={{ color: "var(--text-muted)" }}>Loot: {Object.entries(npc.stock).filter(([, v]) => (v as number) > 0).map(([k]) => RESOURCES[k as ResourceId].icon).join(" ")}</div>
