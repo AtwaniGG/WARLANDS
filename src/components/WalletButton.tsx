@@ -2,6 +2,7 @@
 
 import { useAccount, useConnect, useDisconnect } from "wagmi";
 import { injected } from "wagmi/connectors";
+import { Button } from "./ui";
 
 function truncate(addr: string) {
   return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
@@ -14,23 +15,15 @@ export function WalletButton() {
 
   if (isConnected && address) {
     return (
-      <button
-        onClick={() => disconnect()}
-        className="rounded bg-emerald-700/80 px-2.5 py-1 text-xs font-semibold text-emerald-100 hover:bg-emerald-700"
-        title="Disconnect"
-      >
+      <Button variant="success" size="sm" onClick={() => disconnect()} title="Disconnect">
         🟢 {truncate(address)}
-      </button>
+      </Button>
     );
   }
 
   return (
-    <button
-      onClick={() => connect({ connector: injected() })}
-      disabled={isPending}
-      className="rounded bg-amber-500 px-2.5 py-1 text-xs font-semibold text-black hover:bg-amber-400 disabled:opacity-50"
-    >
+    <Button variant="primary" size="sm" disabled={isPending} onClick={() => connect({ connector: injected() })}>
       {isPending ? "Connecting…" : "Connect Wallet"}
-    </button>
+    </Button>
   );
 }

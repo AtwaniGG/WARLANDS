@@ -5,11 +5,14 @@ import { useGame } from "@/game/store";
 export function EventLog() {
   const log = useGame((s) => s.log);
   return (
-    <div className="border-t border-zinc-800 bg-zinc-950/80 px-3 py-2">
-      <div className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Event Log</div>
-      <div className="max-h-24 space-y-0.5 overflow-y-auto text-xs text-zinc-400">
+    <div
+      className="px-3 py-2"
+      style={{ borderTop: "1px solid var(--hairline)", background: "rgba(8,11,17,0.8)" }}
+    >
+      <div className="wl-label mb-1">Event Log</div>
+      <div className="max-h-24 space-y-0.5 overflow-y-auto" style={{ fontSize: "12px" }}>
         {log.map((line, i) => (
-          <div key={i} className={i === 0 ? "text-zinc-200" : ""}>
+          <div key={i} style={{ color: i === 0 ? "var(--text-hi)" : "var(--text-lo)" }}>
             {line}
           </div>
         ))}

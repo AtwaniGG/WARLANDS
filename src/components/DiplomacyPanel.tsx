@@ -3,12 +3,41 @@
 import { useGame } from "@/game/store";
 import { empirePower, type Stance } from "@/game/empire";
 import { UNITS, UNIT_IDS } from "@/game/units";
+import { Badge, type BadgeTone } from "./ui";
 
-const STANCE_STYLE: Record<Stance, string> = {
-  neutral: "bg-zinc-800 text-zinc-300",
-  ally: "bg-sky-900/60 text-sky-200",
-  war: "bg-red-900/60 text-red-200",
+const STANCE_TONE: Record<Stance, BadgeTone> = {
+  neutral: "neutral",
+  ally: "sky",
+  war: "blood",
 };
+
+/** Token-styled outline stance button (shared shape across diplomacy actions). */
+function StanceButton({ onClick, tone, children }: { onClick: () => void; tone: "blood" | "sky" | "neutral"; children: React.ReactNode }) {
+  const map = {
+    blood: { color: "var(--blood-text)", border: "rgba(220,38,38,0.4)", hover: "rgba(220,38,38,0.1)" },
+    sky: { color: "var(--sky-text)", border: "rgba(74,144,217,0.4)", hover: "rgba(74,144,217,0.1)" },
+    neutral: { color: "var(--text-secondary)", border: "var(--border-strong)", hover: "rgba(255,255,255,0.05)" },
+  }[tone];
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={(e) => (e.currentTarget.style.background = map.hover)}
+      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+      style={{
+        borderRadius: "var(--radius-sm)",
+        border: `1px solid ${map.border}`,
+        background: "transparent",
+        padding: "4px 10px",
+        fontSize: "12px",
+        fontWeight: 600,
+        color: map.color,
+        cursor: "pointer",
+      }}
+    >
+      {children}
+    </button>
+  );
+}
 
 export function DiplomacyPanel() {
   const empires = useGame((s) => s.empires);
@@ -17,14 +46,17 @@ export function DiplomacyPanel() {
 
   return (
     <div className="mx-auto max-w-3xl p-5">
-      <h2 className="mb-1 text-xl font-bold text-amber-400">Diplomacy &amp; Rival Empires</h2>
-      <p className="mb-4 text-xs text-zinc-500">
+      <h2 className="wl-title mb-1" style={{ fontSize: "22px", color: "var(--amber)" }}>Diplomacy &amp; Rival Empires</h2>
+      <p className="mb-4" style={{ fontSize: "12px", color: "var(--text-muted)" }}>
         Rival powers hold territory across the map (GDD §10.5–10.6). Make peace, ally, or wage war —
         empires at war will raid your richest plots, and siege victories conquer their land.
       </p>
 
       {list.length === 0 ? (
-        <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-6 text-center text-sm text-zinc-400">
+        <div
+          className="p-6 text-center"
+          style={{ borderRadius: "var(--radius-lg)", border: "1px solid var(--hairline)", background: "var(--panel)", fontSize: "14px", color: "var(--text-lo)" }}
+        >
           🏆 All rival empires have been eliminated. The map is yours to contest.
         </div>
       ) : (
@@ -32,36 +64,30 @@ export function DiplomacyPanel() {
           {list.map((e) => {
             const territories = Object.keys(e.plots).length;
             return (
-              <div key={e.id} className="rounded-lg border bg-zinc-900 p-4" style={{ borderColor: e.color + "44" }}>
+              <div key={e.id} className="p-4" style={{ borderRadius: "var(--radius-lg)", border: `1px solid ${e.color}44`, background: "var(--panel)" }}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="text-lg font-bold" style={{ color: e.color }}>{e.banner} {e.name}</div>
-                    <div className="text-xs text-zinc-500">
+                    <div className="wl-title" style={{ fontSize: "18px", color: e.color }}>{e.banner} {e.name}</div>
+                    <div className="wl-num" style={{ fontSize: "12px", color: "var(--text-muted)" }}>
                       {territories} territories · power {empirePower(e)} · tier {e.tier}
                     </div>
                   </div>
-                  <span className={`rounded px-2 py-0.5 text-[10px] font-semibold ${STANCE_STYLE[e.stance]}`}>{e.stance.toUpperCase()}</span>
+                  <Badge tone={STANCE_TONE[e.stance]}>{e.stance}</Badge>
                 </div>
 
                 {e.scouted && (
-                  <div className="mt-2 flex flex-wrap gap-1 text-[11px] text-zinc-400">
+                  <div className="mt-2 flex flex-wrap gap-1" style={{ fontSize: "11px", color: "var(--text-lo)" }}>
                     {UNIT_IDS.map((u) => {
                       const n = Object.values(e.plots).reduce((s, p) => s + (p.garrison[u] ?? 0), 0);
-                      return n > 0 ? <span key={u} className="rounded bg-zinc-800 px-1.5 py-0.5">{UNITS[u].icon} {n}</span> : null;
+                      return n > 0 ? <span key={u} style={{ borderRadius: "var(--radius-sm)", background: "var(--surface-raised)", padding: "2px 6px" }}>{UNITS[u].icon} {n}</span> : null;
                     })}
                   </div>
                 )}
 
                 <div className="mt-3 flex flex-wrap gap-1">
-                  {e.stance !== "war" && (
-                    <button onClick={() => setStance(e.id, "war")} className="rounded border border-red-500/40 px-2.5 py-1 text-xs font-semibold text-red-300 hover:bg-red-500/10">Declare War</button>
-                  )}
-                  {e.stance === "war" && (
-                    <button onClick={() => setStance(e.id, "neutral")} className="rounded border border-zinc-600 px-2.5 py-1 text-xs font-semibold text-zinc-300 hover:bg-zinc-800">Sue for Peace</button>
-                  )}
-                  {e.stance !== "ally" && (
-                    <button onClick={() => setStance(e.id, "ally")} className="rounded border border-sky-500/40 px-2.5 py-1 text-xs font-semibold text-sky-300 hover:bg-sky-500/10">Propose Alliance</button>
-                  )}
+                  {e.stance !== "war" && <StanceButton tone="blood" onClick={() => setStance(e.id, "war")}>Declare War</StanceButton>}
+                  {e.stance === "war" && <StanceButton tone="neutral" onClick={() => setStance(e.id, "neutral")}>Sue for Peace</StanceButton>}
+                  {e.stance !== "ally" && <StanceButton tone="sky" onClick={() => setStance(e.id, "ally")}>Propose Alliance</StanceButton>}
                 </div>
               </div>
             );

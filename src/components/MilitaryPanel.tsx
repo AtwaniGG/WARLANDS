@@ -3,6 +3,59 @@
 import { useGame } from "@/game/store";
 import { UNITS, UNIT_IDS, armySize, type UnitId, type Army } from "@/game/units";
 import { RESOURCES, type ResourceId } from "@/game/resources";
+import { Badge, Button } from "./ui";
+
+/** A left-label / right-meta selectable row (train + construct share this shape). */
+function MenuRow({
+  onClick,
+  disabled,
+  title,
+  left,
+  right,
+}: {
+  onClick: () => void;
+  disabled?: boolean;
+  title?: string;
+  left: React.ReactNode;
+  right: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      className="flex items-center justify-between px-2 py-1.5 text-left"
+      style={{
+        borderRadius: "var(--radius-sm)",
+        border: "1px solid var(--hairline)",
+        background: "rgba(26,32,48,0.6)",
+        fontSize: "12px",
+        color: "var(--text-hi)",
+        cursor: disabled ? "not-allowed" : "pointer",
+        opacity: disabled ? 0.4 : 1,
+      }}
+    >
+      <span>{left}</span>
+      <span className="wl-num" style={{ fontSize: "10px", color: "var(--text-lo)" }}>{right}</span>
+    </button>
+  );
+}
+
+function UnitChip({ children }: { children: React.ReactNode }) {
+  return (
+    <span
+      style={{
+        borderRadius: "var(--radius-sm)",
+        background: "var(--surface-raised)",
+        padding: "4px 8px",
+        fontSize: "12px",
+        color: "var(--text-secondary)",
+      }}
+    >
+      {children}
+    </span>
+  );
+}
 
 /** Military management for the selected owned plot: train units + show garrison. */
 export function MilitaryPanel({ plotKey }: { plotKey: string }) {
@@ -14,30 +67,28 @@ export function MilitaryPanel({ plotKey }: { plotKey: string }) {
 
   return (
     <div className="space-y-2">
-      <div className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-        Garrison ({armySize(plot.army)} units)
-      </div>
+      <div className="wl-label">Garrison ({armySize(plot.army)} units)</div>
       {armySize(plot.army) > 0 ? (
         <div className="flex flex-wrap gap-1">
           {UNIT_IDS.filter((u) => (plot.army[u] ?? 0) > 0).map((u) => (
-            <span key={u} className="rounded bg-zinc-800/70 px-2 py-1 text-xs">
+            <UnitChip key={u}>
               {UNITS[u].icon} {UNITS[u].name} ×{plot.army[u]}
-            </span>
+            </UnitChip>
           ))}
         </div>
       ) : (
-        <p className="text-xs text-zinc-500">No troops. Train units below to defend or raid.</p>
+        <p style={{ fontSize: "12px", color: "var(--text-muted)" }}>No troops. Train units below to defend or raid.</p>
       )}
 
       {plot.trainQueue.length > 0 && (
-        <div className="text-[11px] text-amber-300">
+        <div className="wl-num" style={{ fontSize: "11px", color: "var(--amber-text)" }}>
           Training: {plot.trainQueue.map((t) => `${UNITS[t.unit].icon}${t.ticksLeft}s`).join(" · ")}
         </div>
       )}
 
-      <div className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Train Units</div>
+      <div className="wl-label">Train Units</div>
       {!hasArmsLab && (
-        <p className="text-[11px] text-zinc-500">Tip: build an Arms Factory / Heavy Works to produce unit inputs.</p>
+        <p style={{ fontSize: "11px", color: "var(--text-muted)" }}>Tip: build an Arms Factory / Heavy Works to produce unit inputs.</p>
       )}
       <div className="grid grid-cols-1 gap-1">
         {UNIT_IDS.map((u) => {
@@ -46,15 +97,13 @@ export function MilitaryPanel({ plotKey }: { plotKey: string }) {
             .map(([k, v]) => `${v}${RESOURCES[k as ResourceId].icon}`)
             .join(" ");
           return (
-            <button
+            <MenuRow
               key={u}
               onClick={() => trainUnit(plotKey, u as UnitId)}
-              className="flex items-center justify-between rounded bg-zinc-800/60 px-2 py-1.5 text-left text-xs hover:bg-zinc-700/70"
               title={def.desc}
-            >
-              <span>{def.icon} {def.name} <span className="text-zinc-500">A{def.attack}/D{def.defense}</span></span>
-              <span className="text-[10px] text-zinc-400">{def.costWar}$ {costStr}</span>
-            </button>
+              left={<>{def.icon} {def.name} <span style={{ color: "var(--text-muted)" }}>A{def.attack}/D{def.defense}</span></>}
+              right={<>{def.costWar}$ {costStr}</>}
+            />
           );
         })}
       </div>
@@ -74,7 +123,7 @@ export function RaidPanel({ npcKey }: { npcKey: string }) {
   if (!npc) return null;
 
   if (owned.length === 0) {
-    return <p className="p-1 text-xs text-zinc-500">Claim and garrison a plot before raiding.</p>;
+    return <p className="p-1" style={{ fontSize: "12px", color: "var(--text-muted)" }}>Claim and garrison a plot before raiding.</p>;
   }
 
   // launch base = owned plot with the most troops
@@ -83,56 +132,41 @@ export function RaidPanel({ npcKey }: { npcKey: string }) {
   const respawning = npc.defeatedAtTick !== null;
 
   return (
-    <div className="space-y-2 rounded-md border border-red-500/30 bg-red-950/20 p-3">
+    <div
+      className="space-y-2 p-3"
+      style={{ borderRadius: "var(--radius-md)", border: "1px solid rgba(220,38,38,0.3)", background: "rgba(156,43,43,0.12)" }}
+    >
       <div className="flex items-center justify-between">
-        <span className="text-sm font-bold text-red-300">⚔ Hostile Camp</span>
-        <span className="rounded bg-red-900/50 px-1.5 py-0.5 text-[10px] text-red-200">TIER {npc.tier}</span>
+        <span className="wl-title" style={{ fontSize: "14px", color: "var(--blood-text)" }}>⚔ Hostile Camp</span>
+        <Badge tone="blood">Tier {npc.tier}</Badge>
       </div>
 
       {respawning ? (
-        <p className="text-xs text-zinc-400">This camp was cleared. It will regroup shortly.</p>
+        <p style={{ fontSize: "12px", color: "var(--text-lo)" }}>This camp was cleared. It will regroup shortly.</p>
       ) : (
         <>
           {npc.scouted ? (
-            <div className="text-xs text-zinc-300">
-              <div className="mb-1 text-zinc-500">Scouted garrison:</div>
+            <div style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
+              <div className="mb-1" style={{ color: "var(--text-muted)" }}>Scouted garrison:</div>
               <div className="flex flex-wrap gap-1">
                 {UNIT_IDS.filter((u) => (npc.army[u] ?? 0) > 0).map((u) => (
-                  <span key={u} className="rounded bg-zinc-800/70 px-1.5 py-0.5">{UNITS[u].icon}×{npc.army[u]}</span>
+                  <UnitChip key={u}>{UNITS[u].icon}×{npc.army[u]}</UnitChip>
                 ))}
               </div>
-              <div className="mt-1 text-zinc-500">Loot: {Object.entries(npc.stock).filter(([, v]) => (v as number) > 0).map(([k]) => RESOURCES[k as ResourceId].icon).join(" ")}</div>
+              <div className="mt-1" style={{ color: "var(--text-muted)" }}>Loot: {Object.entries(npc.stock).filter(([, v]) => (v as number) > 0).map(([k]) => RESOURCES[k as ResourceId].icon).join(" ")}</div>
             </div>
           ) : (
-            <p className="text-xs text-zinc-400">Unknown strength. Scout first (50 $WAR) to reveal the garrison.</p>
+            <p style={{ fontSize: "12px", color: "var(--text-lo)" }}>Unknown strength. Scout first (50 $WAR) to reveal the garrison.</p>
           )}
 
           <div className="flex gap-1">
-            <button
-              onClick={() => scoutNpc(npcKey, baseKey)}
-              disabled={npc.scouted}
-              className="flex-1 rounded bg-sky-700 px-2 py-1 text-xs font-semibold hover:bg-sky-600 disabled:opacity-40"
-            >
-              🔭 Scout (50$)
-            </button>
-            <button
-              onClick={() => raidNpc(npcKey, baseKey, fullArmy(base.army), "raid")}
-              disabled={armySize(base.army) === 0}
-              className="flex-1 rounded bg-amber-600 px-2 py-1 text-xs font-semibold text-black hover:bg-amber-500 disabled:opacity-40"
-            >
-              🗡️ Raid
-            </button>
-            <button
-              onClick={() => raidNpc(npcKey, baseKey, fullArmy(base.army), "siege")}
-              disabled={armySize(base.army) === 0}
-              className="flex-1 rounded bg-red-700 px-2 py-1 text-xs font-semibold hover:bg-red-600 disabled:opacity-40"
-            >
-              🏰 Siege
-            </button>
+            <Button variant="info" size="sm" full disabled={npc.scouted} onClick={() => scoutNpc(npcKey, baseKey)}>🔭 Scout (50$)</Button>
+            <Button variant="primary" size="sm" full disabled={armySize(base.army) === 0} onClick={() => raidNpc(npcKey, baseKey, fullArmy(base.army), "raid")}>🗡️ Raid</Button>
+            <Button variant="danger" size="sm" full disabled={armySize(base.army) === 0} onClick={() => raidNpc(npcKey, baseKey, fullArmy(base.army), "siege")}>🏰 Siege</Button>
           </div>
-          <p className="text-[11px] text-zinc-500">
-            Launching from <span className="text-zinc-300">{base.name}</span> with{" "}
-            <span className="text-zinc-300">{armySize(base.army)}</span> troops.
+          <p style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+            Launching from <span style={{ color: "var(--text-secondary)" }}>{base.name}</span> with{" "}
+            <span style={{ color: "var(--text-secondary)" }}>{armySize(base.army)}</span> troops.
             {armySize(base.army) === 0 && " Train troops there first."}
           </p>
         </>
@@ -145,6 +179,34 @@ function fullArmy(a: Army): Army {
   const out: Army = {};
   for (const id of UNIT_IDS) if (a[id]) out[id] = a[id];
   return out;
+}
+
+/** A small token-styled diplomacy / stance pill-button. */
+function StanceButton({ onClick, tone, children }: { onClick: () => void; tone: "blood" | "sky" | "neutral"; children: React.ReactNode }) {
+  const map = {
+    blood: { color: "var(--blood-text)", border: "rgba(220,38,38,0.4)", hover: "rgba(220,38,38,0.1)" },
+    sky: { color: "var(--sky-text)", border: "rgba(74,144,217,0.4)", hover: "rgba(74,144,217,0.1)" },
+    neutral: { color: "var(--text-secondary)", border: "var(--border-strong)", hover: "rgba(255,255,255,0.05)" },
+  }[tone];
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={(e) => (e.currentTarget.style.background = map.hover)}
+      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+      style={{
+        borderRadius: "var(--radius-sm)",
+        border: `1px solid ${map.border}`,
+        background: "transparent",
+        padding: "2px 8px",
+        fontSize: "10px",
+        fontWeight: 600,
+        color: map.color,
+        cursor: "pointer",
+      }}
+    >
+      {children}
+    </button>
+  );
 }
 
 /** Shown when a rival-empire territory hex is selected. */
@@ -160,54 +222,44 @@ export function EmpirePlotPanel({ hexKey }: { hexKey: string }) {
   const owned = Object.entries(plots);
   if (owned.length === 0) {
     return (
-      <div className="space-y-2 rounded-md border p-3" style={{ borderColor: empire.color + "55" }}>
-        <div className="text-sm font-bold" style={{ color: empire.color }}>{empire.banner} {empire.name}</div>
-        <p className="text-xs text-zinc-500">Claim and garrison a plot before engaging an empire.</p>
+      <div className="space-y-2 p-3" style={{ borderRadius: "var(--radius-md)", border: `1px solid ${empire.color}55` }}>
+        <div className="wl-title" style={{ fontSize: "14px", color: empire.color }}>{empire.banner} {empire.name}</div>
+        <p style={{ fontSize: "12px", color: "var(--text-muted)" }}>Claim and garrison a plot before engaging an empire.</p>
       </div>
     );
   }
   const [baseKey, base] = owned.sort((a, b) => armySize(b[1].army) - armySize(a[1].army))[0];
   const target = empire.plots[hexKey];
+  const stanceTone = empire.stance === "war" ? "blood" : empire.stance === "ally" ? "sky" : "neutral";
 
   return (
-    <div className="space-y-2 rounded-md border p-3" style={{ borderColor: empire.color + "66", background: empire.color + "11" }}>
+    <div className="space-y-2 p-3" style={{ borderRadius: "var(--radius-md)", border: `1px solid ${empire.color}66`, background: `${empire.color}11` }}>
       <div className="flex items-center justify-between">
-        <span className="text-sm font-bold" style={{ color: empire.color }}>{empire.banner} {empire.name}</span>
-        <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${empire.stance === "war" ? "bg-red-900/60 text-red-200" : empire.stance === "ally" ? "bg-sky-900/60 text-sky-200" : "bg-zinc-800 text-zinc-300"}`}>
-          {empire.stance.toUpperCase()}
-        </span>
+        <span className="wl-title" style={{ fontSize: "14px", color: empire.color }}>{empire.banner} {empire.name}</span>
+        <Badge tone={stanceTone}>{empire.stance}</Badge>
       </div>
 
       {empire.scouted && target ? (
-        <div className="text-xs text-zinc-300">
-          <span className="text-zinc-500">Garrison: </span>
+        <div style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
+          <span style={{ color: "var(--text-muted)" }}>Garrison: </span>
           {UNIT_IDS.filter((u) => (target.garrison[u] ?? 0) > 0).map((u) => `${UNITS[u].icon}${target.garrison[u]}`).join(" ")}
         </div>
       ) : (
-        <p className="text-xs text-zinc-400">Strength unknown. Run espionage (80 $WAR) to reveal garrisons.</p>
+        <p style={{ fontSize: "12px", color: "var(--text-lo)" }}>Strength unknown. Run espionage (80 $WAR) to reveal garrisons.</p>
       )}
 
       <div className="flex flex-wrap gap-1">
-        <button onClick={() => scoutEmpire(empire.id, baseKey)} disabled={empire.scouted}
-          className="rounded bg-purple-800 px-2 py-1 text-[11px] font-semibold hover:bg-purple-700 disabled:opacity-40">🕵️ Espionage</button>
-        <button onClick={() => raidEmpire(hexKey, baseKey, fullArmy(base.army), "raid")} disabled={armySize(base.army) === 0}
-          className="rounded bg-amber-600 px-2 py-1 text-[11px] font-semibold text-black hover:bg-amber-500 disabled:opacity-40">🗡️ Raid</button>
-        <button onClick={() => raidEmpire(hexKey, baseKey, fullArmy(base.army), "siege")} disabled={armySize(base.army) === 0}
-          className="rounded bg-red-700 px-2 py-1 text-[11px] font-semibold hover:bg-red-600 disabled:opacity-40">🏰 Siege (conquer)</button>
+        <Button variant="secondary" size="sm" disabled={empire.scouted} onClick={() => scoutEmpire(empire.id, baseKey)} style={{ background: "var(--violet)", color: "#0c0a14", border: "none" }}>🕵️ Espionage</Button>
+        <Button variant="primary" size="sm" disabled={armySize(base.army) === 0} onClick={() => raidEmpire(hexKey, baseKey, fullArmy(base.army), "raid")}>🗡️ Raid</Button>
+        <Button variant="danger" size="sm" disabled={armySize(base.army) === 0} onClick={() => raidEmpire(hexKey, baseKey, fullArmy(base.army), "siege")}>🏰 Siege (conquer)</Button>
       </div>
 
-      <div className="flex flex-wrap gap-1 border-t border-zinc-800 pt-2">
-        {empire.stance !== "war" && (
-          <button onClick={() => setStance(empire.id, "war")} className="rounded border border-red-500/40 px-2 py-0.5 text-[10px] text-red-300 hover:bg-red-500/10">Declare War</button>
-        )}
-        {empire.stance === "war" && (
-          <button onClick={() => setStance(empire.id, "neutral")} className="rounded border border-zinc-600 px-2 py-0.5 text-[10px] text-zinc-300 hover:bg-zinc-800">Sue for Peace</button>
-        )}
-        {empire.stance !== "ally" && (
-          <button onClick={() => setStance(empire.id, "ally")} className="rounded border border-sky-500/40 px-2 py-0.5 text-[10px] text-sky-300 hover:bg-sky-500/10">Propose Alliance</button>
-        )}
+      <div className="flex flex-wrap gap-1 pt-2" style={{ borderTop: "1px solid var(--hairline)" }}>
+        {empire.stance !== "war" && <StanceButton tone="blood" onClick={() => setStance(empire.id, "war")}>Declare War</StanceButton>}
+        {empire.stance === "war" && <StanceButton tone="neutral" onClick={() => setStance(empire.id, "neutral")}>Sue for Peace</StanceButton>}
+        {empire.stance !== "ally" && <StanceButton tone="sky" onClick={() => setStance(empire.id, "ally")}>Propose Alliance</StanceButton>}
       </div>
-      <p className="text-[11px] text-zinc-500">Launching from <span className="text-zinc-300">{base.name}</span> · {armySize(base.army)} troops. Siege victories conquer the territory.</p>
+      <p style={{ fontSize: "11px", color: "var(--text-muted)" }}>Launching from <span style={{ color: "var(--text-secondary)" }}>{base.name}</span> · {armySize(base.army)} troops. Siege victories conquer the territory.</p>
     </div>
   );
 }

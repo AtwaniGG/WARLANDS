@@ -66,7 +66,8 @@ export function HexMap() {
 
   return (
     <div
-      className="relative h-full w-full overflow-hidden bg-[#0c1018]"
+      className="relative h-full w-full overflow-hidden"
+      style={{ background: "var(--panel-void)" }}
       onWheel={onWheel}
       onMouseDown={onDown}
       onMouseMove={onMove}
@@ -93,22 +94,24 @@ export function HexMap() {
           const cx = x + offX;
           const cy = y + offY;
           const stroke = isSel
-            ? "#ffd24a"
+            ? "var(--rim-selected)"
             : owned
-              ? "#facc15"
+              ? "var(--rim-owned)"
               : empire
                 ? empire.color
                 : npcActive
-                  ? "#dc2626"
-                  : "#1c2433";
+                  ? "var(--rim-enemy)"
+                  : "var(--rim-neutral)";
           return (
             <g key={key} onClick={(e) => { e.stopPropagation(); select(key); }} style={{ cursor: "pointer" }}>
               <polygon
                 points={hexPoints(cx, cy, HEX_SIZE - 1)}
-                fill={empire ? empire.color : def.color}
-                fillOpacity={owned ? 1 : empire ? 0.78 : 0.62}
-                stroke={stroke}
                 strokeWidth={isSel ? 3 : owned || npcActive || empire ? 2 : 1}
+                style={{
+                  fill: empire ? empire.color : def.color,
+                  fillOpacity: owned ? 1 : empire ? 0.78 : 0.62,
+                  stroke,
+                }}
               />
               {owned && (
                 <text x={cx} y={cy + 5} textAnchor="middle" fontSize={16} pointerEvents="none">
@@ -135,10 +138,10 @@ export function HexMap() {
         })}
       </svg>
 
-      <div className="pointer-events-none absolute left-3 top-3 rounded-md bg-black/60 px-3 py-2 text-xs text-zinc-300">
-        <div className="font-semibold text-amber-400">Live World Map</div>
+      <div className="pointer-events-none absolute left-3 top-3 px-3 py-2" style={{ borderRadius: "var(--radius-md)", background: "rgba(0,0,0,0.6)", fontSize: "12px", color: "var(--text-secondary)" }}>
+        <div className="wl-title" style={{ fontSize: "13px", color: "var(--amber-text)" }}>Live World Map</div>
         <div>Drag to pan · scroll to zoom · click a hex</div>
-        <div className="mt-1 flex gap-2 text-[10px]">
+        <div className="mt-1 flex gap-2" style={{ fontSize: "10px", color: "var(--text-muted)" }}>
           <span>⚔ Crucible (center, high risk)</span>
           <span>· edge = newbie ring</span>
         </div>

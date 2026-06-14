@@ -8,19 +8,19 @@ const PILLARS = [
     no: "01",
     title: "Land is staked, not bought",
     body: "Lock $WAR to secure a plot — never spent, always returnable. Conquest transfers the right to the land, never your principal. Skin in the game without loot in the game.",
-    accent: "#f5b301",
+    accent: "var(--amber)",
   },
   {
     no: "02",
     title: "Economy before war",
     body: "No army without a supply chain. No plot makes everything well. Specialization and trade are structurally forced — then war disrupts what the economy built.",
-    accent: "#3f9aa6",
+    accent: "var(--teal)",
   },
   {
     no: "03",
     title: "War funded by sinks, not emissions",
     body: "Every reward $WAR is first collected from a real sink. The protocol can never pay out more than it took in. No infinite emissions. No death spiral.",
-    accent: "#9c2b2b",
+    accent: "var(--blood)",
   },
 ];
 
@@ -39,7 +39,7 @@ export default function Landing() {
       {/* nav */}
       <nav className="relative z-10 mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
         <div className="flex items-center gap-2">
-          <span className="grid h-7 w-7 place-items-center bg-[#f5b301] font-black text-black" style={{ fontFamily: "var(--font-display)" }}>W</span>
+          <span className="grid h-7 w-7 place-items-center font-black text-black" style={{ fontFamily: "var(--font-display)", background: "var(--amber)" }}>W</span>
           <span className="text-lg font-bold tracking-[0.2em] text-zinc-100" style={{ fontFamily: "var(--font-display)" }}>WARLANDS</span>
         </div>
         <div className="hidden items-center gap-7 text-xs uppercase tracking-widest text-zinc-400 md:flex">
@@ -64,7 +64,7 @@ export default function Landing() {
           <span className="wl-rise block" style={{ animationDelay: "80ms" }}>STAKE THE LAND.</span>
           <span className="wl-rise block text-amber-400" style={{ animationDelay: "180ms" }}>FORGE AN EMPIRE.</span>
           <span className="wl-rise block" style={{ animationDelay: "280ms" }}>
-            WAGE <span className="text-[#9c2b2b]">WAR</span>.
+            WAGE <span style={{ color: "var(--blood)" }}>WAR</span>.
           </span>
         </h1>
 
@@ -91,7 +91,7 @@ export default function Landing() {
             ["TOKEN", "$WAR"],
             ["SEASON", "30 DAYS"],
           ].map(([k, v]) => (
-            <div key={k} className="bg-[#0c1018] px-4 py-3">
+            <div key={k} className="px-4 py-3" style={{ background: "var(--panel-void)" }}>
               <div className="text-[10px] uppercase tracking-widest text-zinc-500">{k}</div>
               <div className="mt-1 text-lg font-bold text-amber-300">{v}</div>
             </div>
@@ -127,7 +127,7 @@ export default function Landing() {
         <SectionLabel n="B" title="Doctrine" />
         <div className="mt-8 grid gap-px bg-zinc-800 md:grid-cols-3">
           {PILLARS.map((p) => (
-            <div key={p.no} className="group bg-[#0c1018] p-7 transition hover:bg-[#0f1420]">
+            <div key={p.no} className="group p-7 transition" style={{ background: "var(--panel-void)" }}>
               <div className="text-5xl font-bold text-zinc-800 transition group-hover:text-zinc-700" style={{ fontFamily: "var(--font-display)" }}>{p.no}</div>
               <div className="mt-3 h-0.5 w-10" style={{ background: p.accent }} />
               <h3 className="mt-4 text-xl font-semibold text-zinc-100" style={{ fontFamily: "var(--font-display)" }}>{p.title}</h3>
@@ -148,7 +148,7 @@ export default function Landing() {
           {TERRAIN_IDS.map((t) => {
             const d = PLOT_TYPES[t];
             return (
-              <div key={t} className="bg-[#0c1018] p-4 transition hover:bg-[#10151f]">
+              <div key={t} className="p-4 transition" style={{ background: "var(--panel-void)" }}>
                 <div className="flex items-center justify-between">
                   <span className="inline-block h-3 w-3" style={{ background: d.color }} />
                   <span className="text-[10px] uppercase tracking-widest text-zinc-600">DEF ×{d.defenseMult}</span>
@@ -172,12 +172,12 @@ export default function Landing() {
               on-chain invariant guarantees payouts can never exceed what sinks collected.
             </p>
             <div className="mt-6 space-y-3" style={{ fontFamily: "var(--font-mono)" }}>
-              <FlowRow label="BURN" pct="≥ 20%" desc="permanently removed · structural deflation" color="#9c2b2b" />
-              <FlowRow label="SEASON POOL" pct="~40%" desc="ranked player rewards (sink-funded)" color="#f5b301" />
-              <FlowRow label="REGION TAX" pct="~20%" desc="income for territory-holding Allegiances" color="#3f9aa6" />
+              <FlowRow label="BURN" pct="≥ 20%" desc="permanently removed · structural deflation" color="var(--blood)" />
+              <FlowRow label="SEASON POOL" pct="~40%" desc="ranked player rewards (sink-funded)" color="var(--amber)" />
+              <FlowRow label="REGION TAX" pct="~20%" desc="income for territory-holding Allegiances" color="var(--teal)" />
             </div>
           </div>
-          <div className="border border-zinc-800 bg-[#0c1018] p-6" style={{ fontFamily: "var(--font-mono)" }}>
+          <div className="border border-zinc-800 p-6" style={{ fontFamily: "var(--font-mono)", background: "var(--panel-void)" }}>
             <div className="text-[10px] uppercase tracking-widest text-zinc-500">Token flow</div>
             <pre className="mt-3 overflow-x-auto text-[11px] leading-relaxed text-zinc-400">{`PLAYERS
   │ fees · upkeep · speed-ups
@@ -236,7 +236,7 @@ function SectionLabel({ n, title }: { n: string; title: string }) {
 
 function FlowRow({ label, pct, desc, color }: { label: string; pct: string; desc: string; color: string }) {
   return (
-    <div className="flex items-center gap-3 border border-zinc-800 bg-[#0c1018] px-4 py-3">
+    <div className="flex items-center gap-3 border border-zinc-800 px-4 py-3" style={{ background: "var(--panel-void)" }}>
       <span className="inline-block h-8 w-1" style={{ background: color }} />
       <div className="flex-1">
         <div className="flex items-baseline justify-between">

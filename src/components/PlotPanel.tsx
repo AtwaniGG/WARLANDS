@@ -6,6 +6,7 @@ import { BUILDINGS, BUILDING_IDS, isBuildingAllowedOnTerrain } from "@/game/buil
 import { RESOURCES, type ResourceId } from "@/game/resources";
 import { upgradeCost, diminishingReturns } from "@/game/formulas";
 import { MilitaryPanel, RaidPanel, EmpirePlotPanel } from "./MilitaryPanel";
+import { Badge, Button, ResourceChip } from "./ui";
 
 function num(n: number | undefined) {
   return Math.floor(n ?? 0).toLocaleString();
@@ -27,7 +28,7 @@ export function PlotPanel() {
 
   if (!selected) {
     return (
-      <div className="p-4 text-sm text-zinc-400">
+      <div className="p-4" style={{ fontSize: "13px", color: "var(--text-lo)" }}>
         Select a hex on the map to inspect or claim it.
       </div>
     );
@@ -45,8 +46,8 @@ export function PlotPanel() {
     return (
       <div className="space-y-3 p-4">
         <EmpirePlotPanel hexKey={selected} />
-        <div className="text-xs text-zinc-400">Hex ({hex.q}, {hex.r}) · {def.name} held by {empire.empire.name}.</div>
-        <p className="text-[11px] text-zinc-500">Conquer this empire&apos;s territory (siege) to open the land for claiming.</p>
+        <div style={{ fontSize: "12px", color: "var(--text-lo)" }}>Hex ({hex.q}, {hex.r}) · {def.name} held by {empire.empire.name}.</div>
+        <p style={{ fontSize: "11px", color: "var(--text-muted)" }}>Conquer this empire&apos;s territory (siege) to open the land for claiming.</p>
       </div>
     );
   }
@@ -59,26 +60,25 @@ export function PlotPanel() {
       <div className="space-y-3 p-4">
         {npc && npc.defeatedAtTick === null && <RaidPanel npcKey={selected} />}
         <div>
-          <div className="text-lg font-bold" style={{ color: def.color }}>{def.name}</div>
-          <div className="text-xs text-zinc-400">Hex ({hex.q}, {hex.r}) · ring {hex.ring}</div>
+          <div className="wl-title" style={{ fontSize: "18px", color: def.color }}>{def.name}</div>
+          <div style={{ fontSize: "12px", color: "var(--text-lo)" }}>Hex ({hex.q}, {hex.r}) · ring {hex.ring}</div>
         </div>
-        <p className="text-sm text-zinc-300">{def.blurb}</p>
-        <div className="rounded-md bg-zinc-800/60 p-3 text-xs text-zinc-300 space-y-1">
+        <p style={{ fontSize: "14px", color: "var(--text-secondary)" }}>{def.blurb}</p>
+        <div
+          className="space-y-1 p-3"
+          style={{ borderRadius: "var(--radius-md)", background: "rgba(26,32,48,0.5)", fontSize: "12px" }}
+        >
           <Row label="Stake to claim" value={`${num(def.stake)} $WAR`} />
           <Row label="Defense mult" value={`×${def.defenseMult}`} />
           <Row label="Reward mult" value={`×${def.rewardMult}`} />
           <Row label="This would be plot #" value={`${claimIndex} (yield DR ×${diminishingReturns(claimIndex).toFixed(2)})`} />
           <Row label="Protection" value={def.protectable ? "eligible" : "never (warzone)"} />
         </div>
-        <button
-          disabled={!canAfford}
-          onClick={() => claimPlot(hex.q, hex.r)}
-          className="w-full rounded-md bg-amber-500 px-3 py-2 text-sm font-semibold text-black hover:bg-amber-400 disabled:cursor-not-allowed disabled:bg-zinc-700 disabled:text-zinc-400"
-        >
+        <Button variant="primary" full icon="⚔️" disabled={!canAfford} onClick={() => claimPlot(hex.q, hex.r)}>
           {canAfford ? `Stake ${num(def.stake)} $WAR & Claim` : "Insufficient $WAR"}
-        </button>
-        <p className="text-[11px] text-zinc-500">
-          Staked $WAR is <span className="text-zinc-300">locked, never spent</span>. You get it back
+        </Button>
+        <p style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+          Staked $WAR is <span style={{ color: "var(--text-secondary)" }}>locked, never spent</span>. You get it back
           on unstake (minus a small early-unstake fee). It can never be looted by other players.
         </p>
       </div>
@@ -102,28 +102,32 @@ export function PlotPanel() {
     <div className="space-y-4 p-4">
       <div>
         <div className="flex items-center justify-between">
-          <div className="text-lg font-bold" style={{ color: def.color }}>{plot.name}</div>
-          <span className="rounded bg-amber-500/20 px-2 py-0.5 text-[10px] font-semibold text-amber-300">OWNED</span>
+          <div className="wl-title" style={{ fontSize: "18px", color: def.color }}>{plot.name}</div>
+          <Badge tone="amber">Owned</Badge>
         </div>
-        <div className="text-xs text-zinc-400">
+        <div style={{ fontSize: "12px", color: "var(--text-lo)" }}>
           {def.name} · staked {num(plot.stakeLocked)} $WAR · plot #{plot.claimIndex} (DR ×{diminishingReturns(plot.claimIndex).toFixed(2)})
         </div>
-        <div className="mt-1 text-xs">
-          Defense: <span className={plot.defensePct < 0.6 ? "text-red-400" : "text-emerald-400"}>{Math.round(plot.defensePct * 100)}%</span>
+        <div className="mt-1" style={{ fontSize: "12px" }}>
+          Defense: <span style={{ color: plot.defensePct < 0.6 ? "var(--blood-text)" : "var(--emerald-text)" }}>{Math.round(plot.defensePct * 100)}%</span>
         </div>
       </div>
 
       {/* Inventory */}
       <div>
-        <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-zinc-500">Stockpile (cap {num(cap)})</div>
-        <div className="grid grid-cols-2 gap-1 text-xs">
+        <div className="wl-label mb-1">Stockpile (cap {num(cap)})</div>
+        <div className="grid grid-cols-2 gap-1">
           {(Object.keys(plot.resources) as ResourceId[])
             .filter((r) => (plot.resources[r] ?? 0) > 0.01)
             .map((r) => (
-              <div key={r} className="flex items-center justify-between rounded bg-zinc-800/50 px-2 py-1">
-                <span>{RESOURCES[r].icon} {RESOURCES[r].name}</span>
-                <span className="font-mono text-zinc-300">{num(plot.resources[r])}</span>
-              </div>
+              <ResourceChip
+                key={r}
+                icon={RESOURCES[r].icon}
+                name={RESOURCES[r].name}
+                amount={num(plot.resources[r])}
+                tier={RESOURCES[r].tier}
+                size="sm"
+              />
             ))}
         </div>
       </div>
@@ -131,25 +135,25 @@ export function PlotPanel() {
       {/* Buildings */}
       <div>
         <div className="mb-1 flex items-center justify-between">
-          <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Buildings</span>
-          <span className="text-[11px] text-zinc-500">slots {usedSlots}/{slotCap}</span>
+          <span className="wl-label">Buildings</span>
+          <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>slots {usedSlots}/{slotCap}</span>
         </div>
         <div className="space-y-1">
           {plot.buildings.map((b, i) => {
             const bd = BUILDINGS[b.id];
             const cost = upgradeCost(bd.baseCost || 200, b.level + 1);
             return (
-              <div key={i} className="rounded bg-zinc-800/50 p-2 text-xs">
+              <div
+                key={i}
+                className="p-2"
+                style={{ borderRadius: "var(--radius-sm)", background: "rgba(26,32,48,0.5)", fontSize: "12px" }}
+              >
                 <div className="flex items-center justify-between">
-                  <span>{bd.icon} {bd.name} <span className="text-zinc-500">L{b.level}</span></span>
+                  <span>{bd.icon} {bd.name} <span style={{ color: "var(--text-muted)" }}>L{b.level}</span></span>
                   {b.level < bd.maxLevel && (
-                    <button
-                      onClick={() => upgrade(selected, i)}
-                      disabled={war < cost}
-                      className="rounded bg-sky-600 px-2 py-0.5 text-[11px] font-semibold hover:bg-sky-500 disabled:bg-zinc-700 disabled:text-zinc-500"
-                    >
+                    <Button variant="info" size="sm" disabled={war < cost} onClick={() => upgrade(selected, i)}>
                       ⬆ {num(cost)}
-                    </button>
+                    </Button>
                   )}
                 </div>
                 {bd.kind === "factory" && bd.makes && (
@@ -158,7 +162,15 @@ export function PlotPanel() {
                       <button
                         key={p}
                         onClick={() => setFactoryProduct(selected, i, p)}
-                        className={`rounded px-1.5 py-0.5 text-[10px] ${b.activeProduct === p ? "bg-emerald-600 text-white" : "bg-zinc-700 text-zinc-300 hover:bg-zinc-600"}`}
+                        style={{
+                          borderRadius: "var(--radius-sm)",
+                          padding: "2px 6px",
+                          fontSize: "10px",
+                          cursor: "pointer",
+                          border: "none",
+                          color: b.activeProduct === p ? "#eafff2" : "var(--text-secondary)",
+                          background: b.activeProduct === p ? "#15803d" : "var(--surface-raised)",
+                        }}
                       >
                         {RESOURCES[p].icon} {RESOURCES[p].name}
                       </button>
@@ -173,7 +185,7 @@ export function PlotPanel() {
 
       {/* Build menu */}
       <div>
-        <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-zinc-500">Construct</div>
+        <div className="wl-label mb-1">Construct</div>
         <div className="grid grid-cols-1 gap-1">
           {buildable.map((id) => {
             const bd = BUILDINGS[id];
@@ -186,10 +198,19 @@ export function PlotPanel() {
                 key={id}
                 onClick={() => build(selected, id)}
                 disabled={blocked}
-                className="flex items-center justify-between rounded bg-zinc-800/60 px-2 py-1.5 text-left text-xs hover:bg-zinc-700/70 disabled:opacity-40"
+                className="flex items-center justify-between px-2 py-1.5 text-left"
+                style={{
+                  borderRadius: "var(--radius-sm)",
+                  border: "1px solid var(--hairline)",
+                  background: "rgba(26,32,48,0.6)",
+                  fontSize: "12px",
+                  color: "var(--text-hi)",
+                  cursor: blocked ? "not-allowed" : "pointer",
+                  opacity: blocked ? 0.4 : 1,
+                }}
               >
                 <span>{bd.icon} {bd.name}</span>
-                <span className="text-[10px] text-zinc-400">{num(bd.baseCost)}$ {resCost && `· ${resCost}`}</span>
+                <span className="wl-num" style={{ fontSize: "10px", color: "var(--text-lo)" }}>{num(bd.baseCost)}$ {resCost && `· ${resCost}`}</span>
               </button>
             );
           })}
@@ -197,16 +218,13 @@ export function PlotPanel() {
       </div>
 
       {/* Military */}
-      <div className="border-t border-zinc-800 pt-3">
+      <div className="pt-3" style={{ borderTop: "1px solid var(--hairline)" }}>
         <MilitaryPanel plotKey={selected} />
       </div>
 
-      <button
-        onClick={() => unstake(selected)}
-        className="w-full rounded-md border border-red-500/40 px-3 py-1.5 text-xs font-semibold text-red-300 hover:bg-red-500/10"
-      >
+      <Button variant="outline" full size="sm" onClick={() => unstake(selected)}>
         Unstake plot (return {num(plot.stakeLocked * 0.97)} $WAR · 3% fee)
-      </button>
+      </Button>
     </div>
   );
 }
@@ -214,8 +232,8 @@ export function PlotPanel() {
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between">
-      <span className="text-zinc-500">{label}</span>
-      <span className="text-zinc-200">{value}</span>
+      <span style={{ color: "var(--text-muted)" }}>{label}</span>
+      <span style={{ color: "var(--text-primary)" }}>{value}</span>
     </div>
   );
 }

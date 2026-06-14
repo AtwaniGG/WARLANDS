@@ -7,6 +7,7 @@ import { ADDRESSES, CONTRACTS_CONFIGURED } from "@/web3/addresses";
 import { warTokenAbi, stakingManagerAbi, sinkRouterAbi, rewardDistributorAbi } from "@/web3/abis";
 import { TERRAIN_IDS, PLOT_TYPES } from "@/game/plotTypes";
 import { WalletButton } from "./WalletButton";
+import { Button, Panel, Stat, type StatAccent } from "./ui";
 
 function fmt(v: bigint | undefined, decimals = 18) {
   if (v === undefined) return "—";
@@ -58,29 +59,42 @@ export function WalletPanel() {
     writeContract({ address: ADDRESSES.stakingManager, abi: stakingManagerAbi, functionName: "claimRefund", args: [] });
   }
 
+  const inputStyle: React.CSSProperties = {
+    borderRadius: "var(--radius-sm)",
+    background: "var(--panel-2)",
+    border: "1px solid var(--hairline)",
+    color: "var(--text-hi)",
+  };
+
   return (
     <div className="mx-auto max-w-2xl p-5">
       <div className="mb-1 flex items-center justify-between">
-        <h2 className="text-xl font-bold text-amber-400">Wallet &amp; On-Chain</h2>
+        <h2 className="wl-title" style={{ fontSize: "22px", color: "var(--amber)" }}>Wallet &amp; On-Chain</h2>
         <WalletButton />
       </div>
-      <p className="mb-4 text-xs text-zinc-500">
+      <p className="mb-4" style={{ fontSize: "12px", color: "var(--text-muted)" }}>
         Real $WAR staking on an EVM L2 (GDD §20). Connect a wallet and point the app at deployed
-        contracts via <code className="text-zinc-400">NEXT_PUBLIC_*</code> env to leave mock mode.
+        contracts via <code style={{ color: "var(--text-lo)" }}>NEXT_PUBLIC_*</code> env to leave mock mode.
       </p>
 
       {/* Connection status */}
-      <div className="mb-4 rounded-lg border border-zinc-800 bg-zinc-900 p-3 text-xs">
+      <div className="mb-4 p-3" style={{ borderRadius: "var(--radius-lg)", border: "1px solid var(--hairline)", background: "var(--panel)", fontSize: "12px" }}>
         <Row label="Wallet" value={isConnected && address ? address : "not connected"} />
         <Row label="Chain" value={isConnected ? `${chain?.name ?? "unknown"} (${chainId})` : "—"} />
         <Row label="Contracts" value={CONTRACTS_CONFIGURED ? "configured ✓" : "not deployed (mock mode)"} />
       </div>
 
       {!CONTRACTS_CONFIGURED && (
-        <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-950/20 p-3 text-xs text-amber-200">
-          <div className="font-semibold">Mock mode active.</div>
+        <div
+          className="mb-4 p-3"
+          style={{ borderRadius: "var(--radius-lg)", border: "1px solid rgba(245,179,1,0.3)", background: "rgba(245,179,1,0.08)", fontSize: "12px", color: "var(--amber-text)" }}
+        >
+          <div style={{ fontWeight: 600 }}>Mock mode active.</div>
           Deploy <code>contracts/</code> (see its README), then set:
-          <pre className="mt-1 overflow-x-auto rounded bg-black/40 p-2 text-[10px] text-zinc-300">{`NEXT_PUBLIC_WAR_TOKEN=0x...
+          <pre
+            className="wl-num mt-1 overflow-x-auto p-2"
+            style={{ borderRadius: "var(--radius-sm)", background: "rgba(0,0,0,0.4)", fontSize: "10px", color: "var(--text-secondary)" }}
+          >{`NEXT_PUBLIC_WAR_TOKEN=0x...
 NEXT_PUBLIC_STAKING_MANAGER=0x...
 NEXT_PUBLIC_SINK_ROUTER=0x...
 NEXT_PUBLIC_REWARD_DISTRIBUTOR=0x...`}</pre>
@@ -90,25 +104,24 @@ NEXT_PUBLIC_REWARD_DISTRIBUTOR=0x...`}</pre>
 
       {/* On-chain reads */}
       <div className="mb-4 grid grid-cols-2 gap-3">
-        <Stat label="Your $WAR" value={fmt(balance as bigint | undefined)} />
-        <Stat label="Total Staked (protocol)" value={fmt(totalStaked as bigint | undefined)} />
-        <Stat label="Total Burned (sinks)" value={fmt(totalBurned as bigint | undefined)} accent="text-red-400" />
-        <Stat label="Reward Pool Funded" value={fmt(totalFunded as bigint | undefined)} accent="text-emerald-400" />
+        <ChainStat label="Your $WAR" value={fmt(balance as bigint | undefined)} accent="amber" />
+        <ChainStat label="Total Staked (protocol)" value={fmt(totalStaked as bigint | undefined)} accent="amber" />
+        <ChainStat label="Total Burned (sinks)" value={fmt(totalBurned as bigint | undefined)} accent="blood" />
+        <ChainStat label="Reward Pool Funded" value={fmt(totalFunded as bigint | undefined)} accent="emerald" />
       </div>
 
       {/* Stake on-chain */}
-      <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-        <h3 className="mb-2 text-sm font-semibold text-zinc-200">Stake a plot on-chain (GDD §4)</h3>
+      <Panel title="Stake a plot on-chain (GDD §4)">
         <div className="flex flex-wrap items-end gap-2">
-          <label className="text-xs text-zinc-400">
+          <label style={{ fontSize: "12px", color: "var(--text-lo)" }}>
             Plot ID
             <input value={plotId} onChange={(e) => setPlotId(e.target.value.replace(/\D/g, ""))}
-              className="mt-1 block w-24 rounded bg-zinc-800 px-2 py-1 font-mono text-sm" />
+              className="wl-num mt-1 block w-24 px-2 py-1" style={{ ...inputStyle, fontSize: "13px" }} />
           </label>
-          <label className="text-xs text-zinc-400">
+          <label style={{ fontSize: "12px", color: "var(--text-lo)" }}>
             Plot type
             <select value={plotType} onChange={(e) => setPlotType(Number(e.target.value))}
-              className="mt-1 block rounded bg-zinc-800 px-2 py-1 text-sm">
+              className="mt-1 block px-2 py-1" style={{ ...inputStyle, fontSize: "13px" }}>
               {TERRAIN_IDS.map((t, i) => (
                 <option key={t} value={i}>{PLOT_TYPES[t].name} — {PLOT_TYPES[t].stake.toLocaleString()} WAR</option>
               ))}
@@ -116,26 +129,23 @@ NEXT_PUBLIC_REWARD_DISTRIBUTOR=0x...`}</pre>
           </label>
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
-          <button onClick={approve} disabled={!isConnected || !enabled || isPending}
-            className="rounded bg-sky-700 px-3 py-1.5 text-xs font-semibold hover:bg-sky-600 disabled:opacity-40">
+          <Button variant="info" size="sm" disabled={!isConnected || !enabled || isPending} onClick={approve}>
             1. Approve {PLOT_TYPES[TERRAIN_IDS[plotType]].stake.toLocaleString()} WAR
-          </button>
-          <button onClick={stake} disabled={!isConnected || !enabled || isPending}
-            className="rounded bg-amber-500 px-3 py-1.5 text-xs font-semibold text-black hover:bg-amber-400 disabled:opacity-40">
+          </Button>
+          <Button variant="primary" size="sm" disabled={!isConnected || !enabled || isPending} onClick={stake}>
             2. Stake &amp; Claim Plot
-          </button>
-          <button onClick={claimRefund} disabled={!isConnected || !enabled || isPending}
-            className="rounded border border-zinc-700 px-3 py-1.5 text-xs font-semibold text-zinc-300 hover:bg-zinc-800 disabled:opacity-40"
+          </Button>
+          <Button variant="secondary" size="sm" disabled={!isConnected || !enabled || isPending} onClick={claimRefund}
             title="Reclaim full principal credited by a conquest">
             Claim Refund {refund !== undefined && (refund as bigint) > BigInt(0) ? `(${fmt(refund as bigint)})` : ""}
-          </button>
+          </Button>
         </div>
-        {error && <p className="mt-2 text-[11px] text-red-400">{error.message.split("\n")[0]}</p>}
-        <p className="mt-2 text-[11px] text-zinc-600">
+        {error && <p className="wl-num mt-2" style={{ fontSize: "11px", color: "var(--blood-text)" }}>{error.message.split("\n")[0]}</p>}
+        <p className="mt-2" style={{ fontSize: "11px", color: "var(--text-muted)" }}>
           Staked $WAR is locked, never spent, and can never be looted by another player — conquest
           returns your full principal (StakingManager invariant).
         </p>
-      </div>
+      </Panel>
     </div>
   );
 }
@@ -143,17 +153,16 @@ NEXT_PUBLIC_REWARD_DISTRIBUTOR=0x...`}</pre>
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between gap-2 py-0.5">
-      <span className="text-zinc-500">{label}</span>
-      <span className="truncate font-mono text-zinc-300">{value}</span>
+      <span style={{ color: "var(--text-muted)" }}>{label}</span>
+      <span className="wl-num truncate" style={{ color: "var(--text-secondary)" }}>{value}</span>
     </div>
   );
 }
 
-function Stat({ label, value, accent = "text-amber-300" }: { label: string; value: string; accent?: string }) {
+function ChainStat({ label, value, accent }: { label: string; value: string; accent: StatAccent }) {
   return (
-    <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-3">
-      <div className="text-[11px] uppercase tracking-wide text-zinc-500">{label}</div>
-      <div className={`mt-1 font-mono text-lg font-bold ${accent}`}>{value}</div>
-    </div>
+    <Panel padding="12px">
+      <Stat label={label} value={value} accent={accent} align="stack" size="lg" />
+    </Panel>
   );
 }
