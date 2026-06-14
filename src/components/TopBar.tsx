@@ -1,6 +1,7 @@
 "use client";
 
 import { useGame } from "@/game/store";
+import { WalletButton } from "./WalletButton";
 
 function num(n: number) {
   return Math.floor(n).toLocaleString();
@@ -30,6 +31,7 @@ export function TopBar() {
         <Stat label="Pool" value={num(pool)} accent="text-emerald-300" />
         <Stat label="Plots" value={String(plotCount)} accent="text-emerald-300" />
         <Stat label={`S${seasonIdx}·t`} value={String(tick)} accent="text-zinc-400" />
+        <WalletButton />
       </div>
     </header>
   );
