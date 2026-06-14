@@ -18,13 +18,14 @@ import { ResearchPanel } from "./ResearchPanel";
 import { QuestsPanel } from "./QuestsPanel";
 import { StatsPanel } from "./StatsPanel";
 import { LeaderboardPanel } from "./LeaderboardPanel";
+import { CodexPanel } from "./CodexPanel";
 import { EventBanner } from "./EventBanner";
 import { SettingsEffects, SettingsModal } from "./SettingsModal";
 import { Toaster } from "./Toaster";
 import { TutorialOverlay } from "./TutorialOverlay";
 import { Tabs, type TabItem } from "./ui";
 
-type View = "map" | "market" | "research" | "allegiance" | "diplomacy" | "commanders" | "quests" | "stats" | "leaderboard" | "season" | "wallet";
+type View = "map" | "market" | "research" | "allegiance" | "diplomacy" | "commanders" | "quests" | "stats" | "leaderboard" | "codex" | "season" | "wallet";
 
 const TABS: TabItem<View>[] = [
   { id: "map", label: "World", icon: "🗺️" },
@@ -36,6 +37,7 @@ const TABS: TabItem<View>[] = [
   { id: "quests", label: "Quests", icon: "📜" },
   { id: "stats", label: "Stats", icon: "📊" },
   { id: "leaderboard", label: "Ranks", icon: "🏅" },
+  { id: "codex", label: "Codex", icon: "📖" },
   { id: "season", label: "Season", icon: "🏆" },
   { id: "wallet", label: "Wallet", icon: "🔗" },
 ];
@@ -98,6 +100,7 @@ export function GameShell() {
             {view === "quests" && <QuestsPanel />}
             {view === "stats" && <StatsPanel />}
             {view === "leaderboard" && <LeaderboardPanel />}
+            {view === "codex" && <CodexPanel />}
             {view === "season" && <SeasonPanel />}
             {view === "wallet" && <WalletPanel />}
           </div>
