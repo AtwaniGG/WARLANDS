@@ -48,6 +48,10 @@ import {
   commanderCombatFactor, commanderProductionBonus, commanderScoutBonus,
   type Commander,
 } from "./commanders";
+import {
+  TECHS, RESEARCH_RESOURCE, computeTechBonuses, canResearch,
+  type TechId, type TechBonuses,
+} from "./research";
 
 export const WORLD_RADIUS = 9;
 export const RECRUIT_REROLL_COST = 500; // §13 sink
@@ -130,6 +134,7 @@ interface GameState {
   commanders: Commander[]; // owned, account-permanent (GDD §8.4, §15)
   recruitPool: Commander[]; // available to recruit
   plotCommander: Record<string, string>; // hexKey -> commanderId
+  unlockedTech: string[]; // researched tech ids (GDD §6.4)
   season: SeasonState;
   selectedHex: string | null;
   tick: number;
@@ -174,6 +179,10 @@ interface GameState {
   rerollRecruits: () => void;
   recruitCommander: (id: string) => void;
   assignCommander: (plotKey: string, commanderId: string | null) => void;
+
+  // research (GDD §6.4)
+  techBonuses: () => TechBonuses;
+  research: (id: TechId) => void;
 
   // meta
   resetGame: () => void;
@@ -326,6 +335,7 @@ function freshState() {
     playerAllegianceId: null as string | null,
     recruitPool: rollRecruits((Date.now() & 0x7fffffff) || 1),
     plotCommander: {} as Record<string, string>,
+    unlockedTech: [] as string[],
     season: { index: 1, startTick: 0, lengthTicks: SEASON_TICKS, scoreEcon: 0, scoreMilitary: 0, lastPayout: null as number | null },
     selectedHex: null as string | null,
     tick: 0,
@@ -350,7 +360,7 @@ export const useGame = create<GameState>()(
     const fromWarehouses = plot.buildings
       .filter((b) => b.id === "warehouse")
       .reduce((sum, b) => sum + (BUILDINGS.warehouse.capacity ?? 0) * b.level, 0);
-    return STORAGE_BASE_CAP + fromWarehouses;
+    return STORAGE_BASE_CAP + fromWarehouses + computeTechBonuses(get().unlockedTech).storage;
   },
 
   resourceTotal: (item) =>
@@ -540,14 +550,15 @@ export const useGame = create<GameState>()(
     }
     const terrain = PLOT_TYPES[npc.terrain];
     const cmd = getPlotCommander(state, fromPlot);
+    const tech = get().techBonuses();
     const result = resolveBattle({
       seed: (state.tick + 1) * 2654435761 + npc.q * 40503 + npc.r,
       intent,
       attacker: army,
       defender: npc.army,
       terrainFactor: terrain.defenseMult >= 1 ? 1 + (terrain.defenseMult - 1) : terrain.defenseMult,
-      scoutFactor: (npc.scouted ? 1.1 : 0.97) + commanderScoutBonus(cmd),
-      commanderFactor: commanderCombatFactor(cmd, intent),
+      scoutFactor: (npc.scouted ? 1.1 : 0.97) + commanderScoutBonus(cmd) + tech.scout,
+      commanderFactor: Math.min(1.2, commanderCombatFactor(cmd, intent) * (1 + tech.combat)),
       defenderStock: npc.stock,
       defensePct: 1,
     });
@@ -610,7 +621,7 @@ export const useGame = create<GameState>()(
       set({ log: ["No sell liquidity for that item.", ...state.log].slice(0, 50) });
       return;
     }
-    const fee = Math.ceil(cost * MARKET_FEE * (1 - get().allegianceBuffs().marketFeeDiscount));
+    const fee = Math.ceil(cost * MARKET_FEE * (1 - Math.min(0.8, get().allegianceBuffs().marketFeeDiscount + get().techBonuses().marketFee)));
     const total = Math.ceil(cost) + fee;
     if (state.war < total) {
       set({ log: [`Need ${total.toLocaleString()} $WAR (incl. ${fee} fee) to buy ${filled} ${item}.`, ...state.log].slice(0, 50) });
@@ -658,7 +669,7 @@ export const useGame = create<GameState>()(
       set({ log: ["No buy liquidity for that item.", ...state.log].slice(0, 50) });
       return;
     }
-    const fee = Math.ceil(revenue * MARKET_FEE * (1 - get().allegianceBuffs().marketFeeDiscount));
+    const fee = Math.ceil(revenue * MARKET_FEE * (1 - Math.min(0.8, get().allegianceBuffs().marketFeeDiscount + get().techBonuses().marketFee)));
     const net = Math.floor(revenue) - fee;
     const plots = withdrawFromPlots(state, item, sold);
     set({
@@ -791,14 +802,15 @@ export const useGame = create<GameState>()(
 
     const terrain = PLOT_TYPES[target.terrain];
     const cmd = getPlotCommander(state, fromPlot);
+    const tech = get().techBonuses();
     const result = resolveBattle({
       seed: (state.tick + 1) * 40503 + target.q * 31 + target.r * 7,
       intent,
       attacker: army,
       defender: target.garrison,
       terrainFactor: terrain.defenseMult >= 1 ? terrain.defenseMult : 1 - (1 - terrain.defenseMult) * 0.5,
-      scoutFactor: (empire.scouted ? 1.1 : 0.97) + commanderScoutBonus(cmd),
-      commanderFactor: commanderCombatFactor(cmd, intent),
+      scoutFactor: (empire.scouted ? 1.1 : 0.97) + commanderScoutBonus(cmd) + tech.scout,
+      commanderFactor: Math.min(1.2, commanderCombatFactor(cmd, intent) * (1 + tech.combat)),
       defenderStock: target.stock,
       defensePct: 1,
     });
@@ -900,6 +912,28 @@ export const useGame = create<GameState>()(
       delete pc[plotKey];
     }
     set({ plotCommander: pc });
+  },
+
+  // ---------- Research (GDD §6.4) ----------
+  techBonuses: () => computeTechBonuses(get().unlockedTech),
+
+  research: (id) => {
+    const state = get();
+    if (!canResearch(state.unlockedTech, id)) return;
+    const t = TECHS[id];
+    const haveData = get().resourceTotal(RESEARCH_RESOURCE);
+    if (state.war < t.costWar || haveData < t.costData) {
+      set({ log: [`Need ${t.costWar.toLocaleString()} $WAR + ${t.costData} Data Chips to research ${t.name}.`, ...state.log].slice(0, 50) });
+      return;
+    }
+    const plots = withdrawFromPlots(state, RESEARCH_RESOURCE, t.costData);
+    set({
+      plots,
+      war: state.war - t.costWar,
+      warBurned: state.warBurned + Math.round(t.costWar * 0.5),
+      unlockedTech: [...state.unlockedTech, id],
+      log: [`🔬 Researched ${t.name} (${t.branch}).`, ...state.log].slice(0, 50),
+    });
   },
 
   resetGame: () => {
@@ -1029,6 +1063,7 @@ export const useGame = create<GameState>()(
   doTick: () => {
     const state = get();
     const buffs = get().allegianceBuffs();
+    const tech = computeTechBonuses(state.unlockedTech);
     const plots = { ...state.plots };
     const plotList = Object.values(plots);
     const empLog: string[] = []; // empire-AI messages collected this tick
@@ -1053,7 +1088,7 @@ export const useGame = create<GameState>()(
             base: def.baseOutput,
             terrainMult,
             level: b.level,
-            workforceMult: 1 + buffs.production + cmdProd, // Allegiance Research (§10.3) + Commander (§8.4)
+            workforceMult: 1 + buffs.production + cmdProd + tech.production, // Allegiance (§10.3) + Commander (§8.4) + Tech (§6.4)
             plotIndex: plot.claimIndex,
           });
           addRes(resources, def.extracts, out, cap);
@@ -1064,7 +1099,7 @@ export const useGame = create<GameState>()(
         if (def.kind === "factory" && b.activeProduct) {
           const product = b.activeProduct;
           const recipe = RESOURCES[product].recipe ?? {};
-          const rate = (def.baseOutput ?? 1) * levelMult(b.level) * (terrain.id === "industrial" ? 1.25 : 1) * dr;
+          const rate = (def.baseOutput ?? 1) * levelMult(b.level) * (terrain.id === "industrial" ? 1.25 : 1) * dr * (1 + buffs.production + cmdProd + tech.production);
           // produce as many whole units as inputs allow, up to rate
           const batches = Math.floor(rate);
           const frac = rate - batches;
@@ -1291,6 +1326,7 @@ export const useGame = create<GameState>()(
         commanders: s.commanders,
         recruitPool: s.recruitPool,
         plotCommander: s.plotCommander,
+        unlockedTech: s.unlockedTech,
         season: s.season,
         selectedHex: s.selectedHex,
         tick: s.tick,
