@@ -3,6 +3,7 @@
 // Client-side prototype: staking is mocked (no chain yet), production is tick-based.
 
 import { create } from "zustand";
+import { persist, createJSONStorage, type StateStorage } from "zustand/middleware";
 import {
   RESOURCES,
   type ResourceBag,
@@ -149,6 +150,9 @@ interface GameState {
   seasonScore: () => { econ: number; military: number; territory: number; allegiance: number; total: number };
   endSeason: () => void;
 
+  // meta
+  resetGame: () => void;
+
   // allegiance actions (GDD §10-11)
   allegianceBuffs: () => AllegianceBuffs;
   createAllegiance: (name: string, govModel: GovModel) => void;
@@ -250,7 +254,33 @@ function spendResources(bag: ResourceBag, cost: Partial<Record<ResourceId, numbe
 
 const INITIAL_WORLD = generateWorld(WORLD_RADIUS);
 
-export const useGame = create<GameState>((set, get) => ({
+/** Fresh economic/military/season state (everything except the derived world). */
+function freshState() {
+  return {
+    war: STARTING_WAR,
+    warStaked: 0,
+    warBurned: 0,
+    seasonPool: 0,
+    plots: {} as Record<string, Plot>,
+    npcs: generateNpcs(INITIAL_WORLD),
+    refPrices: { ...BASE_PRICE },
+    book: generateBook(BASE_PRICE, 99),
+    allegiances: generateAiAllegiances(),
+    playerAllegianceId: null as string | null,
+    season: { index: 1, startTick: 0, lengthTicks: SEASON_TICKS, scoreEcon: 0, scoreMilitary: 0, lastPayout: null as number | null },
+    selectedHex: null as string | null,
+    tick: 0,
+    battleReport: null as (BattleResult & { target: string }) | null,
+    log: ["Welcome, Commander. Stake $WAR to claim your first plot."],
+  };
+}
+
+// SSR-safe storage: localStorage on the client, a no-op on the server.
+const noopStorage: StateStorage = { getItem: () => null, setItem: () => {}, removeItem: () => {} };
+
+export const useGame = create<GameState>()(
+  persist(
+    (set, get) => ({
   world: INITIAL_WORLD,
   war: STARTING_WAR,
   warStaked: 0,
@@ -657,6 +687,10 @@ export const useGame = create<GameState>((set, get) => ({
     });
   },
 
+  resetGame: () => {
+    set({ ...freshState(), log: ["New world generated. Stake $WAR to claim your first plot."] });
+  },
+
   // ---------- Allegiances (GDD §10-11) ----------
   allegianceBuffs: () => {
     const state = get();
@@ -952,4 +986,29 @@ export const useGame = create<GameState>((set, get) => ({
       get().endSeason();
     }
   },
-}));
+    }),
+    {
+      name: "warlands-save-v1",
+      version: 1,
+      storage: createJSONStorage(() => (typeof window !== "undefined" ? window.localStorage : noopStorage)),
+      skipHydration: true, // we rehydrate manually on the client to avoid SSR mismatch
+      // Persist only serializable game state — the hex `world` is deterministic and regenerated.
+      partialize: (s) => ({
+        war: s.war,
+        warStaked: s.warStaked,
+        warBurned: s.warBurned,
+        seasonPool: s.seasonPool,
+        plots: s.plots,
+        npcs: s.npcs,
+        refPrices: s.refPrices,
+        book: s.book,
+        allegiances: s.allegiances,
+        playerAllegianceId: s.playerAllegianceId,
+        season: s.season,
+        selectedHex: s.selectedHex,
+        tick: s.tick,
+        log: s.log,
+      }),
+    },
+  ),
+);

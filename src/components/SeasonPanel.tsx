@@ -14,6 +14,7 @@ export function SeasonPanel() {
   const burned = useGame((s) => s.warBurned);
   const score = useGame((s) => s.seasonScore)();
   const endSeason = useGame((s) => s.endSeason);
+  const resetGame = useGame((s) => s.resetGame);
 
   const elapsed = tick - season.startTick;
   const remaining = Math.max(0, season.lengthTicks - elapsed);
@@ -66,6 +67,17 @@ export function SeasonPanel() {
         Share curve is top-heavy (p=1.5) but not winner-take-all, so mid-ranked players still earn (retention).
         Unpaid remainder rolls into next season&apos;s pool. New map opens (hostile camps refresh; you keep plots, stake, account progression).
       </p>
+
+      <div className="mt-6 rounded-lg border border-red-500/20 bg-red-950/10 p-3">
+        <div className="text-xs font-semibold text-zinc-300">Danger zone</div>
+        <p className="mt-1 text-[11px] text-zinc-500">Your progress auto-saves to this browser. Start over from scratch:</p>
+        <button
+          onClick={() => { if (confirm("Wipe your saved game and start a new world?")) resetGame(); }}
+          className="mt-2 rounded border border-red-500/40 px-3 py-1.5 text-xs font-semibold text-red-300 hover:bg-red-500/10"
+        >
+          New Game (reset save)
+        </button>
+      </div>
     </div>
   );
 }
