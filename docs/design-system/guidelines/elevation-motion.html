@@ -1,0 +1,30 @@
+<!-- @dsCard group="Spacing" viewport="700x170" name="Elevation & Motion" subtitle="Deep shadows on near-black + tactical easing" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  body { padding: 24px; display: flex; gap: 22px; align-items: center; }
+  .cell { text-align: center; }
+  .box { width: 110px; height: 64px; background: var(--panel); border: 1px solid var(--hairline); border-radius: var(--radius-md); }
+  .name { font-size: 10px; color: var(--text-lo); margin-top: 11px; font-family: var(--font-mono); }
+  .divider { width: 1px; align-self: stretch; background: var(--hairline); }
+  .motion { font-size: 11px; color: var(--text-lo); line-height: 1.9; }
+  .motion b { color: var(--text-hi); font-weight: 600; }
+  .motion .m { font-family: var(--font-mono); color: var(--amber-text); }
+</style>
+</head>
+<body>
+  <div class="cell"><div class="box" style="box-shadow:var(--shadow-1),var(--edge-inset)"></div><div class="name">shadow-1</div></div>
+  <div class="cell"><div class="box" style="box-shadow:var(--shadow-2)"></div><div class="name">shadow-2</div></div>
+  <div class="cell"><div class="box" style="box-shadow:var(--shadow-modal)"></div><div class="name">shadow-modal</div></div>
+  <div class="divider"></div>
+  <div class="motion">
+    <div><b>Motion</b></div>
+    <div><span class="m">--ease-out</span> 0.2,0.8,0.2,1 — default</div>
+    <div><span class="m">--ease-snap</span> press / claim juice</div>
+    <div><span class="m">--dur-fast</span> 120ms · <span class="m">--dur</span> 200ms</div>
+  </div>
+</body>
+</html>

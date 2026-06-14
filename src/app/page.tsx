@@ -1,10 +1,5 @@
 import Link from "next/link";
-import { Oswald, Archivo, JetBrains_Mono } from "next/font/google";
 import { PLOT_TYPES, TERRAIN_IDS } from "@/game/plotTypes";
-
-const display = Oswald({ subsets: ["latin"], weight: ["500", "600", "700"], variable: "--font-display" });
-const body = Archivo({ subsets: ["latin"], weight: ["400", "500", "600"], variable: "--font-body" });
-const mono = JetBrains_Mono({ subsets: ["latin"], weight: ["400", "500", "700"], variable: "--font-readout" });
 
 const LOOP = ["STAKE", "CLAIM", "BUILD", "FARM", "MANUFACTURE", "RAID", "ALLY", "EARN"];
 
@@ -32,8 +27,8 @@ const PILLARS = [
 export default function Landing() {
   return (
     <div
-      className={`${display.variable} ${body.variable} ${mono.variable} wl-grain relative min-h-dvh overflow-hidden bg-[#0a0d12] text-zinc-200`}
-      style={{ fontFamily: "var(--font-body)" }}
+      className="wl-grain relative min-h-dvh overflow-hidden bg-[#0a0d12] text-zinc-200"
+      style={{ fontFamily: "var(--font-ui)" }}
     >
       {/* atmosphere */}
       <div className="wl-hexgrid pointer-events-none absolute inset-0 opacity-40" />
@@ -89,7 +84,7 @@ export default function Landing() {
         </div>
 
         {/* status readout strip */}
-        <div className="wl-rise mt-14 grid grid-cols-2 gap-px border border-zinc-800 bg-zinc-800 sm:grid-cols-4" style={{ animationDelay: "560ms", fontFamily: "var(--font-readout)" }}>
+        <div className="wl-rise mt-14 grid grid-cols-2 gap-px border border-zinc-800 bg-zinc-800 sm:grid-cols-4" style={{ animationDelay: "560ms", fontFamily: "var(--font-mono)" }}>
           {[
             ["WORLD", "ONLINE"],
             ["LAND PLOTS", "~250,000"],
@@ -110,7 +105,7 @@ export default function Landing() {
       {/* core loop */}
       <section id="loop" className="relative z-10 mx-auto max-w-6xl px-6 py-20">
         <SectionLabel n="A" title="The Core Loop" />
-        <div className="mt-8 flex flex-wrap items-stretch gap-2" style={{ fontFamily: "var(--font-readout)" }}>
+        <div className="mt-8 flex flex-wrap items-stretch gap-2" style={{ fontFamily: "var(--font-mono)" }}>
           {LOOP.map((step, i) => (
             <div key={step} className="flex items-center gap-2">
               <div className="border border-zinc-800 bg-[#0f131c] px-4 py-3 text-center">
@@ -149,7 +144,7 @@ export default function Landing() {
           Nine terrain types, each with its own yields, defenses, and stake. Higher tiers earn
           more and bleed more. Stake is locked — never spent, never lootable.
         </p>
-        <div className="mt-8 grid grid-cols-2 gap-px bg-zinc-800 sm:grid-cols-3 lg:grid-cols-3" style={{ fontFamily: "var(--font-readout)" }}>
+        <div className="mt-8 grid grid-cols-2 gap-px bg-zinc-800 sm:grid-cols-3 lg:grid-cols-3" style={{ fontFamily: "var(--font-mono)" }}>
           {TERRAIN_IDS.map((t) => {
             const d = PLOT_TYPES[t];
             return (
@@ -176,13 +171,13 @@ export default function Landing() {
               speed-ups, war — flows through a single router and splits three ways. A hard,
               on-chain invariant guarantees payouts can never exceed what sinks collected.
             </p>
-            <div className="mt-6 space-y-3" style={{ fontFamily: "var(--font-readout)" }}>
+            <div className="mt-6 space-y-3" style={{ fontFamily: "var(--font-mono)" }}>
               <FlowRow label="BURN" pct="≥ 20%" desc="permanently removed · structural deflation" color="#9c2b2b" />
               <FlowRow label="SEASON POOL" pct="~40%" desc="ranked player rewards (sink-funded)" color="#f5b301" />
               <FlowRow label="REGION TAX" pct="~20%" desc="income for territory-holding Allegiances" color="#3f9aa6" />
             </div>
           </div>
-          <div className="border border-zinc-800 bg-[#0c1018] p-6" style={{ fontFamily: "var(--font-readout)" }}>
+          <div className="border border-zinc-800 bg-[#0c1018] p-6" style={{ fontFamily: "var(--font-mono)" }}>
             <div className="text-[10px] uppercase tracking-widest text-zinc-500">Token flow</div>
             <pre className="mt-3 overflow-x-auto text-[11px] leading-relaxed text-zinc-400">{`PLAYERS
   │ fees · upkeep · speed-ups
@@ -220,7 +215,7 @@ SINK ROUTER ──► BURN  (supply ↓)
 
       {/* footer */}
       <footer className="relative z-10 border-t border-zinc-900 px-6 py-8">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 text-xs text-zinc-600 sm:flex-row" style={{ fontFamily: "var(--font-readout)" }}>
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 text-xs text-zinc-600 sm:flex-row" style={{ fontFamily: "var(--font-mono)" }}>
           <span className="tracking-widest">WARLANDS · AAA WEB3 STRATEGY MMO</span>
           <span>Prototype build · {new Date().getFullYear()}</span>
         </div>
@@ -232,7 +227,7 @@ SINK ROUTER ──► BURN  (supply ↓)
 function SectionLabel({ n, title }: { n: string; title: string }) {
   return (
     <div className="flex items-center gap-4">
-      <span className="grid h-7 w-7 place-items-center border border-amber-500/50 text-xs font-bold text-amber-400" style={{ fontFamily: "var(--font-readout)" }}>{n}</span>
+      <span className="grid h-7 w-7 place-items-center border border-amber-500/50 text-xs font-bold text-amber-400" style={{ fontFamily: "var(--font-mono)" }}>{n}</span>
       <h2 className="text-2xl font-semibold tracking-tight text-zinc-100 md:text-3xl" style={{ fontFamily: "var(--font-display)" }}>{title}</h2>
       <span className="h-px flex-1 bg-zinc-800" />
     </div>

@@ -1,0 +1,28 @@
+<!-- @dsCard group="Colors" viewport="700x180" name="UI Surfaces" subtitle="Dark recon-screen surface ramp & text" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  body { padding: 20px; }
+  .grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+  .sw { border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--hairline); }
+  .chip { height: 64px; }
+  .meta { padding: 7px 9px; background: var(--panel); }
+  .name { font-size: 11px; font-weight: 600; color: var(--text-hi); }
+  .hex { font-family: var(--font-mono); font-size: 10px; color: var(--text-lo); margin-top: 2px; }
+  .role { font-size: 9px; color: var(--text-muted); margin-top: 3px; letter-spacing: 0.04em; }
+</style>
+</head>
+<body>
+<div class="grid">
+  <div class="sw"><div class="chip" style="background:var(--panel-void)"></div><div class="meta"><div class="name">panel-void</div><div class="hex">#0c1018</div><div class="role">App / map bg</div></div></div>
+  <div class="sw"><div class="chip" style="background:var(--panel)"></div><div class="meta"><div class="name">panel</div><div class="hex">#12161f</div><div class="role">Card surface</div></div></div>
+  <div class="sw"><div class="chip" style="background:var(--panel-2)"></div><div class="meta"><div class="name">panel-2</div><div class="hex">#1a2030</div><div class="role">Raised / rows</div></div></div>
+  <div class="sw"><div class="chip" style="background:var(--hairline)"></div><div class="meta"><div class="name">hairline</div><div class="hex">#232b3a</div><div class="role">Borders</div></div></div>
+  <div class="sw"><div class="chip" style="background:var(--text-hi)"></div><div class="meta"><div class="name">text-hi</div><div class="hex">#e6e9ef</div><div class="role">Primary text</div></div></div>
+  <div class="sw"><div class="chip" style="background:var(--text-lo)"></div><div class="meta"><div class="name">text-lo</div><div class="hex">#8a92a3</div><div class="role">Secondary</div></div></div>
+</div>
+</body>
+</html>

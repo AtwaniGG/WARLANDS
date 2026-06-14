@@ -1,0 +1,27 @@
+<!-- @dsCard group="Colors" viewport="700x200" name="Semantic Accents" subtitle="High-chroma signals — ≤2 per composition" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  body { padding: 20px; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .sw { display: flex; align-items: center; gap: 11px; padding: 10px 12px; border-radius: var(--radius-md); background: var(--panel); border: 1px solid var(--hairline); }
+  .dot { width: 34px; height: 34px; border-radius: var(--radius-sm); flex: none; }
+  .name { font-size: 12px; font-weight: 700; color: var(--text-hi); }
+  .hex { font-family: var(--font-mono); font-size: 10px; color: var(--text-lo); margin-top: 1px; }
+  .role { font-size: 10px; color: var(--text-muted); margin-top: 3px; }
+</style>
+</head>
+<body>
+<div class="grid">
+  <div class="sw"><div class="dot" style="background:var(--amber)"></div><div><div class="name">amber</div><div class="hex">#f5b301</div><div class="role">Owned · economy · $WAR · CTA</div></div></div>
+  <div class="sw"><div class="dot" style="background:var(--blood)"></div><div><div class="name">blood</div><div class="hex">#9c2b2b</div><div class="role">Warzone · combat · enemy</div></div></div>
+  <div class="sw"><div class="dot" style="background:var(--teal)"></div><div><div class="name">teal</div><div class="hex">#3f9aa6</div><div class="role">Coastal · market · info</div></div></div>
+  <div class="sw"><div class="dot" style="background:var(--toxic)"></div><div><div class="name">toxic</div><div class="hex">#6ee7a8</div><div class="role">Tech · EMP · research</div></div></div>
+  <div class="sw"><div class="dot" style="background:var(--sky)"></div><div><div class="name">sky</div><div class="hex">#4a90d9</div><div class="role">Allegiance · defense · scout</div></div></div>
+  <div class="sw"><div class="dot" style="background:var(--violet)"></div><div><div class="name">violet</div><div class="hex">#8b5cf6</div><div class="role">Rare · tech ruins · premium</div></div></div>
+</div>
+</body>
+</html>

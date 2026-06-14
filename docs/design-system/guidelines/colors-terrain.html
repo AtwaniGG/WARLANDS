@@ -1,0 +1,29 @@
+<!-- @dsCard group="Colors" viewport="700x180" name="Terrain Fills" subtitle="9 plot types — map identity by silhouette + 1 signal color" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  body { padding: 20px; }
+  .grid { display: grid; grid-template-columns: repeat(9, 1fr); gap: 7px; }
+  .cell { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .hex { width: 52px; height: 58px; clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%); display: flex; align-items: center; justify-content: center; font-size: 18px; }
+  .name { font-size: 9px; font-weight: 600; color: var(--text-hi); text-align: center; line-height: 1.2; }
+  .hexcode { font-family: var(--font-mono); font-size: 8px; color: var(--text-muted); }
+</style>
+</head>
+<body>
+<div class="grid">
+  <div class="cell"><div class="hex" style="background:var(--terrain-plains)">🌾</div><div class="name">Plains</div><div class="hexcode">#7c8a4f</div></div>
+  <div class="cell"><div class="hex" style="background:var(--terrain-forest)">🌲</div><div class="name">Forest</div><div class="hexcode">#2f5d3a</div></div>
+  <div class="cell"><div class="hex" style="background:var(--terrain-river)">💧</div><div class="name">River</div><div class="hexcode">#2c6f8c</div></div>
+  <div class="cell"><div class="hex" style="background:var(--terrain-mountain)">⛰️</div><div class="name">Mountain</div><div class="hexcode">#6b6f78</div></div>
+  <div class="cell"><div class="hex" style="background:var(--terrain-desert)">🛢️</div><div class="name">Oil Desert</div><div class="hexcode">#c9a14a</div></div>
+  <div class="cell"><div class="hex" style="background:var(--terrain-coastal)">⚓</div><div class="name">Coastal</div><div class="hexcode">#3f9aa6</div></div>
+  <div class="cell"><div class="hex" style="background:var(--terrain-industrial)">🏭</div><div class="name">Industrial</div><div class="hexcode">#8a5a3c</div></div>
+  <div class="cell"><div class="hex" style="background:var(--terrain-techruins)">🛸</div><div class="name">Tech Ruins</div><div class="hexcode">#5b4b8a</div></div>
+  <div class="cell"><div class="hex" style="background:var(--terrain-warzone)">⚔️</div><div class="name">Warzone</div><div class="hexcode">#9c2b2b</div></div>
+</div>
+</body>
+</html>

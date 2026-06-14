@@ -1,49 +1,110 @@
 @import "tailwindcss";
 
+/* ==================================================================
+   WARLANDS DESIGN SYSTEM TOKENS  (vendored from docs/design-system)
+   Single source of truth for color, type, spacing, motion.
+   Fonts are wired to next/font variables (set in layout.tsx).
+   ================================================================== */
 :root {
-  --background: #0a0d12;
-  --foreground: #e6e9ef;
+  /* ---- Base / environment ---- */
+  --gunmetal: #2a2f3a; --ash: #4b515c; --olive-drab: #5c6347;
+  --sand: #c9a14a; --concrete: #8b8f96; --dirt-brown: #6b5840;
+
+  /* ---- UI surfaces ---- */
+  --panel-void: #0c1018; --panel: #12161f; --panel-2: #1a2030;
+  --hairline: #232b3a; --text-hi: #e6e9ef; --text-lo: #8a92a3; --text-faint: #5a6273;
+
+  /* ---- Semantic accents ---- */
+  --amber: #f5b301; --blood: #9c2b2b; --teal: #3f9aa6;
+  --toxic: #6ee7a8; --sky: #4a90d9; --violet: #8b5cf6;
+  --amber-text: #fbbf24; --blood-text: #f87171; --teal-text: #5ec8d4;
+  --emerald-text: #34d399; --sky-text: #7cb3ec; --violet-text: #c4b5fd;
+
+  /* ---- State ---- */
+  --success: #34d399; --warning: #fbbf24; --error: #ef4444; --disabled: #3a4150;
+
+  /* ---- Terrain fills (9 plot types, GDD §4) ---- */
+  --terrain-plains: #7c8a4f; --terrain-forest: #2f5d3a; --terrain-river: #2c6f8c;
+  --terrain-mountain: #6b6f78; --terrain-desert: #c9a14a; --terrain-coastal: #3f9aa6;
+  --terrain-industrial: #8a5a3c; --terrain-techruins: #5b4b8a; --terrain-warzone: #9c2b2b;
+
+  /* ---- Map ownership rims ---- */
+  --rim-owned: #facc15; --rim-enemy: #dc2626; --rim-neutral: #1c2433; --rim-selected: #ffd24a;
+
+  /* ---- Semantic aliases (prefer these in components) ---- */
+  --bg-app: var(--panel-void); --surface-card: var(--panel); --surface-raised: var(--panel-2);
+  --surface-sunken: #0a0d14; --border-default: var(--hairline); --border-strong: #2f3a4d;
+  --text-primary: var(--text-hi); --text-secondary: var(--text-lo); --text-muted: var(--text-faint);
+  --accent: var(--amber); --accent-text: var(--amber-text);
+  --cta-bg: var(--amber); --cta-bg-hover: #ffc21f; --cta-fg: #0c0a04;
+  --danger: var(--blood); --danger-strong: #dc2626; --info: var(--teal); --ally: var(--sky); --tech: var(--toxic);
+  --focus-ring-color: var(--amber);
+
+  /* ---- Fonts (wired to next/font variables from layout.tsx) ---- */
+  --font-display: var(--font-oswald), "Oswald", "Arial Narrow", sans-serif;
+  --font-ui: var(--font-geist-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: var(--font-geist-mono), "JetBrains Mono", ui-monospace, monospace;
+
+  /* ---- Type scale ---- */
+  --text-2xs: 10px; --text-xs: 11px; --text-sm: 12px; --text-base: 13px;
+  --text-md: 14px; --text-lg: 16px; --text-xl: 18px; --text-2xl: 20px;
+  --text-3xl: 24px; --text-4xl: 32px; --text-display: 48px;
+  --tracking-label: 0.1em; --tracking-tight: -0.01em;
+
+  /* ---- Spacing / radii / elevation / motion ---- */
+  --radius-sm: 4px; --radius-md: 8px; --radius-lg: 12px; --radius-pill: 999px;
+  --shadow-1: 0 1px 2px rgba(0,0,0,0.5); --shadow-2: 0 4px 12px rgba(0,0,0,0.55);
+  --shadow-modal: 0 24px 60px rgba(0,0,0,0.7);
+  --focus-ring: 0 0 0 2px var(--panel-void), 0 0 0 4px var(--amber);
+  --glow-amber: 0 0 0 1px rgba(245,179,1,0.4), 0 0 12px rgba(245,179,1,0.18);
+  --dur-fast: 120ms; --dur: 200ms; --ease-out: cubic-bezier(0.2,0.8,0.2,1);
+  --ease-snap: cubic-bezier(0.34,1.4,0.5,1);
+
+  /* legacy aliases kept for existing component code */
+  --background: var(--panel-void);
+  --foreground: var(--text-hi);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-ui);
+  --font-mono: var(--font-mono);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  background: var(--bg-app);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection { background: rgba(245, 179, 1, 0.3); }
+:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+/* ---- DS text recipes ---- */
+.wl-label {
+  font-family: var(--font-display); font-weight: 600; font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--text-muted);
+}
+.wl-title {
+  font-family: var(--font-display); font-weight: 700; letter-spacing: var(--tracking-tight);
+  text-transform: uppercase; color: var(--text-primary); line-height: 1.1;
+}
+.wl-num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
 }
 
 /* ============ WARLANDS landing atmosphere ============ */
-@keyframes wl-rise {
-  from { opacity: 0; transform: translateY(22px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-@keyframes wl-scan {
-  0% { transform: translateY(-10vh); opacity: 0; }
-  8% { opacity: 0.6; }
-  92% { opacity: 0.6; }
-  100% { transform: translateY(110vh); opacity: 0; }
-}
-@keyframes wl-pulse {
-  0%, 100% { opacity: 0.35; }
-  50% { opacity: 0.7; }
-}
-@keyframes wl-flicker {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.78; }
-}
-@keyframes wl-march {
-  to { background-position: 40px 0; }
-}
+@keyframes wl-rise { from { opacity: 0; transform: translateY(22px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes wl-scan { 0% { transform: translateY(-10vh); opacity: 0; } 8% { opacity: 0.6; } 92% { opacity: 0.6; } 100% { transform: translateY(110vh); opacity: 0; } }
+@keyframes wl-pulse { 0%, 100% { opacity: 0.35; } 50% { opacity: 0.7; } }
+@keyframes wl-march { to { background-position: 40px 0; } }
 
 .wl-rise { opacity: 0; animation: wl-rise 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-
-/* hex grid + scanline + grain layers */
 .wl-hexgrid {
   background-image:
     linear-gradient(0deg, transparent 23px, rgba(245, 179, 1, 0.05) 24px),
@@ -60,8 +121,5 @@ body {
   content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0.06; mix-blend-mode: overlay;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
-.wl-hazard {
-  background-image: repeating-linear-gradient(45deg, #f5b301 0 10px, #0a0d12 10px 20px);
-  animation: wl-march 1.2s linear infinite;
-}
+.wl-hazard { background-image: repeating-linear-gradient(45deg, #f5b301 0 10px, #0a0d12 10px 20px); animation: wl-march 1.2s linear infinite; }
 .wl-glow { animation: wl-pulse 5s ease-in-out infinite; }

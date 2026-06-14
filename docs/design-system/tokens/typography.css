@@ -1,0 +1,80 @@
+/* WARLANDS — Typography
+   ==================================================================
+   Hierarchy (Art Direction Bible §1.4):
+     · Display / headings  -> condensed industrial grotesque, ALL-CAPS
+                              for section labels; sentence case for titles.
+     · UI / body           -> clean neo-grotesque, high legibility.
+     · Numbers / readouts  -> monospace, TABULAR figures, ALWAYS.
+                              (resource counts, prices, timers, power)
+   ================================================================== */
+
+:root {
+  /* ---- Families ---- */
+  --font-display: 'Oswald', 'Saira Condensed', 'Arial Narrow', sans-serif;
+  --font-ui:      'Geist', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono:    'Geist Mono', 'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace;
+
+  /* ---- Weights ---- */
+  --fw-regular:  400; /* @kind font */
+  --fw-medium:   500; /* @kind font */
+  --fw-semibold: 600; /* @kind font */
+  --fw-bold:     700; /* @kind font */
+  --fw-black:    900; /* @kind font */  /* WARLANDS wordmark & VICTORY/DEFEAT headers */
+
+  /* ---- Type scale (dense, tactical HUD — small by default) ---- */
+  --text-2xs:  10px;   /* micro labels, hex coords */
+  --text-xs:   11px;   /* captions, helper text */
+  --text-sm:   12px;   /* dense table & control text */
+  --text-base: 13px;   /* body default in panels */
+  --text-md:   14px;   /* primary body */
+  --text-lg:   16px;   /* sub-headers */
+  --text-xl:   18px;   /* panel titles */
+  --text-2xl:  20px;   /* screen titles */
+  --text-3xl:  24px;   /* major headings */
+  --text-4xl:  32px;
+  --text-display: 48px; /* hero / key-art wordmark */
+
+  /* ---- Line heights ---- */
+  --leading-tight:  1.1;
+  --leading-snug:   1.3;
+  --leading-normal: 1.5;
+
+  /* ---- Letter spacing ---- */
+  --tracking-tighter: -0.03em;  /* black display wordmark */
+  --tracking-tight:   -0.01em;  /* headings */
+  --tracking-normal:  0;
+  --tracking-wide:    0.06em;
+  --tracking-label:   0.1em;    /* ALL-CAPS uppercase section labels */
+
+  /* tabular numerals — apply on every numeric readout */
+  --num-feature: "tnum" 1, "lnum" 1; /* @kind font */
+}
+
+/* Reusable text recipes ---------------------------------------------------- */
+
+/* ALL-CAPS condensed section label (e.g. "STOCKPILE", "TRAIN UNITS") */
+.wl-label {
+  font-family: var(--font-display);
+  font-weight: var(--fw-semibold);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* Condensed display title */
+.wl-title {
+  font-family: var(--font-display);
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--tracking-tight);
+  text-transform: uppercase;
+  color: var(--text-primary);
+  line-height: var(--leading-tight);
+}
+
+/* Numeric readout — always mono + tabular */
+.wl-num {
+  font-family: var(--font-mono);
+  font-feature-settings: var(--num-feature);
+  font-variant-numeric: tabular-nums;
+}

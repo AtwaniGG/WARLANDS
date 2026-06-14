@@ -1,0 +1,29 @@
+<!-- @dsCard group="Type" viewport="700x190" name="Numbers — Geist Mono" subtitle="Tabular figures · ALWAYS mono for counts, prices, timers" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  body { padding: 22px; }
+  .row { display: flex; gap: 28px; align-items: baseline; }
+  .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-weight: 600; }
+  .lbl { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); display:block; margin-bottom: 4px; }
+  .meta { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); margin-top: 20px; }
+  .stack > div { margin-bottom: 6px; }
+</style>
+</head>
+<body>
+  <div class="row">
+    <div><span class="lbl">$WAR</span><span class="num" style="font-size:30px; color:var(--amber-text)">48,210</span></div>
+    <div><span class="lbl">Best Ask</span><span class="num" style="font-size:30px; color:var(--blood-text)">12.40</span></div>
+    <div><span class="lbl">Pool</span><span class="num" style="font-size:30px; color:var(--emerald-text)">9,640</span></div>
+    <div><span class="lbl">Timer</span><span class="num" style="font-size:30px; color:var(--text-hi)">S3·t128</span></div>
+  </div>
+  <div class="stack" style="margin-top:18px">
+    <div class="num" style="font-size:13px; color:var(--text-lo)">0123456789 · tabular alignment</div>
+    <div class="num" style="font-size:13px; color:var(--text-lo)">1,000,000 · ×2.5 · +40% · A32/D26</div>
+  </div>
+  <div class="meta">Geist Mono — every resource count, price, timer &amp; power rating</div>
+</body>
+</html>

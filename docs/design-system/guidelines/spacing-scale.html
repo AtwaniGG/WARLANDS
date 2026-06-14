@@ -1,0 +1,27 @@
+<!-- @dsCard group="Spacing" viewport="700x160" name="Spacing Scale" subtitle="8px grid with 2 / 4px substeps for the dense HUD" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  body { padding: 22px; display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; }
+  .cell { display: flex; flex-direction: column; align-items: center; gap: 7px; }
+  .bar { background: var(--amber); border-radius: 2px; width: 22px; }
+  .tok { font-family: var(--font-mono); font-size: 9px; color: var(--text-muted); }
+  .px { font-family: var(--font-mono); font-size: 10px; color: var(--text-lo); }
+</style>
+</head>
+<body>
+  <div class="cell"><div class="bar" style="height:4px"></div><div class="px">4</div><div class="tok">1</div></div>
+  <div class="cell"><div class="bar" style="height:8px"></div><div class="px">8</div><div class="tok">2</div></div>
+  <div class="cell"><div class="bar" style="height:12px"></div><div class="px">12</div><div class="tok">3</div></div>
+  <div class="cell"><div class="bar" style="height:16px"></div><div class="px">16</div><div class="tok">4</div></div>
+  <div class="cell"><div class="bar" style="height:20px"></div><div class="px">20</div><div class="tok">5</div></div>
+  <div class="cell"><div class="bar" style="height:24px"></div><div class="px">24</div><div class="tok">6</div></div>
+  <div class="cell"><div class="bar" style="height:32px"></div><div class="px">32</div><div class="tok">8</div></div>
+  <div class="cell"><div class="bar" style="height:40px"></div><div class="px">40</div><div class="tok">10</div></div>
+  <div class="cell"><div class="bar" style="height:48px"></div><div class="px">48</div><div class="tok">12</div></div>
+  <div class="cell"><div class="bar" style="height:64px"></div><div class="px">64</div><div class="tok">16</div></div>
+</body>
+</html>

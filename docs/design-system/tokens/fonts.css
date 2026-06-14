@@ -1,0 +1,13 @@
+/* WARLANDS — Webfonts
+   ------------------------------------------------------------------
+   Display : Oswald          — condensed industrial grotesque, stencil-adjacent.
+                               Used for ALL-CAPS section labels & big titles.
+   UI/body : Geist           — the families the shipped prototype uses
+   Mono    : Geist Mono      — every resource count, price, timer, power rating
+   ------------------------------------------------------------------
+   Geist / Geist Mono are the real product fonts (next/font/google in the
+   codebase). Oswald is the design-system display face — explicitly sanctioned
+   by the Art Direction Bible (§1.4 lists "Oswald"/"Saira Condensed").
+   Loaded from Google Fonts so consumers need no local binaries. */
+
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Geist:wght@400;500;600;700;800;900&family=Geist+Mono:wght@400;500;600;700&display=swap');

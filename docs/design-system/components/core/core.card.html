@@ -1,0 +1,89 @@
+<!-- @dsCard group="Components" viewport="700x440" name="Core — Button, Badge, Stat, Panel" subtitle="Buttons, status tags, readouts & panels" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="../../styles.css" />
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>
+  body { padding: 22px; }
+  .row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+  .block { margin-bottom: 22px; }
+  .cap { font-family: var(--font-display); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 9px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+  const { Button, Badge, Stat, Panel } = window.WARLANDSDesignSystem_e0d283;
+
+  function Demo() {
+    return (
+      <div>
+        <div className="block">
+          <div className="cap">Button — variants</div>
+          <div className="row">
+            <Button variant="primary" icon="⚔️">Stake &amp; Claim</Button>
+            <Button variant="secondary">Cancel</Button>
+            <Button variant="info" icon="🔭">Scout</Button>
+            <Button variant="danger" icon="🏰">Siege</Button>
+            <Button variant="success">Contribute</Button>
+            <Button variant="outline">Unstake</Button>
+            <Button variant="ghost">Dismiss</Button>
+          </div>
+        </div>
+
+        <div className="block">
+          <div className="cap">Button — sizes &amp; disabled</div>
+          <div className="row">
+            <Button variant="primary" size="sm">Small</Button>
+            <Button variant="primary" size="md">Medium</Button>
+            <Button variant="primary" size="lg">Large</Button>
+            <Button variant="primary" disabled>Insufficient $WAR</Button>
+          </div>
+        </div>
+
+        <div className="grid2">
+          <div>
+            <div className="cap">Badge — tones</div>
+            <div className="row">
+              <Badge tone="amber">Owned</Badge>
+              <Badge tone="blood" variant="solid">Prototype</Badge>
+              <Badge tone="sky">Tier 3</Badge>
+              <Badge tone="emerald">Passed</Badge>
+              <Badge tone="violet">Legendary</Badge>
+              <Badge tone="neutral">Council</Badge>
+            </div>
+            <div className="cap" style={{marginTop:'18px'}}>Stat — HUD readouts</div>
+            <div className="row" style={{gap:'18px'}}>
+              <Stat label="$WAR" value="48,210" accent="amber" />
+              <Stat label="Staked" value="120,000" accent="sky" />
+              <Stat label="Burned" value="6,540" accent="blood" />
+              <Stat label="Pool" value="9,640" accent="emerald" />
+            </div>
+          </div>
+          <div>
+            <div className="cap">Panel</div>
+            <Panel title="Hostile Camp" rim="blood" padding="12px">
+              <div style={{display:'flex', flexDirection:'column', gap:'8px'}}>
+                <span style={{fontSize:'12px', color:'var(--text-secondary)'}}>Unknown strength. Scout first to reveal the garrison.</span>
+                <div className="row">
+                  <Button variant="info" size="sm" icon="🔭">Scout (50$)</Button>
+                  <Button variant="danger" size="sm" icon="🗡️">Raid</Button>
+                </div>
+              </div>
+            </Panel>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  ReactDOM.createRoot(document.getElementById("root")).render(<Demo />);
+</script>
+</body>
+</html>

@@ -1,0 +1,40 @@
+<!-- @dsCard group="Colors" viewport="700x150" name="State & Map Rims" subtitle="Status colors + ownership rim treatment" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  body { padding: 20px; display: flex; gap: 26px; }
+  .col { flex: 1; }
+  .cap { font-family: var(--font-display); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px; }
+  .row { display: flex; gap: 8px; }
+  .state { flex: 1; text-align: center; }
+  .bar { height: 30px; border-radius: var(--radius-sm); }
+  .lbl { font-size: 10px; color: var(--text-lo); margin-top: 5px; }
+  .rims { display: flex; gap: 14px; }
+  .rim { width: 50px; height: 56px; clip-path: polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%); background: var(--terrain-plains); display:flex; align-items:center; justify-content:center; }
+  .rwrap { text-align: center; }
+</style>
+</head>
+<body>
+<div class="col">
+  <div class="cap">State</div>
+  <div class="row">
+    <div class="state"><div class="bar" style="background:var(--success)"></div><div class="lbl">success</div></div>
+    <div class="state"><div class="bar" style="background:var(--warning)"></div><div class="lbl">warning</div></div>
+    <div class="state"><div class="bar" style="background:var(--error)"></div><div class="lbl">error</div></div>
+    <div class="state"><div class="bar" style="background:var(--disabled)"></div><div class="lbl">disabled</div></div>
+  </div>
+</div>
+<div class="col">
+  <div class="cap">Map ownership rims</div>
+  <div class="rims">
+    <div class="rwrap"><div class="rim" style="outline:2px solid var(--rim-owned); outline-offset:-2px">🏕️</div><div class="lbl">owned</div></div>
+    <div class="rwrap"><div class="rim" style="outline:2px solid var(--rim-enemy); outline-offset:-2px">💀</div><div class="lbl">enemy</div></div>
+    <div class="rwrap"><div class="rim" style="outline:1px solid var(--rim-neutral); outline-offset:-1px"></div><div class="lbl">neutral</div></div>
+    <div class="rwrap"><div class="rim" style="outline:3px solid var(--rim-selected); outline-offset:-3px">⚔</div><div class="lbl">selected</div></div>
+  </div>
+</div>
+</body>
+</html>

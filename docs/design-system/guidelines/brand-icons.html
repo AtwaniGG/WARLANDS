@@ -1,0 +1,47 @@
+<!-- @dsCard group="Brand" viewport="700x340" name="Icon System — Emoji" subtitle="Functional emoji icons carry game identity (resources, units, buildings)" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  body { padding: 20px 22px; }
+  .grp { margin-bottom: 16px; }
+  .cap { font-family: var(--font-display); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 9px; }
+  .row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .ic { display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px; border-radius: var(--radius-sm); background: var(--panel-2); border: 1px solid var(--hairline); font-size: 12px; color: var(--text-lo); }
+  .ic b { font-style: normal; }
+  .note { font-size: 10px; color: var(--text-muted); margin-top: 4px; }
+</style>
+</head>
+<body>
+  <div class="grp">
+    <div class="cap">Raw → Intermediate → Finished resources</div>
+    <div class="row">
+      <span class="ic">🌾 Food</span><span class="ic">💧 Water</span><span class="ic">🪵 Wood</span><span class="ic">🪨 Stone</span><span class="ic">⛓️ Iron</span><span class="ic">💎 Minerals</span><span class="ic">🛢️ Oil</span><span class="ic">💽 Data</span>
+      <span class="ic">⛽ Fuel</span><span class="ic">🔩 Steel</span><span class="ic">🔌 Electronics</span><span class="ic">⚙️ Parts</span><span class="ic">🧨 Ammo</span><span class="ic">🧪 Chemicals</span>
+      <span class="ic">🔫 Rifles</span><span class="ic">🛡️ Tanks</span><span class="ic">🛸 Drones</span><span class="ic">✈️ Aircraft</span><span class="ic">🗼 Turrets</span><span class="ic">🧱 Components</span>
+    </div>
+  </div>
+  <div class="grp">
+    <div class="cap">Units — counter system reads by silhouette</div>
+    <div class="row">
+      <span class="ic">🪖 Infantry</span><span class="ic">🛡️ Tanks</span><span class="ic">💥 Artillery</span><span class="ic">✈️ Aircraft</span><span class="ic">🛸 Drones</span><span class="ic">🔧 Engineers</span>
+    </div>
+  </div>
+  <div class="grp">
+    <div class="cap">Buildings &amp; allegiance</div>
+    <div class="row">
+      <span class="ic">🏕️ Camp</span><span class="ic">🏭 Refinery</span><span class="ic">⚒️ Foundry</span><span class="ic">🛠️ Heavy Works</span><span class="ic">🔬 Electronics Lab</span><span class="ic">📦 Warehouse</span>
+      <span class="ic">🏛️ HQ</span><span class="ic">🏰 Fortress</span><span class="ic">🏪 Trade Hub</span><span class="ic">📡 Radar</span>
+    </div>
+  </div>
+  <div class="grp" style="margin-bottom:0">
+    <div class="cap">Navigation &amp; combat</div>
+    <div class="row">
+      <span class="ic">🗺️ World</span><span class="ic">💱 Market</span><span class="ic">🤝 Allegiance</span><span class="ic">🏆 Season</span><span class="ic">💀 Hostile</span><span class="ic">⚔ Crucible</span><span class="ic">🔭 Scout</span><span class="ic">🗡️ Raid</span>
+    </div>
+    <div class="note">Emoji are the shipped functional icon set (a sprite/silhouette system is the art-direction target). UI chrome uses Lucide via CDN where line icons are needed.</div>
+  </div>
+</body>
+</html>
