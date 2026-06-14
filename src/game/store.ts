@@ -52,6 +52,7 @@ import {
   TECHS, RESEARCH_RESOURCE, computeTechBonuses, canResearch,
   type TechId, type TechBonuses,
 } from "./research";
+import { eventById, rollEvent, EVENT_INTERVAL_TICKS } from "./events";
 
 export const WORLD_RADIUS = 9;
 export const RECRUIT_REROLL_COST = 500; // §13 sink
@@ -135,6 +136,9 @@ interface GameState {
   recruitPool: Commander[]; // available to recruit
   plotCommander: Record<string, string>; // hexKey -> commanderId
   unlockedTech: string[]; // researched tech ids (GDD §6.4)
+  activeEventId: string | null; // current world event (GDD §9, §15.3)
+  eventEndsAt: number; // tick the active event ends
+  nextEventAt: number; // tick the next event may fire
   season: SeasonState;
   selectedHex: string | null;
   tick: number;
@@ -336,6 +340,9 @@ function freshState() {
     recruitPool: rollRecruits((Date.now() & 0x7fffffff) || 1),
     plotCommander: {} as Record<string, string>,
     unlockedTech: [] as string[],
+    activeEventId: null as string | null,
+    eventEndsAt: 0,
+    nextEventAt: 25,
     season: { index: 1, startTick: 0, lengthTicks: SEASON_TICKS, scoreEcon: 0, scoreMilitary: 0, lastPayout: null as number | null },
     selectedHex: null as string | null,
     tick: 0,
@@ -558,7 +565,7 @@ export const useGame = create<GameState>()(
       defender: npc.army,
       terrainFactor: terrain.defenseMult >= 1 ? 1 + (terrain.defenseMult - 1) : terrain.defenseMult,
       scoutFactor: (npc.scouted ? 1.1 : 0.97) + commanderScoutBonus(cmd) + tech.scout,
-      commanderFactor: Math.min(1.2, commanderCombatFactor(cmd, intent) * (1 + tech.combat)),
+      commanderFactor: Math.min(1.2, commanderCombatFactor(cmd, intent) * (1 + tech.combat + (eventById(get().activeEventId)?.combat ?? 0))),
       defenderStock: npc.stock,
       defensePct: 1,
     });
@@ -810,7 +817,7 @@ export const useGame = create<GameState>()(
       defender: target.garrison,
       terrainFactor: terrain.defenseMult >= 1 ? terrain.defenseMult : 1 - (1 - terrain.defenseMult) * 0.5,
       scoutFactor: (empire.scouted ? 1.1 : 0.97) + commanderScoutBonus(cmd) + tech.scout,
-      commanderFactor: Math.min(1.2, commanderCombatFactor(cmd, intent) * (1 + tech.combat)),
+      commanderFactor: Math.min(1.2, commanderCombatFactor(cmd, intent) * (1 + tech.combat + (eventById(get().activeEventId)?.combat ?? 0))),
       defenderStock: target.stock,
       defensePct: 1,
     });
@@ -1064,6 +1071,8 @@ export const useGame = create<GameState>()(
     const state = get();
     const buffs = get().allegianceBuffs();
     const tech = computeTechBonuses(state.unlockedTech);
+    const evt = eventById(state.activeEventId);
+    const evtProd = evt ? evt.production : 0;
     const plots = { ...state.plots };
     const plotList = Object.values(plots);
     const empLog: string[] = []; // empire-AI messages collected this tick
@@ -1088,7 +1097,7 @@ export const useGame = create<GameState>()(
             base: def.baseOutput,
             terrainMult,
             level: b.level,
-            workforceMult: 1 + buffs.production + cmdProd + tech.production, // Allegiance (§10.3) + Commander (§8.4) + Tech (§6.4)
+            workforceMult: Math.max(0.1, 1 + buffs.production + cmdProd + tech.production + evtProd), // Allegiance + Commander + Tech + Event
             plotIndex: plot.claimIndex,
           });
           addRes(resources, def.extracts, out, cap);
@@ -1099,7 +1108,7 @@ export const useGame = create<GameState>()(
         if (def.kind === "factory" && b.activeProduct) {
           const product = b.activeProduct;
           const recipe = RESOURCES[product].recipe ?? {};
-          const rate = (def.baseOutput ?? 1) * levelMult(b.level) * (terrain.id === "industrial" ? 1.25 : 1) * dr * (1 + buffs.production + cmdProd + tech.production);
+          const rate = (def.baseOutput ?? 1) * levelMult(b.level) * (terrain.id === "industrial" ? 1.25 : 1) * dr * Math.max(0.1, 1 + buffs.production + cmdProd + tech.production + evtProd);
           // produce as many whole units as inputs allow, up to rate
           const batches = Math.floor(rate);
           const frac = rate - batches;
@@ -1152,6 +1161,12 @@ export const useGame = create<GameState>()(
     // ---- Market life (GDD §7): prices drift, AI liquidity refreshes, limit orders fill ----
     const nextTick = state.tick + 1;
     const refPrices = driftPrices(state.refPrices, nextTick);
+    // world events nudge prices each tick
+    if (evt && evt.priceMult !== 1) {
+      for (const k of Object.keys(refPrices) as ResourceId[]) {
+        refPrices[k] = Math.round(Math.max(0.1, refPrices[k] * evt.priceMult) * 100) / 100;
+      }
+    }
     let book = state.book;
     let marketWar = 0;
     let marketBurn = 0;
@@ -1278,9 +1293,26 @@ export const useGame = create<GameState>()(
       }
     }
 
+    // World events: expire the current one or fire a new one after the cooldown (GDD §9, §15.3)
+    let activeEventId = state.activeEventId;
+    let eventEndsAt = state.eventEndsAt;
+    let nextEventAt = state.nextEventAt;
+    const eventMsgs: string[] = [];
+    if (activeEventId && nextTick >= eventEndsAt) {
+      const ended = eventById(activeEventId);
+      if (ended) eventMsgs.push(`${ended.icon} ${ended.name} has ended.`);
+      activeEventId = null;
+      nextEventAt = nextTick + EVENT_INTERVAL_TICKS;
+    } else if (!activeEventId && nextTick >= nextEventAt) {
+      const e = rollEvent(nextTick + 0.5);
+      activeEventId = e.id;
+      eventEndsAt = nextTick + e.durationTicks;
+      eventMsgs.push(`${e.icon} World Event: ${e.name} — ${e.desc}`);
+    }
+
     const marketLog = marketWar > 0 ? [`Market: limit orders filled for +${marketWar.toLocaleString()} $WAR.`] : [];
-    const nextLog = empLog.length || marketLog.length
-      ? [...empLog, ...marketLog, ...state.log].slice(0, 50)
+    const nextLog = eventMsgs.length || empLog.length || marketLog.length
+      ? [...eventMsgs, ...empLog, ...marketLog, ...state.log].slice(0, 50)
       : state.log;
 
     set({
@@ -1291,6 +1323,9 @@ export const useGame = create<GameState>()(
       tick: nextTick,
       refPrices,
       book,
+      activeEventId,
+      eventEndsAt,
+      nextEventAt,
       war: state.war + marketWar,
       warBurned: state.warBurned + marketBurn,
       seasonPool: state.seasonPool + marketPool,
@@ -1327,6 +1362,9 @@ export const useGame = create<GameState>()(
         recruitPool: s.recruitPool,
         plotCommander: s.plotCommander,
         unlockedTech: s.unlockedTech,
+        activeEventId: s.activeEventId,
+        eventEndsAt: s.eventEndsAt,
+        nextEventAt: s.nextEventAt,
         season: s.season,
         selectedHex: s.selectedHex,
         tick: s.tick,

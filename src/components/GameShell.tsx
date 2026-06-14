@@ -14,6 +14,7 @@ import { WalletPanel } from "./WalletPanel";
 import { DiplomacyPanel } from "./DiplomacyPanel";
 import { CommandersPanel } from "./CommandersPanel";
 import { ResearchPanel } from "./ResearchPanel";
+import { EventBanner } from "./EventBanner";
 import { Tabs, type TabItem } from "./ui";
 
 type View = "map" | "market" | "research" | "allegiance" | "diplomacy" | "commanders" | "season" | "wallet";
@@ -39,6 +40,7 @@ export function GameShell() {
       <TopBar />
 
       <Tabs tabs={TABS} value={view} onChange={setView} />
+      <EventBanner />
 
       <div className="flex min-h-0 flex-1">
         {view === "map" ? (
