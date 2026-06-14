@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useGame } from "@/game/store";
 import { TopBar } from "./TopBar";
 import { HexMap } from "./HexMap";
 import { PlotPanel } from "./PlotPanel";
@@ -17,7 +18,7 @@ import { ResearchPanel } from "./ResearchPanel";
 import { QuestsPanel } from "./QuestsPanel";
 import { StatsPanel } from "./StatsPanel";
 import { EventBanner } from "./EventBanner";
-import { SettingsEffects } from "./SettingsModal";
+import { SettingsEffects, SettingsModal } from "./SettingsModal";
 import { Toaster } from "./Toaster";
 import { Tabs, type TabItem } from "./ui";
 
@@ -38,6 +39,22 @@ const TABS: TabItem<View>[] = [
 
 export function GameShell() {
   const [view, setView] = useState<View>("map");
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const clearReport = useGame((s) => s.clearReport);
+
+  // Keyboard shortcuts: 1–0 switch tabs, S settings, Esc close.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA") return;
+      if (e.key === "Escape") { setSettingsOpen(false); clearReport(); return; }
+      if (e.key.toLowerCase() === "s") { setSettingsOpen((o) => !o); return; }
+      const n = e.key === "0" ? 10 : Number(e.key);
+      if (!Number.isNaN(n) && n >= 1 && n <= TABS.length) setView(TABS[n - 1].id);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [clearReport]);
 
   return (
     <div className="flex h-dvh flex-col" style={{ background: "var(--panel-void)", color: "var(--text-hi)" }}>
@@ -45,7 +62,8 @@ export function GameShell() {
       <SettingsEffects />
       <Toaster />
       <BattleReport />
-      <TopBar />
+      {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
+      <TopBar onOpenSettings={() => setSettingsOpen(true)} />
 
       <Tabs tabs={TABS} value={view} onChange={setView} />
       <EventBanner />

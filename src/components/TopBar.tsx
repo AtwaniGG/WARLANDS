@@ -1,17 +1,14 @@
 "use client";
 
-import { useState } from "react";
 import { useGame } from "@/game/store";
 import { WalletButton } from "./WalletButton";
-import { SettingsModal } from "./SettingsModal";
 import { Badge, Stat } from "./ui";
 
 function num(n: number) {
   return Math.floor(n).toLocaleString();
 }
 
-export function TopBar() {
-  const [settingsOpen, setSettingsOpen] = useState(false);
+export function TopBar({ onOpenSettings }: { onOpenSettings: () => void }) {
   const war = useGame((s) => s.war);
   const staked = useGame((s) => s.warStaked);
   const burned = useGame((s) => s.warBurned);
@@ -47,7 +44,7 @@ export function TopBar() {
         <Stat label={`S${seasonIdx}·t`} value={String(tick)} accent="neutral" />
         <WalletButton />
         <button
-          onClick={() => setSettingsOpen(true)}
+          onClick={onOpenSettings}
           aria-label="Settings"
           className="px-1.5 py-1"
           style={{ borderRadius: "var(--radius-sm)", color: "var(--text-lo)", fontSize: "15px" }}
@@ -55,7 +52,6 @@ export function TopBar() {
           ⚙️
         </button>
       </div>
-      {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
     </header>
   );
 }
