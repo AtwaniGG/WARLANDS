@@ -4,6 +4,7 @@ import { RESOURCES, INTERMEDIATE_RESOURCES, FINISHED_RESOURCES, type ResourceId 
 import { UNITS, UNIT_IDS, COUNTER } from "@/game/units";
 import { PLOT_TYPES, TERRAIN_IDS } from "@/game/plotTypes";
 import { Panel } from "./ui";
+import { ResourceIcon, UnitIcon } from "./GameIcons";
 
 function counterColor(v: number) {
   if (v >= 1.4) return "var(--emerald-text)";
@@ -28,13 +29,13 @@ export function CodexPanel() {
             <thead>
               <tr>
                 <th style={{ padding: "4px 6px", textAlign: "left", color: "var(--text-muted)" }}>atk \ def</th>
-                {UNIT_IDS.map((u) => <th key={u} style={{ padding: "4px 6px", color: "var(--text-lo)" }}>{UNITS[u].icon}</th>)}
+                {UNIT_IDS.map((u) => <th key={u} style={{ padding: "4px 6px", color: "var(--text-lo)" }}><UnitIcon id={u} size={16} /></th>)}
               </tr>
             </thead>
             <tbody>
               {UNIT_IDS.map((a) => (
                 <tr key={a}>
-                  <td style={{ padding: "4px 6px", color: "var(--text-lo)" }}>{UNITS[a].icon} {UNITS[a].name}</td>
+                  <td style={{ padding: "4px 6px", color: "var(--text-lo)" }}><span className="inline-flex items-center gap-1"><UnitIcon id={a} size={14} /> {UNITS[a].name}</span></td>
                   {UNIT_IDS.map((d) => (
                     <td key={d} style={{ padding: "4px 6px", textAlign: "center", color: counterColor(COUNTER[a][d]) }}>{COUNTER[a][d].toFixed(1)}</td>
                   ))}
@@ -52,10 +53,12 @@ export function CodexPanel() {
             const recipe = def.recipe ?? {};
             return (
               <div key={id} className="px-2.5 py-2" style={{ borderRadius: "var(--radius-sm)", background: "var(--panel-2)", fontSize: "12px" }}>
-                <span style={{ fontWeight: 600 }}>{def.icon} {def.name}</span>
+                <span className="inline-flex items-center gap-1" style={{ fontWeight: 600 }}><ResourceIcon id={id} size={15} /> {def.name}</span>
                 <span style={{ color: "var(--text-muted)" }}> ⟵ </span>
-                <span style={{ color: "var(--text-lo)" }}>
-                  {Object.entries(recipe).map(([k, v]) => `${v}× ${RESOURCES[k as ResourceId].icon}`).join("  ")}
+                <span className="inline-flex flex-wrap items-center gap-2" style={{ color: "var(--text-lo)" }}>
+                  {Object.entries(recipe).map(([k, v]) => (
+                    <span key={k} className="inline-flex items-center gap-0.5">{v}×<ResourceIcon id={k as ResourceId} size={13} /></span>
+                  ))}
                 </span>
               </div>
             );

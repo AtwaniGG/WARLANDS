@@ -7,6 +7,7 @@ import {
   type GovModel, type AllegianceBuildingId,
 } from "@/game/allegiance";
 import { Badge, Button, Panel } from "./ui";
+import { AllegianceBuildingIcon } from "./GameIcons";
 
 const GOV_MODELS: { id: GovModel; label: string; desc: string }[] = [
   { id: "democracy", label: "Democracy", desc: "1 member = 1 vote." },
@@ -96,8 +97,9 @@ export function AllegiancePanel() {
                 <div key={a.id} className="flex items-center justify-between p-3" style={{ borderRadius: "var(--radius-lg)", border: "1px solid var(--hairline)", background: "var(--panel)" }}>
                   <div>
                     <div style={{ fontWeight: 600 }}>{a.name} <span className="wl-label">{a.govModel}</span></div>
-                    <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>
-                      {a.members.length} members · treasury {num(a.treasuryWar)} $WAR · {a.buildings.map((b) => ALLEGIANCE_BUILDINGS[b].icon).join(" ")}
+                    <div className="flex items-center gap-1" style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+                      {a.members.length} members · treasury {num(a.treasuryWar)} $WAR ·
+                      {a.buildings.map((b) => <AllegianceBuildingIcon key={b} id={b} size={15} />)}
                     </div>
                   </div>
                   <Button variant="info" size="sm" onClick={() => join(a.id)}>Join</Button>
@@ -158,7 +160,7 @@ export function AllegiancePanel() {
                         opacity: built ? 0.4 : 1,
                       }}
                     >
-                      <div style={{ fontWeight: 600 }}>{def.icon} {def.name} {built && "✓"}</div>
+                      <div className="flex items-center gap-1.5" style={{ fontWeight: 600 }}><AllegianceBuildingIcon id={b} size={18} /> {def.name} {built && "✓"}</div>
                       <div style={{ fontSize: "10px", color: "var(--text-lo)" }}>{def.benefit}</div>
                       <div className="wl-num" style={{ fontSize: "10px", color: "var(--amber-text)" }}>{num(def.cost)} $WAR treasury</div>
                     </button>

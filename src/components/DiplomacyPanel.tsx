@@ -2,7 +2,8 @@
 
 import { useGame } from "@/game/store";
 import { empirePower, type Stance } from "@/game/empire";
-import { UNITS, UNIT_IDS } from "@/game/units";
+import { UNIT_IDS } from "@/game/units";
+import { UnitIcon } from "./GameIcons";
 import { Badge, type BadgeTone } from "./ui";
 
 const STANCE_TONE: Record<Stance, BadgeTone> = {
@@ -79,7 +80,7 @@ export function DiplomacyPanel() {
                   <div className="mt-2 flex flex-wrap gap-1" style={{ fontSize: "11px", color: "var(--text-lo)" }}>
                     {UNIT_IDS.map((u) => {
                       const n = Object.values(e.plots).reduce((s, p) => s + (p.garrison[u] ?? 0), 0);
-                      return n > 0 ? <span key={u} style={{ borderRadius: "var(--radius-sm)", background: "var(--surface-raised)", padding: "2px 6px" }}>{UNITS[u].icon} {n}</span> : null;
+                      return n > 0 ? <span key={u} className="inline-flex items-center gap-1" style={{ borderRadius: "var(--radius-sm)", background: "var(--surface-raised)", padding: "2px 6px" }}><UnitIcon id={u} size={13} /> {n}</span> : null;
                     })}
                   </div>
                 )}

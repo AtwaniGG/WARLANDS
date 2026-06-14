@@ -241,9 +241,11 @@ export function EmpirePlotPanel({ hexKey }: { hexKey: string }) {
       </div>
 
       {empire.scouted && target ? (
-        <div style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
+        <div className="flex flex-wrap items-center gap-1.5" style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
           <span style={{ color: "var(--text-muted)" }}>Garrison: </span>
-          {UNIT_IDS.filter((u) => (target.garrison[u] ?? 0) > 0).map((u) => `${UNITS[u].icon}${target.garrison[u]}`).join(" ")}
+          {UNIT_IDS.filter((u) => (target.garrison[u] ?? 0) > 0).map((u) => (
+            <span key={u} className="inline-flex items-center gap-0.5"><UnitIcon id={u} size={13} />{target.garrison[u]}</span>
+          ))}
         </div>
       ) : (
         <p style={{ fontSize: "12px", color: "var(--text-lo)" }}>Strength unknown. Run espionage (80 $WAR) to reveal garrisons.</p>

@@ -3,10 +3,10 @@
 import { useEffect, useRef } from "react";
 import { useGame } from "@/game/store";
 import { UNIT_IDS, type Army } from "@/game/units";
-import { RESOURCES, type ResourceId } from "@/game/resources";
+import { type ResourceId } from "@/game/resources";
 import { play } from "@/game/sound";
 import { Button } from "./ui";
-import { UnitIcon } from "./GameIcons";
+import { UnitIcon, ResourceIcon } from "./GameIcons";
 
 function Chip({ children }: { children: React.ReactNode }) {
   return (
@@ -90,7 +90,7 @@ export function BattleReport() {
             <div className="flex flex-wrap gap-1">
               {Object.entries(report.loot).map(([k, v]) => (
                 <Chip key={k}>
-                  {RESOURCES[k as ResourceId].icon} {Math.floor(v as number).toLocaleString()}
+                  <span className="inline-flex items-center gap-1"><ResourceIcon id={k as ResourceId} size={13} /> {Math.floor(v as number).toLocaleString()}</span>
                 </Chip>
               ))}
             </div>
