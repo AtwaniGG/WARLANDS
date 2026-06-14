@@ -1,80 +1,78 @@
-# WARLANDS — Web3 Strategy MMO (Prototype)
+# WARLANDS — AAA Web3 Strategy MMO
 
 A persistent-world, PvP-first strategy MMO where players stake a native token (`$WAR`) to
-secure finite land on one shared live map, build economies, and wage war.
-This repo is the **playable prototype of the core loop**, built directly from
-[`docs/GDD.md`](docs/GDD.md) (the full 24-section design doc / tokenomics / architecture spec).
+secure finite land on one shared live map, build economies, and wage war — solo or in
+**Allegiances**. Built directly from [`docs/GDD.md`](docs/GDD.md), the full 24-section design
+doc covering tokenomics, balancing math, architecture, and roadmap.
 
-## What's playable right now
-
-The full prototype loop across **five integrated systems** (tabs: World · Market · Allegiance · Season):
-
-```
-STAKE → CLAIM → BUILD → FARM → MANUFACTURE → TRAIN → RAID → TRADE → ALLY → COMPETE FOR SEASON REWARDS
-```
-
-**Phase A — Economy (GDD §2–6, §18)**
-- **Live hex world map** with a center→edge risk gradient (newbie ring → the Crucible), pan & zoom.
-- **9 plot types** with real stake costs + terrain yield multipliers. $WAR is *locked, never spent*.
-- **8 raw → 6 intermediate → 6 finished** resources with real supply-chain recipes.
-- **Extractors + factories**; tick engine with diminishing returns, level multipliers, super-linear
-  upkeep, storage caps, and starvation→defense decay. **Anti-whale math live.**
-
-**Phase B — Combat & Raids (GDD §8–9)**
-- **6 unit classes** + a full counter matrix (infantry/tanks/artillery/aircraft/drones/engineers).
-- **NPC hostile camps** (💀) seeded across the map, stronger & richer toward the center; respawn over time.
-- **Scout → Raid/Siege** with **seeded, reproducible** battle resolution, the GDD §9.4 underdog
-  win-probability model, loot efficiency falloff, and full battle reports.
-
-**Phase C — Marketplace (GDD §7)**
-- Player-driven **order book** (buy / sell / limit list) over a live AI-liquidity book with drifting prices.
-- **4% transaction + 5 $WAR listing fees** are token sinks (½ burned, ½ to the season reward pool).
-
-**Phase D — Allegiances & Governance (GDD §10–11)**
-- **Found or join** an Allegiance; pick one of 4 governance models (democracy/weighted/council/founder).
-- **Treasury contributions** raise your contribution score; **propose → vote** on Allegiance buildings;
-  AI members auto-vote and proposals resolve by your governance model.
-- **Buildings grant live buffs**: Research +production, Fortress +defense, Trade Hub −market fees, Radar +scouting.
-
-**Phase E — Seasons & Rewards (GDD §14–15)**
-- Season timer, **4-factor season score** (econ/military/territory/allegiance).
-- Reward pool is **funded only by sinks**; payout uses the top-heavy (p=1.5) share curve and
-  **can never exceed the pool** — the GDD §12.2 no-emissions invariant, enforced in code.
-
-## Run it
+> **Landing page** at `/` · **Game** at `/play`.
 
 ```bash
 npm install
-npm run dev        # http://localhost:3000
+npm run dev        # → http://localhost:3000  (landing)  ·  /play (game)
 ```
 
-How to play: click an unclaimed hex → **Stake & Claim** → on your plot, **Construct**
-extractors (e.g. Farm, Iron Mine) → watch the stockpile fill each tick → build a
-Foundry/Refinery and pick a product to start manufacturing → upgrade your Camp for more
-build slots. Higher-tier terrain (mountain, desert, tech ruins, warzone) costs more stake
-but yields more.
+## Repository layout
+
+```
+src/
+  app/                  Next.js App Router
+    page.tsx            ← tactical landing page (/)
+    play/page.tsx       ← the game (/play)
+    api/                ← health · players · market (server routes)
+  game/                 client game engine (rules mirror the GDD section-by-section)
+    resources · plotTypes · buildings · units · combat · market
+    allegiance · empire · formulas · world · store (zustand, persisted)
+  components/           UI: hex map, plot/military/market/allegiance/diplomacy/season/wallet panels
+  web3/                 wagmi + viem: config, ABIs, addresses, provider
+  server/db/            Drizzle ORM schema (GDD §21) + Neon client
+contracts/              Solidity smart contracts (GDD §20) + Foundry tests
+drizzle/                generated SQL migrations
+docs/
+  GDD.md                full game design document
+  DESIGN_BRIEF.md       master art & design prompt (16 modules)
+```
+
+## What's built
+
+**Game (client, `src/game` + `src/components`)** — fully playable single-player prototype:
+- **Economy** (GDD §2–6, §18): hex world with center→edge risk gradient, 9 plot types, 20-resource
+  supply chain, extractors + factories, tick engine with diminishing returns / super-linear upkeep.
+- **Combat** (§8–9): 6 unit classes + counter matrix, NPC camps, scout/raid/siege, seeded
+  reproducible battles, the underdog win-probability model, loot, battle reports.
+- **Marketplace** (§7): player-driven order book with drifting prices; fees are token sinks.
+- **Allegiances & governance** (§10–11): found/join, 4 governance models, treasury, contribution
+  scores, propose→vote→resolve, buildings that grant live buffs.
+- **Rival empires & diplomacy** (§10.5–10.6): AI empires hold territory, declare war/peace/alliance,
+  retaliate, and can be conquered.
+- **Seasons & rewards** (§14–15): timer, 4-factor score, sink-funded reward pool enforcing the
+  no-emissions invariant.
+- **Persistence**: localStorage save/load with SSR-safe hydration + reset.
+
+**On-chain layer (`contracts/`, GDD §20)** — self-contained Foundry project, `solc`-verified:
+`WarToken` (fixed-supply burnable), `StakingManager` (principal-safe staking + conquest),
+`SinkRouter` (burn-floor split), `RewardDistributor` (Merkle claims, claimable ≤ pool),
+`AllegianceTreasury` (quorum + timelock). See [contracts/README.md](contracts/README.md).
+
+**Web3 client (`src/web3`)**: wagmi v3 + viem wallet connect, typed ABIs, env-driven addresses.
+Falls back to mock mode until contracts are deployed and `NEXT_PUBLIC_*` is set.
+
+**Backend foundation (`src/server`, GDD §19/§21)**: full 26-table Drizzle/Postgres schema +
+Neon client + API routes. Runs in mock mode until `DATABASE_URL` is set.
+See [src/server/README.md](src/server/README.md).
+
+## Configuration
+
+Copy [`.env.example`](.env.example) → `.env.local`. All integrations degrade gracefully:
+no `DATABASE_URL` → mock backend; no `NEXT_PUBLIC_*` contract addresses → mocked staking.
 
 ## Stack
 
-- **Next.js 16** (App Router) + **React 19** + **TypeScript**
-- **Tailwind v4**
-- **Zustand** game store + a 1s tick loop (`GameClock`)
-- All game rules live in [`src/game/`](src/game/) and mirror the GDD section-by-section:
-  - `resources.ts` — §5 resource tiers & recipes
-  - `plotTypes.ts` — §4 terrain/plots
-  - `buildings.ts` — §6 buildings/factories
-  - `formulas.ts` — §18 balancing formulas (production, DR, upkeep, win prob, loot)
-  - `world.ts` — §3 hex world generation
-  - `store.ts` — §2 core loop engine
+Next.js 16 (App Router) · React 19 · TypeScript · Tailwind v4 · Zustand · wagmi/viem ·
+Drizzle ORM + Neon Postgres · Foundry/Solidity. Targets an EVM L2 (Base / Arbitrum).
 
-## Not yet built (next slices, per the GDD)
+## Not yet built
 
-- **On-chain layer (§20)** — real $WAR ERC-20, staking/treasury/reward contracts on an L2 (Base/Arbitrum).
-  Currently staking, treasury and rewards are **mocked client-side** but modeled exactly as the contracts will enforce.
-- **Server-authoritative multiplayer (§19)** — sector-sharded sim, WebSocket sync, Postgres/Redis.
-  Currently single-player with AI opponents standing in for other players (market liquidity, NPC camps, Allegiance members).
-- **Player-vs-player raids, territory wars, diplomacy/espionage (§8, §10.5–10.6)**, weather/commanders/traps,
-  and the on-chain Merkle reward claim.
-
-The current build is a single-player, client-side prototype that demonstrates the **complete economic +
-military + political + seasonal loop** with every rule traced to a GDD section.
+Server-authoritative multiplayer simulation (sector sharding, WebSocket sync), the on-chain
+Merkle reward pipeline, player-vs-player (vs the current AI), and contract audit hardening.
+The client store is the reference implementation of the rules the backend will run authoritatively.
