@@ -43,8 +43,14 @@ import {
   generateEmpires,
   type Empire, type Stance,
 } from "./empire";
+import {
+  rollRecruits, RARITY_META, xpForLevel,
+  commanderCombatFactor, commanderProductionBonus, commanderScoutBonus,
+  type Commander,
+} from "./commanders";
 
 export const WORLD_RADIUS = 9;
+export const RECRUIT_REROLL_COST = 500; // §13 sink
 export const TICK_MS = 1000; // 1 real second = 1 game tick (prototype speed)
 export const STORAGE_BASE_CAP = 1500;
 export const STARTING_WAR = 200_000; // mocked $WAR balance
@@ -121,6 +127,9 @@ interface GameState {
   allegiances: Record<string, Allegiance>;
   playerAllegianceId: string | null;
   empires: Record<string, Empire>;
+  commanders: Commander[]; // owned, account-permanent (GDD §8.4, §15)
+  recruitPool: Commander[]; // available to recruit
+  plotCommander: Record<string, string>; // hexKey -> commanderId
   season: SeasonState;
   selectedHex: string | null;
   tick: number;
@@ -160,6 +169,11 @@ interface GameState {
   setStance: (empireId: string, stance: Stance) => void;
   scoutEmpire: (empireId: string, fromPlot: string) => void;
   raidEmpire: (targetKey: string, fromPlot: string, army: Army, intent: "raid" | "siege") => void;
+
+  // commanders (GDD §8.4)
+  rerollRecruits: () => void;
+  recruitCommander: (id: string) => void;
+  assignCommander: (plotKey: string, commanderId: string | null) => void;
 
   // meta
   resetGame: () => void;
@@ -268,6 +282,30 @@ function spendResources(bag: ResourceBag, cost: Partial<Record<ResourceId, numbe
   for (const [k, v] of Object.entries(cost)) bag[k as ResourceId] = (bag[k as ResourceId] ?? 0) - (v ?? 0);
 }
 
+/** The commander assigned to a plot, if any. */
+function getPlotCommander(
+  state: { commanders: Commander[]; plotCommander: Record<string, string> },
+  plotKey: string,
+): Commander | undefined {
+  const id = state.plotCommander[plotKey];
+  return id ? state.commanders.find((c) => c.id === id) : undefined;
+}
+
+/** Award XP to a commander and auto-level when the threshold is crossed. Returns a new array. */
+function applyCommanderXp(commanders: Commander[], commanderId: string | undefined, xp: number): Commander[] {
+  if (!commanderId || xp <= 0) return commanders;
+  return commanders.map((c) => {
+    if (c.id !== commanderId) return c;
+    let level = c.level;
+    let total = c.xp + xp;
+    while (total >= xpForLevel(level, c.rarity) && level < 20) {
+      total -= xpForLevel(level, c.rarity);
+      level += 1;
+    }
+    return { ...c, level, xp: total };
+  });
+}
+
 const INITIAL_WORLD = generateWorld(WORLD_RADIUS);
 
 /** Fresh economic/military/season state (everything except the derived world). */
@@ -286,6 +324,8 @@ function freshState() {
     book: generateBook(BASE_PRICE, 99),
     allegiances: generateAiAllegiances(),
     playerAllegianceId: null as string | null,
+    recruitPool: rollRecruits((Date.now() & 0x7fffffff) || 1),
+    plotCommander: {} as Record<string, string>,
     season: { index: 1, startTick: 0, lengthTicks: SEASON_TICKS, scoreEcon: 0, scoreMilitary: 0, lastPayout: null as number | null },
     selectedHex: null as string | null,
     tick: 0,
@@ -302,6 +342,7 @@ export const useGame = create<GameState>()(
     (set, get) => ({
   ...freshState(),
   world: INITIAL_WORLD,
+  commanders: [] as Commander[], // permanent — preserved across resetGame
 
   ownedPlots: () => Object.values(get().plots),
 
@@ -498,13 +539,15 @@ export const useGame = create<GameState>()(
       return;
     }
     const terrain = PLOT_TYPES[npc.terrain];
+    const cmd = getPlotCommander(state, fromPlot);
     const result = resolveBattle({
       seed: (state.tick + 1) * 2654435761 + npc.q * 40503 + npc.r,
       intent,
       attacker: army,
       defender: npc.army,
       terrainFactor: terrain.defenseMult >= 1 ? 1 + (terrain.defenseMult - 1) : terrain.defenseMult,
-      scoutFactor: npc.scouted ? 1.1 : 0.97,
+      scoutFactor: (npc.scouted ? 1.1 : 0.97) + commanderScoutBonus(cmd),
+      commanderFactor: commanderCombatFactor(cmd, intent),
       defenderStock: npc.stock,
       defensePct: 1,
     });
@@ -531,6 +574,7 @@ export const useGame = create<GameState>()(
     set({
       npcs,
       plots: { ...state.plots, [fromPlot]: { ...plot, army: plotArmy, resources } },
+      commanders: result.attackerWins ? applyCommanderXp(state.commanders, cmd?.id, npc.tier * 40) : state.commanders,
       battleReport: { ...result, target: `Camp (${npc.q},${npc.r})` },
       season: result.attackerWins
         ? { ...state.season, scoreMilitary: state.season.scoreMilitary + npc.tier * 100 }
@@ -746,13 +790,15 @@ export const useGame = create<GameState>()(
     }
 
     const terrain = PLOT_TYPES[target.terrain];
+    const cmd = getPlotCommander(state, fromPlot);
     const result = resolveBattle({
       seed: (state.tick + 1) * 40503 + target.q * 31 + target.r * 7,
       intent,
       attacker: army,
       defender: target.garrison,
       terrainFactor: terrain.defenseMult >= 1 ? terrain.defenseMult : 1 - (1 - terrain.defenseMult) * 0.5,
-      scoutFactor: empire.scouted ? 1.1 : 0.97,
+      scoutFactor: (empire.scouted ? 1.1 : 0.97) + commanderScoutBonus(cmd),
+      commanderFactor: commanderCombatFactor(cmd, intent),
       defenderStock: target.stock,
       defensePct: 1,
     });
@@ -789,6 +835,7 @@ export const useGame = create<GameState>()(
       set({
         empires,
         plots: { ...state.plots, [fromPlot]: { ...plot, army: plotArmy, resources } },
+        commanders: applyCommanderXp(state.commanders, cmd?.id, empire.tier * 80),
         battleReport: { ...result, target: empire.name },
         season: { ...state.season, scoreMilitary: state.season.scoreMilitary + empire.tier * 250 },
         log: [`💀 ${empire.name} has been eliminated!`, ...state.log].slice(0, 50),
@@ -800,6 +847,7 @@ export const useGame = create<GameState>()(
     set({
       empires,
       plots: { ...state.plots, [fromPlot]: { ...plot, army: plotArmy, resources } },
+      commanders: result.attackerWins ? applyCommanderXp(state.commanders, cmd?.id, empire.tier * 60) : state.commanders,
       battleReport: { ...result, target: `${empire.name} (${target.q},${target.r})` },
       season: result.attackerWins
         ? { ...state.season, scoreMilitary: state.season.scoreMilitary + empire.tier * 120 }
@@ -808,7 +856,54 @@ export const useGame = create<GameState>()(
     });
   },
 
+  // ---------- Commanders (GDD §8.4) ----------
+  rerollRecruits: () => {
+    const state = get();
+    if (state.war < RECRUIT_REROLL_COST) {
+      set({ log: [`Need ${RECRUIT_REROLL_COST} $WAR to recruit new candidates.`, ...state.log].slice(0, 50) });
+      return;
+    }
+    set({
+      war: state.war - RECRUIT_REROLL_COST,
+      warBurned: state.warBurned + RECRUIT_REROLL_COST,
+      recruitPool: rollRecruits((state.tick + 1) * 7919 + (Date.now() & 0xffff)),
+      log: [`New commander candidates available.`, ...state.log].slice(0, 50),
+    });
+  },
+
+  recruitCommander: (id) => {
+    const state = get();
+    const c = state.recruitPool.find((x) => x.id === id);
+    if (!c) return;
+    const cost = RARITY_META[c.rarity].recruitCost;
+    if (state.war < cost) {
+      set({ log: [`Need ${cost.toLocaleString()} $WAR to recruit ${c.name}.`, ...state.log].slice(0, 50) });
+      return;
+    }
+    set({
+      war: state.war - cost,
+      warBurned: state.warBurned + Math.round(cost * 0.5),
+      commanders: [...state.commanders, c],
+      recruitPool: state.recruitPool.filter((x) => x.id !== id),
+      log: [`Recruited ${c.icon} ${c.name} (${c.rarity}).`, ...state.log].slice(0, 50),
+    });
+  },
+
+  assignCommander: (plotKey, commanderId) => {
+    const state = get();
+    const pc = { ...state.plotCommander };
+    // a commander serves one plot at a time
+    if (commanderId) {
+      for (const k of Object.keys(pc)) if (pc[k] === commanderId) delete pc[k];
+      pc[plotKey] = commanderId;
+    } else {
+      delete pc[plotKey];
+    }
+    set({ plotCommander: pc });
+  },
+
   resetGame: () => {
+    // commanders are permanent (GDD §15) — freshState omits them so they survive.
     set({ ...freshState(), log: ["New world generated. Stake $WAR to claim your first plot."] });
   },
 
@@ -943,6 +1038,7 @@ export const useGame = create<GameState>()(
       const resources = { ...plot.resources };
       const terrain = PLOT_TYPES[plot.terrain];
       const dr = diminishingReturns(plot.claimIndex);
+      const cmdProd = commanderProductionBonus(getPlotCommander(state, plot.q + "," + plot.r)); // Quartermaster (§8.4)
 
       // count factory product lines for specialization focus
       let producedAnything = false;
@@ -957,7 +1053,7 @@ export const useGame = create<GameState>()(
             base: def.baseOutput,
             terrainMult,
             level: b.level,
-            workforceMult: 1 + buffs.production, // Allegiance Research Center bonus (§10.3)
+            workforceMult: 1 + buffs.production + cmdProd, // Allegiance Research (§10.3) + Commander (§8.4)
             plotIndex: plot.claimIndex,
           });
           addRes(resources, def.extracts, out, cap);
@@ -1192,6 +1288,9 @@ export const useGame = create<GameState>()(
         allegiances: s.allegiances,
         playerAllegianceId: s.playerAllegianceId,
         empires: s.empires,
+        commanders: s.commanders,
+        recruitPool: s.recruitPool,
+        plotCommander: s.plotCommander,
         season: s.season,
         selectedHex: s.selectedHex,
         tick: s.tick,
