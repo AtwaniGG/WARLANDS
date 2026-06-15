@@ -68,15 +68,44 @@ export function HexMap() {
   };
   const onUp = () => { dragging.current = null; setIsDragging(false); };
 
+  // ---- touch: one-finger pan, two-finger pinch-zoom ----
+  const touch = useRef<{ mode: "pan" | "pinch"; sx: number; sy: number; ox: number; oy: number; d0: number; s0: number } | null>(null);
+  const tdist = (a: React.Touch, b: React.Touch) => Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+  const onTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      const t = e.touches[0];
+      touch.current = { mode: "pan", sx: t.clientX, sy: t.clientY, ox: view.x, oy: view.y, d0: 0, s0: view.scale };
+    } else if (e.touches.length === 2) {
+      touch.current = { mode: "pinch", sx: 0, sy: 0, ox: view.x, oy: view.y, d0: tdist(e.touches[0], e.touches[1]), s0: view.scale };
+    }
+  };
+  const onTouchMove = (e: React.TouchEvent) => {
+    const t = touch.current;
+    if (!t) return;
+    if (t.mode === "pan" && e.touches.length === 1) {
+      const p = e.touches[0];
+      setView((v) => ({ ...v, x: t.ox + (p.clientX - t.sx), y: t.oy + (p.clientY - t.sy) }));
+    } else if (t.mode === "pinch" && e.touches.length === 2) {
+      const d = tdist(e.touches[0], e.touches[1]);
+      setView((v) => ({ ...v, scale: Math.min(2.5, Math.max(0.5, t.s0 * (d / (t.d0 || 1)))) }));
+    }
+  };
+  const onTouchEnd = (e: React.TouchEvent) => { if (e.touches.length === 0) touch.current = null; };
+  const zoomBy = (f: number) => setView((v) => ({ ...v, scale: Math.min(2.5, Math.max(0.5, v.scale * f)) }));
+  const resetView = () => setView({ x: 0, y: 0, scale: 1 });
+
   return (
     <div
       className="relative h-full w-full overflow-hidden"
-      style={{ background: "var(--panel-void)" }}
+      style={{ background: "var(--panel-void)", touchAction: "none" }}
       onWheel={onWheel}
       onMouseDown={onDown}
       onMouseMove={onMove}
       onMouseUp={onUp}
       onMouseLeave={onUp}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
     >
       <svg
         width="100%"
@@ -162,16 +191,39 @@ export function HexMap() {
 
       <div className="pointer-events-none absolute left-3 top-3 px-3 py-2" style={{ borderRadius: "var(--radius-md)", background: "rgba(0,0,0,0.6)", fontSize: "12px", color: "var(--text-secondary)" }}>
         <div className="wl-title" style={{ fontSize: "13px", color: "var(--amber-text)" }}>Live World Map</div>
-        <div>Drag to pan · scroll to zoom · click a hex</div>
+        <div>Drag or pinch to explore · tap a hex</div>
         <div className="mt-1 flex gap-2" style={{ fontSize: "10px", color: "var(--text-muted)" }}>
           <span>⚔ Crucible (center, high risk)</span>
           <span>· edge = newbie ring</span>
         </div>
       </div>
 
+      {/* zoom controls (touch-friendly) */}
+      <div className="absolute bottom-3 left-3 flex flex-col gap-1.5">
+        <button onClick={() => zoomBy(1.3)} aria-label="Zoom in" style={zoomBtnStyle}>＋</button>
+        <button onClick={() => zoomBy(1 / 1.3)} aria-label="Zoom out" style={zoomBtnStyle}>－</button>
+        <button onClick={resetView} aria-label="Reset view" style={{ ...zoomBtnStyle, fontSize: "15px" }}>⟳</button>
+      </div>
+
       <Minimap />
     </div>
   );
 }
+
+const zoomBtnStyle: React.CSSProperties = {
+  width: 40,
+  height: 40,
+  display: "grid",
+  placeItems: "center",
+  borderRadius: "var(--radius-md)",
+  background: "rgba(0,0,0,0.62)",
+  border: "1px solid var(--hairline)",
+  color: "var(--amber-text)",
+  fontSize: "20px",
+  fontWeight: 700,
+  lineHeight: 1,
+  cursor: "pointer",
+  touchAction: "manipulation",
+};
 
 export type { Hex };

@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useWorldSocket } from "@/lib/useWorldSocket";
 import { PLOT_TYPES } from "@/game/plotTypes";
 import { axialToPixel } from "@/game/world";
@@ -24,6 +24,29 @@ function fmtArmy(a: Army): string {
 export default function WorldPage() {
   const { state, playerId, connected, error, report, send, clearReport } = useWorldSocket(SERVER_URL);
   const [sel, setSel] = useState<string | null>(null);
+
+  // map pan/zoom (mouse + touch + wheel)
+  const [wv, setWv] = useState({ x: 0, y: 0, s: 1 });
+  const wdrag = useRef<{ sx: number; sy: number; ox: number; oy: number } | null>(null);
+  const wtouch = useRef<{ mode: "pan" | "pinch"; sx: number; sy: number; ox: number; oy: number; d0: number; s0: number } | null>(null);
+  const clampS = (s: number) => Math.min(3, Math.max(1, s));
+  const wZoom = (f: number) => setWv((v) => ({ ...v, s: clampS(v.s * f) }));
+  const wReset = () => setWv({ x: 0, y: 0, s: 1 });
+  const wWheel = (e: React.WheelEvent) => setWv((v) => ({ ...v, s: clampS(v.s - e.deltaY * 0.0015) }));
+  const wDown = (e: React.MouseEvent) => { wdrag.current = { sx: e.clientX, sy: e.clientY, ox: wv.x, oy: wv.y }; };
+  const wMove = (e: React.MouseEvent) => { const d = wdrag.current; if (!d) return; setWv((v) => ({ ...v, x: d.ox + (e.clientX - d.sx), y: d.oy + (e.clientY - d.sy) })); };
+  const wUp = () => { wdrag.current = null; };
+  const wtd = (a: React.Touch, b: React.Touch) => Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+  const wTStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) { const t = e.touches[0]; wtouch.current = { mode: "pan", sx: t.clientX, sy: t.clientY, ox: wv.x, oy: wv.y, d0: 0, s0: wv.s }; }
+    else if (e.touches.length === 2) { wtouch.current = { mode: "pinch", sx: 0, sy: 0, ox: wv.x, oy: wv.y, d0: wtd(e.touches[0], e.touches[1]), s0: wv.s }; }
+  };
+  const wTMove = (e: React.TouchEvent) => {
+    const t = wtouch.current; if (!t) return;
+    if (t.mode === "pan" && e.touches.length === 1) { const p = e.touches[0]; setWv((v) => ({ ...v, x: t.ox + (p.clientX - t.sx), y: t.oy + (p.clientY - t.sy) })); }
+    else if (t.mode === "pinch" && e.touches.length === 2) { const d = wtd(e.touches[0], e.touches[1]); setWv((v) => ({ ...v, s: clampS(t.s0 * (d / (t.d0 || 1))) })); }
+  };
+  const wTEnd = (e: React.TouchEvent) => { if (e.touches.length === 0) wtouch.current = null; };
 
   if (!state) {
     return <main style={page}>{connected ? "Loading world…" : `Connecting to ${SERVER_URL}…`}</main>;
@@ -53,22 +76,40 @@ export default function WorldPage() {
       </div>
       {error && <div style={{ color: "#ff6b6b", fontSize: 12, marginTop: 4 }}>⚠ {error}</div>}
 
-      <svg viewBox="-180 -180 360 360" style={{ marginTop: 12, background: "#11141b", borderRadius: 8, width: "100%", maxWidth: 540, height: "auto", display: "block", touchAction: "manipulation" }}>
-        {Object.values(state.hexes).map((h) => {
-          const key = `${h.q},${h.r}`;
-          const { x, y } = axialToPixel(h.q, h.r, SIZE);
-          const plot = state.plots[key];
-          const owned = plot?.owner === playerId;
-          const enemy = plot && !owned;
-          return (
-            <circle key={key} cx={x} cy={y} r={SIZE * 0.62}
-              fill={PLOT_TYPES[h.terrain].color}
-              stroke={owned ? "#ffffff" : enemy ? "#ff5252" : sel === key ? "#ffd54f" : "#00000088"}
-              strokeWidth={owned || enemy || sel === key ? 2 : 0.5}
-              onClick={() => setSel(key)} style={{ cursor: "pointer" }} />
-          );
-        })}
-      </svg>
+      <div
+        style={{ position: "relative", marginTop: 12, width: "100%", maxWidth: 540, aspectRatio: "1 / 1", background: "#11141b", borderRadius: 8, overflow: "hidden", touchAction: "none", cursor: "grab" }}
+        onWheel={wWheel}
+        onMouseDown={wDown}
+        onMouseMove={wMove}
+        onMouseUp={wUp}
+        onMouseLeave={wUp}
+        onTouchStart={wTStart}
+        onTouchMove={wTMove}
+        onTouchEnd={wTEnd}
+      >
+        <svg viewBox="-180 -180 360 360" style={{ width: "100%", height: "100%", display: "block", transform: `translate(${wv.x}px,${wv.y}px) scale(${wv.s})`, transformOrigin: "center", transition: wtouch.current || wdrag.current ? "none" : "transform .08s linear" }}>
+          {Object.values(state.hexes).map((h) => {
+            const key = `${h.q},${h.r}`;
+            const { x, y } = axialToPixel(h.q, h.r, SIZE);
+            const plot = state.plots[key];
+            const owned = plot?.owner === playerId;
+            const enemy = plot && !owned;
+            return (
+              <circle key={key} cx={x} cy={y} r={SIZE * 0.62}
+                fill={PLOT_TYPES[h.terrain].color}
+                stroke={owned ? "#ffffff" : enemy ? "#ff5252" : sel === key ? "#ffd54f" : "#00000088"}
+                strokeWidth={owned || enemy || sel === key ? 2 : 0.5}
+                onClick={() => setSel(key)} style={{ cursor: "pointer" }} />
+            );
+          })}
+        </svg>
+        <div style={{ position: "absolute", bottom: 8, left: 8, display: "flex", flexDirection: "column", gap: 6 }}>
+          <button onClick={() => wZoom(1.3)} aria-label="Zoom in" style={zoomBtn}>＋</button>
+          <button onClick={() => wZoom(1 / 1.3)} aria-label="Zoom out" style={zoomBtn}>－</button>
+          <button onClick={wReset} aria-label="Reset view" style={{ ...zoomBtn, fontSize: 15 }}>⟳</button>
+        </div>
+        <div style={{ position: "absolute", top: 8, right: 10, fontSize: 10, color: "#6b7280", pointerEvents: "none" }}>drag · pinch · ＋－</div>
+      </div>
 
       {selHex && (
         <div style={{ marginTop: 12, fontSize: 13, maxWidth: 560 }}>
@@ -332,5 +373,6 @@ const btn: React.CSSProperties = { background: "#1f2a44", color: "#e8e8e8", bord
 const btnSm: React.CSSProperties = { ...btn, padding: "7px 10px", fontSize: 12, minHeight: 34 };
 const btnDanger: React.CSSProperties = { ...btn, background: "#3a1d1d", border: "1px solid #6b2f2f" };
 const select: React.CSSProperties = { background: "#1f2a44", color: "#e8e8e8", border: "1px solid #2f3e63", borderRadius: 6, padding: "6px 8px", fontFamily: "monospace", fontSize: 12, minHeight: 34 };
+const zoomBtn: React.CSSProperties = { width: 38, height: 38, display: "grid", placeItems: "center", borderRadius: 7, background: "rgba(0,0,0,0.6)", border: "1px solid #2f3e63", color: "#ffd54f", fontSize: 19, fontWeight: 700, lineHeight: 1, cursor: "pointer", touchAction: "manipulation" };
 const overlay: React.CSSProperties = { position: "fixed", inset: 0, background: "#000a", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 };
 const modal: React.CSSProperties = { background: "#141821", border: "1px solid #2f3e63", borderRadius: 10, padding: 20, maxWidth: 420, fontFamily: "monospace", color: "#e8e8e8" };
