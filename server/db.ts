@@ -2,7 +2,14 @@ import pg from "pg";
 import type { WorldState } from "@/sim/types";
 
 const url = process.env.DATABASE_URL;
-const pool = url ? new pg.Pool({ connectionString: url, ssl: { rejectUnauthorized: false } }) : null;
+
+// Internal/local Postgres speaks plaintext; public/proxied endpoints need (lax) SSL.
+function sslFor(u: string): false | { rejectUnauthorized: boolean } {
+  if (u.includes("railway.internal") || u.includes("localhost") || u.includes("127.0.0.1")) return false;
+  return { rejectUnauthorized: false };
+}
+
+const pool = url ? new pg.Pool({ connectionString: url, ssl: sslFor(url) }) : null;
 
 export async function initDb(): Promise<void> {
   if (!pool) return;
