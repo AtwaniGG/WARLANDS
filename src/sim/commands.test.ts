@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { applyCommand } from "./commands";
+import { applyTick } from "./tick";
 import { createWorld, addPlayer } from "./world";
 import { PLOT_TYPES } from "@/game/plotTypes";
 import type { WorldState } from "./types";
@@ -322,5 +323,61 @@ describe("allegiances", () => {
     expect(s.allegiances[id].founder).toBe("p2");
     s = applyCommand(s, "p2", { type: "leaveAllegiance" }).state;
     expect(s.allegiances[id]).toBeUndefined(); // disbanded
+  });
+});
+
+describe("allegiance governance", () => {
+  // p1 founds with a funded treasury, p2 joins
+  function fundedAllegiance() {
+    let w = addPlayer(addPlayer(createWorld(1), "p1"), "p2");
+    w = applyCommand(w, "p1", { type: "found", name: "Pact" }).state;
+    const id = w.players.p1.allegianceId!;
+    w = applyCommand(w, "p1", { type: "contribute", amount: 12000 }).state; // affords research (12000)
+    w = applyCommand(w, "p2", { type: "joinAllegiance", id }).state;
+    return { w, id };
+  }
+
+  it("propose opens a proposal with the proposer voting yes", () => {
+    const { w, id } = fundedAllegiance();
+    const { state, error } = applyCommand(w, "p1", { type: "propose", buildingId: "research" });
+    expect(error).toBeUndefined();
+    const p = state.allegiances[id].proposals[0];
+    expect(p.buildingId).toBe("research");
+    expect(p.for).toContain("p1");
+    expect(p.resolved).toBe(false);
+  });
+
+  it("members vote once; double votes are rejected", () => {
+    let { w } = fundedAllegiance();
+    w = applyCommand(w, "p1", { type: "propose", buildingId: "research" }).state;
+    const pid = w.allegiances[w.players.p1.allegianceId!].proposals[0].id;
+    w = applyCommand(w, "p2", { type: "vote", proposalId: pid, support: true }).state;
+    const { error } = applyCommand(w, "p2", { type: "vote", proposalId: pid, support: false });
+    expect(error).toMatch(/already voted/i);
+  });
+
+  it("a passed proposal builds when its window closes (resolved in tick)", () => {
+    let { w, id } = fundedAllegiance();
+    w = applyCommand(w, "p1", { type: "propose", buildingId: "research" }).state; // p1 yes
+    const pid = w.allegiances[id].proposals[0].id;
+    w = applyCommand(w, "p2", { type: "vote", proposalId: pid, support: true }).state; // p2 yes -> 2-0
+    // advance past the voting window (VOTE_WINDOW = 20)
+    for (let i = 0; i < 22; i++) w = applyTick(w);
+    const a = w.allegiances[id];
+    expect(a.proposals[0].resolved).toBe(true);
+    expect(a.proposals[0].passed).toBe(true);
+    expect(a.buildings).toContain("research"); // built from treasury
+  });
+
+  it("a rejected proposal does not build", () => {
+    let { w, id } = fundedAllegiance();
+    w = applyCommand(w, "p1", { type: "propose", buildingId: "fortress" }).state; // p1 yes
+    const pid = w.allegiances[id].proposals[0].id;
+    w = applyCommand(w, "p2", { type: "vote", proposalId: pid, support: false }).state; // p2 no -> 1-1, not majority
+    for (let i = 0; i < 22; i++) w = applyTick(w);
+    const a = w.allegiances[id];
+    expect(a.proposals[0].resolved).toBe(true);
+    expect(a.proposals[0].passed).toBe(false);
+    expect(a.buildings).not.toContain("fortress");
   });
 });

@@ -41,7 +41,7 @@ describe("applyTick", () => {
     const buffed: WorldState = {
       ...base,
       allegiances: {
-        "a-1": { id: "a-1", name: "R", founder: "p1", members: ["p1"], treasuryWar: 0, contributions: {}, buildings: ["hq", "research"] },
+        "a-1": { id: "a-1", name: "R", founder: "p1", members: ["p1"], treasuryWar: 0, contributions: {}, buildings: ["hq", "research"], proposals: [], nextProposalId: 1 },
       },
       players: { ...base.players, p1: { ...base.players.p1, allegianceId: "a-1" } },
     };

@@ -25,6 +25,16 @@ export interface SimPlayer {
   allegianceId?: string | null;
 }
 
+export interface AllegianceProposal {
+  id: string;
+  buildingId: AllegianceBuildingId;
+  for: string[]; // playerIds who voted yes
+  against: string[]; // playerIds who voted no
+  closesAtTick: number;
+  resolved: boolean;
+  passed?: boolean;
+}
+
 export interface Allegiance {
   id: string;
   name: string;
@@ -33,6 +43,8 @@ export interface Allegiance {
   treasuryWar: number;
   contributions: Record<string, number>; // playerId -> cumulative $WAR contributed
   buildings: AllegianceBuildingId[];
+  proposals: AllegianceProposal[];
+  nextProposalId: number;
 }
 
 export interface SimPlot {
@@ -101,7 +113,9 @@ export type Command =
   | { type: "joinAllegiance"; id: string }
   | { type: "leaveAllegiance" }
   | { type: "contribute"; amount: number }
-  | { type: "allegianceBuild"; buildingId: AllegianceBuildingId };
+  | { type: "allegianceBuild"; buildingId: AllegianceBuildingId }
+  | { type: "propose"; buildingId: AllegianceBuildingId }
+  | { type: "vote"; proposalId: string; support: boolean };
 
 export interface CommandResult {
   state: WorldState;

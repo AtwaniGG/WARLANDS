@@ -6,7 +6,7 @@ import { driftPrices } from "@/game/market";
 import type { Army } from "@/game/units";
 import type { SimPlot, TrainOrder, WorldState } from "./types";
 import { storageCap } from "./world";
-import { allegianceBuffs } from "./allegiance";
+import { allegianceBuffs, resolveProposals } from "./allegiance";
 
 function addRes(bag: ResourceBag, id: ResourceId, amount: number, cap: number): void {
   bag[id] = Math.min(cap, (bag[id] ?? 0) + amount);
@@ -94,5 +94,19 @@ export function applyTick(state: WorldState): WorldState {
   }
   // Market life: reference prices drift each tick (book persists).
   const market = { ...state.market, refPrices: driftPrices(state.market.refPrices, state.tick + 1) };
-  return { ...state, tick: state.tick + 1, plots, market };
+
+  // Governance: resolve allegiance proposals whose voting window has closed.
+  const nextTick = state.tick + 1;
+  let burned = state.burned ?? 0;
+  let allegiances = state.allegiances;
+  for (const [aid, ally] of Object.entries(state.allegiances)) {
+    const due = ally.proposals?.some((p) => !p.resolved && nextTick >= p.closesAtTick);
+    if (!due) continue;
+    const { ally: resolved, spent } = resolveProposals(ally, nextTick);
+    if (allegiances === state.allegiances) allegiances = { ...state.allegiances };
+    allegiances[aid] = resolved;
+    burned += spent;
+  }
+
+  return { ...state, tick: nextTick, plots, market, allegiances, burned };
 }

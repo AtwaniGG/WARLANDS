@@ -7,7 +7,7 @@ import { resolveBattle, type BattleIntent } from "@/game/combat";
 import { MARKET_FEE, LISTING_FEE, round2 } from "@/game/market";
 import { ALLEGIANCE_BUILDINGS, type AllegianceBuildingId } from "@/game/allegiance";
 import { storageCap } from "./world";
-import { allegianceBuffs, CREATE_ALLEGIANCE_COST } from "./allegiance";
+import { allegianceBuffs, CREATE_ALLEGIANCE_COST, VOTE_WINDOW } from "./allegiance";
 import type { ResourceBag, ResourceId } from "@/game/resources";
 import type { Allegiance, Command, CommandResult, MarketOrder, PlacedBuilding, SimPlayer, SimPlot, WorldState } from "./types";
 
@@ -348,6 +348,8 @@ function found(state: WorldState, playerId: string, name: string): CommandResult
     treasuryWar: seed,
     contributions: { [playerId]: seed },
     buildings: ["hq"],
+    proposals: [],
+    nextProposalId: 1,
   };
   return {
     state: {
@@ -443,6 +445,44 @@ function allegianceBuild(state: WorldState, playerId: string, buildingId: Allegi
   };
 }
 
+function propose(state: WorldState, playerId: string, buildingId: AllegianceBuildingId): CommandResult {
+  const player = state.players[playerId];
+  if (!player) return fail(state, "Unknown player.");
+  const id = player.allegianceId;
+  if (!id || !state.allegiances[id]) return fail(state, "You're not in an allegiance.");
+  const ally = state.allegiances[id];
+  if (!ALLEGIANCE_BUILDINGS[buildingId]) return fail(state, "No such building.");
+  if (ally.buildings.includes(buildingId)) return fail(state, `${ALLEGIANCE_BUILDINGS[buildingId].name} already built.`);
+  if (ally.proposals.some((p) => !p.resolved && p.buildingId === buildingId)) return fail(state, "Already an open proposal for that.");
+  const proposal = {
+    id: `${id}-p${ally.nextProposalId}`,
+    buildingId,
+    for: [playerId], // proposer votes yes
+    against: [],
+    closesAtTick: state.tick + VOTE_WINDOW,
+    resolved: false,
+  };
+  const updated: Allegiance = { ...ally, proposals: [...ally.proposals, proposal], nextProposalId: ally.nextProposalId + 1 };
+  return { state: { ...state, allegiances: { ...state.allegiances, [id]: updated } } };
+}
+
+function vote(state: WorldState, playerId: string, proposalId: string, support: boolean): CommandResult {
+  const player = state.players[playerId];
+  if (!player) return fail(state, "Unknown player.");
+  const id = player.allegianceId;
+  if (!id || !state.allegiances[id]) return fail(state, "You're not in an allegiance.");
+  const ally = state.allegiances[id];
+  const proposal = ally.proposals.find((p) => p.id === proposalId);
+  if (!proposal) return fail(state, "No such proposal.");
+  if (proposal.resolved) return fail(state, "Voting has closed.");
+  if (proposal.for.includes(playerId) || proposal.against.includes(playerId)) return fail(state, "You already voted.");
+  const updatedProposal = support
+    ? { ...proposal, for: [...proposal.for, playerId] }
+    : { ...proposal, against: [...proposal.against, playerId] };
+  const proposals = ally.proposals.map((p) => (p.id === proposalId ? updatedProposal : p));
+  return { state: { ...state, allegiances: { ...state.allegiances, [id]: { ...ally, proposals } } } };
+}
+
 export function applyCommand(state: WorldState, playerId: string, cmd: Command): CommandResult {
   switch (cmd.type) {
     case "stake":
@@ -475,6 +515,10 @@ export function applyCommand(state: WorldState, playerId: string, cmd: Command):
       return contribute(state, playerId, cmd.amount);
     case "allegianceBuild":
       return allegianceBuild(state, playerId, cmd.buildingId);
+    case "propose":
+      return propose(state, playerId, cmd.buildingId);
+    case "vote":
+      return vote(state, playerId, cmd.proposalId, cmd.support);
     default:
       return fail(state, "Unknown command.");
   }

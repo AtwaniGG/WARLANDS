@@ -234,7 +234,8 @@ export default function WorldPage() {
                   <button style={btnDanger} onClick={() => send({ type: "leaveAllegiance" })}>Leave</button>
                 </div>
                 {isFounder && (
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 6 }}>
+                    <span style={{ fontSize: 11, opacity: 0.6, alignSelf: "center" }}>founder build:</span>
                     {(["fortress", "research", "tradeHub", "radar", "factory", "shield"] as AllegianceBuildingId[])
                       .filter((b) => !owned.has(b))
                       .map((b) => (
@@ -246,6 +247,35 @@ export default function WorldPage() {
                       ))}
                   </div>
                 )}
+
+                {/* governance: propose + vote (any member) */}
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 6 }}>
+                  <span style={{ fontSize: 11, opacity: 0.6, alignSelf: "center" }}>propose:</span>
+                  {(["fortress", "research", "tradeHub", "radar", "factory", "shield"] as AllegianceBuildingId[])
+                    .filter((b) => !owned.has(b) && !myAlly.proposals.some((p) => !p.resolved && p.buildingId === b))
+                    .map((b) => (
+                      <button key={b} style={btnSm} title={ALLEGIANCE_BUILDINGS[b].benefit}
+                        onClick={() => send({ type: "propose", buildingId: b })}>
+                        🗳 {ALLEGIANCE_BUILDINGS[b].icon}{ALLEGIANCE_BUILDINGS[b].name}
+                      </button>
+                    ))}
+                </div>
+                {myAlly.proposals.filter((p) => !p.resolved).map((p) => {
+                  const voted = p.for.includes(playerId!) || p.against.includes(playerId!);
+                  return (
+                    <div key={p.id} style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 3 }}>
+                      <span style={{ minWidth: 170 }}>
+                        🗳 {ALLEGIANCE_BUILDINGS[p.buildingId].name} · {p.for.length}✓/{p.against.length}✗ · closes t{p.closesAtTick}
+                      </span>
+                      {!voted ? (
+                        <>
+                          <button style={btnSm} onClick={() => send({ type: "vote", proposalId: p.id, support: true })}>For</button>
+                          <button style={btnSm} onClick={() => send({ type: "vote", proposalId: p.id, support: false })}>Against</button>
+                        </>
+                      ) : <span style={{ fontSize: 11, opacity: 0.5 }}>voted</span>}
+                    </div>
+                  );
+                })}
               </div>
             );
           }

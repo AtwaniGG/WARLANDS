@@ -67,12 +67,16 @@ export function normalizeWorld(state: WorldState): WorldState {
         nextOrderId: state.market.nextOrderId ?? 1,
       }
     : freshMarket();
+  const allegiances: WorldState["allegiances"] = {};
+  for (const [k, a] of Object.entries(state.allegiances ?? {})) {
+    allegiances[k] = { ...a, proposals: a.proposals ?? [], nextProposalId: a.nextProposalId ?? 1 };
+  }
   return {
     ...state,
     burned: state.burned ?? 0,
     plots,
     market,
-    allegiances: state.allegiances ?? {},
+    allegiances,
     nextAllegianceId: state.nextAllegianceId ?? 1,
   };
 }
