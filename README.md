@@ -64,9 +64,12 @@ authoritatively in a Node + `ws` server; multiple clients share one map and comm
 client → validate → apply → broadcast → persist (Postgres JSONB snapshots, restore on boot).
 Authoritative today: **stake/build**, **economy** (extractors + factories, upgrade, unstake with
 burn sink), **military** (unit training + seeded **PvP raids/sieges** with loot & defense damage),
-and a **shared player marketplace** (P2P order book, buyer→seller `$WAR` transfer, fee/listing
-sinks). The `/world` route renders it live; `/play` stays single-player. Anonymous per-socket
-identity for now. See [docs/superpowers/specs/2026-06-15-server-authoritative-sim-design.md](docs/superpowers/specs/2026-06-15-server-authoritative-sim-design.md).
+a **shared player marketplace** (P2P order book, buyer→seller `$WAR` transfer, fee/listing sinks),
+and **allegiances** (shared treasury, member contributions, treasury-funded buildings that buff
+every member's plots — research +12% production, fortress +15% defense, tradeHub −25% market fee).
+That's the **full single-player feature set, now server-authoritative multiplayer**. The `/world`
+route renders it live; `/play` stays single-player. Anonymous per-socket identity for now.
+See [docs/superpowers/specs/2026-06-15-server-authoritative-sim-design.md](docs/superpowers/specs/2026-06-15-server-authoritative-sim-design.md).
 
 **On-chain layer (`contracts/`, GDD §20)** — self-contained Foundry project, `solc`-verified:
 `WarToken` (fixed-supply burnable), `StakingManager` (principal-safe staking + conquest),
@@ -94,9 +97,8 @@ Drizzle ORM + Neon Postgres · Foundry/Solidity. Targets an EVM L2 (Base / Arbit
 
 ## Not yet built
 
-The server-authoritative core loop is live and multiplayer (`/world`), but the full MMO does not
-yet have: **allegiances/governance** ported to the server (still single-player only), **sector
-sharding** for scale, **wallet-based identity + anti-cheat signatures** (anonymous ids today), the
-on-chain layer **deployed** (contracts in `contracts/` are tested but not on a testnet/mainnet —
-needs a funded deployer wallet), the on-chain **Merkle reward pipeline**, and **contract audit
-hardening**. The client store remains the reference implementation for the not-yet-ported systems.
+The full single-player feature set is now server-authoritative multiplayer (`/world`). Remaining
+for a real launch: **on-chain deployment** (contracts in `contracts/` are tested but not on a
+testnet/mainnet — needs a funded deployer wallet) + the **Merkle reward pipeline**, allegiance
+**proposal/vote governance** (founder-builds today), **sector sharding** for scale, **wallet-based
+identity + anti-cheat signatures** (anonymous ids today), and **contract audit hardening**.
