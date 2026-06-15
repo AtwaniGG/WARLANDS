@@ -47,6 +47,7 @@ export default function Landing() {
           <a href="#pillars" className="hover:text-amber-400">Doctrine</a>
           <a href="#land" className="hover:text-amber-400">Land</a>
           <a href="#token" className="hover:text-amber-400">$WAR</a>
+          <Link href="/whitepaper" className="hover:text-amber-400">Whitepaper</Link>
         </div>
         <Link href="/play" className="border border-amber-500/60 bg-amber-500/10 px-4 py-2 text-xs font-bold uppercase tracking-widest text-amber-300 transition hover:bg-amber-500 hover:text-black">
           Enter War Room
