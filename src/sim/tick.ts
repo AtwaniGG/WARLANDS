@@ -2,7 +2,8 @@ import { BUILDINGS } from "@/game/buildings";
 import { PLOT_TYPES } from "@/game/plotTypes";
 import { productionPerTick, plotUpkeep, levelMult, diminishingReturns } from "@/game/formulas";
 import { RESOURCES, type ResourceBag, type ResourceId } from "@/game/resources";
-import type { SimPlot, WorldState } from "./types";
+import type { Army } from "@/game/units";
+import type { SimPlot, TrainOrder, WorldState } from "./types";
 import { storageCap } from "./world";
 
 function addRes(bag: ResourceBag, id: ResourceId, amount: number, cap: number): void {
@@ -55,10 +56,24 @@ function tickPlot(plot: SimPlot, tick: number): SimPlot {
     }
   }
 
+  // Training queue: finished orders join the army (§8)
+  const army: Army = { ...(plot.army ?? {}) };
+  const trainQueue: TrainOrder[] = [];
+  for (const order of plot.trainQueue ?? []) {
+    if (order.ticksLeft <= 1) army[order.unit] = (army[order.unit] ?? 0) + 1;
+    else trainQueue.push({ ...order, ticksLeft: order.ticksLeft - 1 });
+  }
+
   const upkeep = plotUpkeep(plot.claimIndex) * plot.buildings.length;
   resources.food = Math.max(0, (resources.food ?? 0) - upkeep);
   resources.water = Math.max(0, (resources.water ?? 0) - upkeep);
-  return { ...plot, resources };
+
+  // Defense regen / starvation decay (§5.3, §16.2)
+  let defensePct = plot.defensePct ?? 1;
+  if ((resources.food ?? 0) <= 0 || (resources.water ?? 0) <= 0) defensePct = Math.max(0.3, defensePct - 0.01);
+  else if (defensePct < 1) defensePct = Math.min(1, defensePct + 0.005);
+
+  return { ...plot, resources, army, trainQueue, defensePct };
 }
 
 export function applyTick(state: WorldState): WorldState {

@@ -1,13 +1,15 @@
 "use client";
 import { useEffect, useRef, useState, useCallback } from "react";
-import type { Command, WorldState } from "@/sim";
+import type { Command, WorldState, BattleReport } from "@/sim";
 
 export interface WorldSocket {
   state: WorldState | null;
   playerId: string | null;
   connected: boolean;
   error: string | null;
+  report: BattleReport | null;
   send: (cmd: Command) => void;
+  clearReport: () => void;
 }
 
 export function useWorldSocket(url: string): WorldSocket {
@@ -15,6 +17,7 @@ export function useWorldSocket(url: string): WorldSocket {
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [report, setReport] = useState<BattleReport | null>(null);
   const ref = useRef<WebSocket | null>(null);
 
   useEffect(() => {
@@ -31,6 +34,9 @@ export function useWorldSocket(url: string): WorldSocket {
         setState(msg.state);
       } else if (msg.type === "error") {
         setError(msg.message);
+        setTimeout(() => setError(null), 4000);
+      } else if (msg.type === "report") {
+        setReport(msg.report);
       }
     };
     return () => ws.close();
@@ -39,6 +45,7 @@ export function useWorldSocket(url: string): WorldSocket {
   const send = useCallback((cmd: Command) => {
     ref.current?.send(JSON.stringify({ type: "command", cmd }));
   }, []);
+  const clearReport = useCallback(() => setReport(null), []);
 
-  return { state, playerId, connected, error, send };
+  return { state, playerId, connected, error, report, send, clearReport };
 }

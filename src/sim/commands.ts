@@ -2,6 +2,9 @@ import { PLOT_TYPES } from "@/game/plotTypes";
 import { BUILDINGS, isBuildingAllowedOnTerrain } from "@/game/buildings";
 import { hexKey } from "@/game/world";
 import { upgradeCost } from "@/game/formulas";
+import { UNITS, UNIT_IDS, armySize, type Army } from "@/game/units";
+import { resolveBattle, type BattleIntent } from "@/game/combat";
+import { storageCap } from "./world";
 import type { ResourceBag, ResourceId } from "@/game/resources";
 import type { Command, CommandResult, PlacedBuilding, SimPlot, WorldState } from "./types";
 
@@ -34,6 +37,9 @@ function stake(state: WorldState, playerId: string, q: number, r: number): Comma
     stakeLocked: def.stake,
     buildings: [{ id: "camp", level: 1 }],
     resources: { food: 100, water: 100, wood: 100, stone: 100 },
+    army: {},
+    trainQueue: [],
+    defensePct: 1,
   };
   return {
     state: {
@@ -137,6 +143,86 @@ function unstake(state: WorldState, playerId: string, key: string): CommandResul
   };
 }
 
+function train(state: WorldState, playerId: string, key: string, unit: keyof typeof UNITS): CommandResult {
+  const got = ownedPlot(state, playerId, key);
+  if ("fail" in got) return got.fail;
+  const plot = got.plot;
+  const player = state.players[playerId];
+  if (!player) return fail(state, "Unknown player.");
+  const u = UNITS[unit];
+  if (player.war < u.costWar) return fail(state, `Need ${u.costWar} $WAR to train ${u.name}.`);
+  if (!hasResources(plot.resources, u.cost)) return fail(state, `Missing resources to train ${u.name}.`);
+  const resources = { ...plot.resources };
+  spendResources(resources, u.cost);
+  const trainQueue = [...plot.trainQueue, { unit, ticksLeft: u.trainTicks }];
+  return {
+    state: {
+      ...state,
+      plots: { ...state.plots, [key]: { ...plot, resources, trainQueue } },
+      players: { ...state.players, [playerId]: { ...player, war: player.war - u.costWar } },
+      burned: (state.burned ?? 0) + Math.round(u.costWar * 0.5), // §13 #7 training fee sink
+    },
+  };
+}
+
+function raid(state: WorldState, playerId: string, fromKey: string, targetKey: string, army: Army, intent: BattleIntent): CommandResult {
+  const fromGot = ownedPlot(state, playerId, fromKey);
+  if ("fail" in fromGot) return fromGot.fail;
+  const from = fromGot.plot;
+  const target = state.plots[targetKey];
+  if (!target) return fail(state, "No target plot there.");
+  if (target.owner === playerId) return fail(state, "Can't raid your own plot.");
+  if (armySize(army) === 0) return fail(state, "Select units to send.");
+  for (const id of UNIT_IDS) {
+    if ((army[id] ?? 0) > (from.army[id] ?? 0)) return fail(state, "You don't have those units.");
+  }
+
+  const terrain = PLOT_TYPES[target.terrain];
+  const result = resolveBattle({
+    seed: (state.tick + 1) * 2654435761 + target.q * 40503 + target.r,
+    intent,
+    attacker: army,
+    defender: target.army,
+    terrainFactor: terrain.defenseMult,
+    scoutFactor: 1,
+    commanderFactor: 1,
+    defenderStock: target.resources,
+    defensePct: target.defensePct ?? 1,
+  });
+
+  // attacker plot: remove sent units, return survivors, add loot
+  const fromArmy: Army = { ...from.army };
+  for (const id of UNIT_IDS) {
+    fromArmy[id] = (fromArmy[id] ?? 0) - (army[id] ?? 0) + (result.attackerSurvivors[id] ?? 0);
+    if (!fromArmy[id]) delete fromArmy[id];
+  }
+  const fromResources = { ...from.resources };
+  const cap = storageCap(from);
+  for (const [k, v] of Object.entries(result.loot)) addRes(fromResources, k as ResourceId, v as number, cap);
+
+  // defender plot: surviving army, looted resources removed, defense damaged on a win
+  const targetResources = { ...target.resources };
+  for (const [k, v] of Object.entries(result.loot)) {
+    targetResources[k as ResourceId] = Math.max(0, (targetResources[k as ResourceId] ?? 0) - (v as number));
+  }
+  const targetDefense = result.attackerWins ? Math.max(0.3, (target.defensePct ?? 1) - 0.4) : (target.defensePct ?? 1);
+
+  const plots = {
+    ...state.plots,
+    [fromKey]: { ...from, army: fromArmy, resources: fromResources },
+    [targetKey]: { ...target, army: result.defenderSurvivors, resources: targetResources, defensePct: targetDefense },
+  };
+
+  return {
+    state: { ...state, plots },
+    report: { result, attackerKey: fromKey, targetKey, tick: state.tick },
+  };
+}
+
+function addRes(bag: ResourceBag, id: ResourceId, amount: number, cap: number): void {
+  bag[id] = Math.min(cap, (bag[id] ?? 0) + amount);
+}
+
 export function applyCommand(state: WorldState, playerId: string, cmd: Command): CommandResult {
   switch (cmd.type) {
     case "stake":
@@ -149,6 +235,10 @@ export function applyCommand(state: WorldState, playerId: string, cmd: Command):
       return setProduct(state, playerId, cmd.key, cmd.index, cmd.product);
     case "unstake":
       return unstake(state, playerId, cmd.key);
+    case "train":
+      return train(state, playerId, cmd.key, cmd.unit);
+    case "raid":
+      return raid(state, playerId, cmd.fromKey, cmd.targetKey, cmd.army, cmd.intent);
     default:
       return fail(state, "Unknown command.");
   }

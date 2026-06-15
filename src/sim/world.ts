@@ -28,4 +28,23 @@ export function storageCap(plot: SimPlot): number {
   return cap;
 }
 
+/**
+ * Make a restored snapshot resilient to schema evolution: fill in fields that
+ * older persisted worlds predate (army/trainQueue/defensePct, burned).
+ */
+export function normalizeWorld(state: WorldState): WorldState {
+  const plots: WorldState["plots"] = {};
+  for (const [k, p] of Object.entries(state.plots)) {
+    plots[k] = {
+      ...p,
+      army: p.army ?? {},
+      trainQueue: p.trainQueue ?? [],
+      defensePct: p.defensePct ?? 1,
+      resources: p.resources ?? {},
+      buildings: p.buildings ?? [{ id: "camp", level: 1 }],
+    };
+  }
+  return { ...state, burned: state.burned ?? 0, plots };
+}
+
 export { hexKey };

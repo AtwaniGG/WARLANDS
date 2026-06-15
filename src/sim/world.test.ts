@@ -41,6 +41,9 @@ describe("storageCap", () => {
         stakeLocked: 0,
         buildings: [{ id: "camp", level: 1 }],
         resources: {},
+        army: {},
+        trainQueue: [],
+        defensePct: 1,
       }),
     ).toBe(1500);
   });
@@ -58,6 +61,9 @@ describe("storageCap", () => {
           { id: "warehouse", level: 2 },
         ],
         resources: {},
+        army: {},
+        trainQueue: [],
+        defensePct: 1,
       }),
     ).toBe(1500 + 2000 * 2);
   });

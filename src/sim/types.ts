@@ -2,12 +2,19 @@ import type { TerrainId } from "@/game/plotTypes";
 import type { BuildingId } from "@/game/buildings";
 import type { ResourceBag, ResourceId } from "@/game/resources";
 import type { Hex } from "@/game/world";
+import type { Army, UnitId } from "@/game/units";
+import type { BattleResult, BattleIntent } from "@/game/combat";
 
 export interface PlacedBuilding {
   id: BuildingId;
   level: number;
   /** for factories: which product this factory is currently making */
   activeProduct?: ResourceId;
+}
+
+export interface TrainOrder {
+  unit: UnitId;
+  ticksLeft: number;
 }
 
 export interface SimPlayer {
@@ -25,6 +32,17 @@ export interface SimPlot {
   stakeLocked: number;
   buildings: PlacedBuilding[];
   resources: ResourceBag;
+  army: Army;
+  trainQueue: TrainOrder[];
+  /** 0..1 plot defense health */
+  defensePct: number;
+}
+
+export interface BattleReport {
+  result: BattleResult;
+  attackerKey: string;
+  targetKey: string;
+  tick: number;
 }
 
 export interface WorldState {
@@ -43,9 +61,13 @@ export type Command =
   | { type: "build"; key: string; buildingId: BuildingId }
   | { type: "upgrade"; key: string; index: number }
   | { type: "setProduct"; key: string; index: number; product: ResourceId }
-  | { type: "unstake"; key: string };
+  | { type: "unstake"; key: string }
+  | { type: "train"; key: string; unit: UnitId }
+  | { type: "raid"; fromKey: string; targetKey: string; army: Army; intent: BattleIntent };
 
 export interface CommandResult {
   state: WorldState;
   error?: string;
+  /** PvP raid outcome, surfaced to the issuing client only */
+  report?: BattleReport;
 }

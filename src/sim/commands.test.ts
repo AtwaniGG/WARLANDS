@@ -133,3 +133,69 @@ describe("unstake", () => {
     expect(error).toMatch(/not your plot/i);
   });
 });
+
+describe("train", () => {
+  it("queues a unit, charges $WAR + resources, and burns the training fee", () => {
+    let { state, key } = ownedPlains();
+    // infantry needs rifles 1 + food 5; give rifles
+    state = { ...state, plots: { ...state.plots, [key]: { ...state.plots[key], resources: { rifles: 5, food: 50 } } } };
+    const warBefore = state.players.p1.war;
+    const burnBefore = state.burned;
+    const { state: after, error } = applyCommand(state, "p1", { type: "train", key, unit: "infantry" });
+    expect(error).toBeUndefined();
+    expect(after.plots[key].trainQueue.length).toBe(1);
+    expect(after.players.p1.war).toBe(warBefore - 20); // infantry costWar
+    expect(after.burned).toBe(burnBefore + 10); // half of 20 burned
+  });
+});
+
+describe("raid (PvP)", () => {
+  // two players, each owning a distinct plains plot
+  function twoPlayers() {
+    let w = addPlayer(addPlayer(createWorld(1), "p1"), "p2");
+    const keys = Object.keys(w.hexes).filter((k) => w.hexes[k].terrain === "plains").slice(0, 2);
+    const [k1, k2] = keys;
+    const [q1, r1] = k1.split(",").map(Number);
+    const [q2, r2] = k2.split(",").map(Number);
+    w = applyCommand(w, "p1", { type: "stake", q: q1, r: r1 }).state;
+    w = applyCommand(w, "p2", { type: "stake", q: q2, r: r2 }).state;
+    return { w, attackerKey: k1, targetKey: k2 };
+  }
+
+  it("a strong army overruns an undefended enemy plot, loots, and damages defense", () => {
+    let { w, attackerKey, targetKey } = twoPlayers();
+    // give attacker tanks and the target lootable food
+    w = {
+      ...w,
+      plots: {
+        ...w.plots,
+        [attackerKey]: { ...w.plots[attackerKey], army: { tanks: 20 } },
+        [targetKey]: { ...w.plots[targetKey], army: {}, resources: { food: 600 }, defensePct: 1 },
+      },
+    };
+    const { state, report, error } = applyCommand(w, "p1", {
+      type: "raid", fromKey: attackerKey, targetKey, army: { tanks: 10 }, intent: "raid",
+    });
+    expect(error).toBeUndefined();
+    expect(report).toBeDefined();
+    expect(report!.result.attackerWins).toBe(true);
+    // defender lost some food to loot
+    expect(state.plots[targetKey].resources.food!).toBeLessThan(600);
+    // defender defense dropped
+    expect(state.plots[targetKey].defensePct).toBeLessThan(1);
+    // attacker survivors returned home (no losses vs empty defender)
+    expect(state.plots[attackerKey].army.tanks).toBe(20);
+  });
+
+  it("rejects raiding your own plot", () => {
+    const { w, attackerKey } = twoPlayers();
+    const { error } = applyCommand(w, "p1", { type: "raid", fromKey: attackerKey, targetKey: attackerKey, army: { tanks: 1 }, intent: "raid" });
+    expect(error).toMatch(/own plot/i);
+  });
+
+  it("rejects sending units you don't have", () => {
+    const { w, attackerKey, targetKey } = twoPlayers();
+    const { error } = applyCommand(w, "p1", { type: "raid", fromKey: attackerKey, targetKey, army: { tanks: 5 }, intent: "raid" });
+    expect(error).toMatch(/don't have/i);
+  });
+});

@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { WebSocketServer, WebSocket } from "ws";
-import { createWorld, addPlayer } from "@/sim/world";
+import { createWorld, addPlayer, normalizeWorld } from "@/sim/world";
 import { applyCommand } from "@/sim/commands";
 import { applyTick } from "@/sim/tick";
 import type { WorldState, Command } from "@/sim/types";
@@ -53,6 +53,7 @@ export function startServer(opts: Options = {}): ServerHandle {
         return;
       }
       state = result.state;
+      if (result.report) ws.send(JSON.stringify({ type: "report", report: result.report }));
       broadcast();
     });
 
@@ -91,7 +92,7 @@ if (process.env.VITEST !== "true") {
   (async () => {
     await initDb().catch(() => {});
     const restored = await loadLatest().catch(() => null);
-    const srv = startServer(restored ? { initial: restored } : {});
+    const srv = startServer(restored ? { initial: normalizeWorld(restored) } : {});
     await srv.ready;
     if (restored) console.log(`Restored world @ tick ${restored.tick}`);
     console.log(`WARLANDS server on :${srv.port}`);
