@@ -5,11 +5,14 @@ secure finite land on one shared live map, build economies, and wage war — sol
 **Allegiances**. Built directly from [`docs/GDD.md`](docs/GDD.md), the full 24-section design
 doc covering tokenomics, balancing math, architecture, and roadmap.
 
-> **Landing page** at `/` · **Game** at `/play`.
+> **Landing page** at `/` · **Single-player game** at `/play` · **Live shared world** at `/world`.
 
 ```bash
 npm install
-npm run dev        # → http://localhost:3000  (landing)  ·  /play (game)
+npm run dev        # → http://localhost:3000  (landing) · /play (single-player) · /world (multiplayer)
+
+# Live world server (authoritative sim) — separate Node service:
+cd server && npm install && npm run dev   # → ws://localhost:8080
 ```
 
 ## Repository layout
@@ -20,12 +23,18 @@ src/
     page.tsx            ← tactical landing page (/)
     play/page.tsx       ← the game (/play)
     api/                ← health · players · market (server routes)
+    play/page.tsx       ← the single-player game (/play)
+    world/page.tsx      ← live multiplayer world (/world)
   game/                 client game engine (rules mirror the GDD section-by-section)
     resources · plotTypes · buildings · units · combat · market
     allegiance · empire · formulas · world · store (zustand, persisted)
+  sim/                  pure isomorphic simulation core (shared client+server)
+    types · world · tick · commands  (no IO; deterministic; vitest-tested)
+  lib/                  useWorldSocket (client ↔ live world server)
   components/           UI: hex map, plot/military/market/allegiance/diplomacy/season/wallet panels
   web3/                 wagmi + viem: config, ABIs, addresses, provider
   server/db/            Drizzle ORM schema (GDD §21) + Neon client
+server/                 authoritative game server — Node + ws, 1 Hz tick, Postgres snapshots
 contracts/              Solidity smart contracts (GDD §20) + Foundry tests
 drizzle/                generated SQL migrations
 docs/
@@ -49,6 +58,13 @@ docs/
   no-emissions invariant.
 - **Persistence**: localStorage save/load with SSR-safe hydration + reset.
 
+**Live multiplayer world (`src/sim` + `server/` + `/world`)** — server-authoritative slice:
+a pure deterministic simulation core (`src/sim`: world, 1 Hz tick, stake/build commands) runs
+authoritatively in a Node + `ws` server. Multiple clients share one map; commands flow
+client → validate → apply → broadcast → persist (Postgres JSONB snapshots, restore on boot).
+The `/world` route renders the shared world live; `/play` stays single-player. Anonymous
+per-socket identity for now. See [docs/superpowers/specs/2026-06-15-server-authoritative-sim-design.md](docs/superpowers/specs/2026-06-15-server-authoritative-sim-design.md).
+
 **On-chain layer (`contracts/`, GDD §20)** — self-contained Foundry project, `solc`-verified:
 `WarToken` (fixed-supply burnable), `StakingManager` (principal-safe staking + conquest),
 `SinkRouter` (burn-floor split), `RewardDistributor` (Merkle claims, claimable ≤ pool),
@@ -64,7 +80,9 @@ See [src/server/README.md](src/server/README.md).
 ## Configuration
 
 Copy [`.env.example`](.env.example) → `.env.local`. All integrations degrade gracefully:
-no `DATABASE_URL` → mock backend; no `NEXT_PUBLIC_*` contract addresses → mocked staking.
+no `DATABASE_URL` → mock backend; no `NEXT_PUBLIC_*` contract addresses → mocked staking;
+no `NEXT_PUBLIC_GAME_SERVER_URL` → `/world` falls back to `ws://localhost:8080`.
+The server (`server/.env`) needs `PORT` and an optional `DATABASE_URL` (snapshots no-op without it).
 
 ## Stack
 
@@ -73,6 +91,9 @@ Drizzle ORM + Neon Postgres · Foundry/Solidity. Targets an EVM L2 (Base / Arbit
 
 ## Not yet built
 
-Server-authoritative multiplayer simulation (sector sharding, WebSocket sync), the on-chain
-Merkle reward pipeline, player-vs-player (vs the current AI), and contract audit hardening.
-The client store is the reference implementation of the rules the backend will run authoritatively.
+The server-authoritative **pipeline** now exists (`/world`), but the full MMO does not yet:
+remaining work is **porting the rest of the rules** to the server (upgrade/train/scout/raid/market/
+allegiance — only stake+build are authoritative so far), **sector sharding** for scale,
+**wallet-based identity + anti-cheat signatures** (anonymous ids today), **real player-vs-player**
+combat (vs the current AI), the on-chain **Merkle reward pipeline**, and **contract audit hardening**.
+The client store remains the reference implementation of the rules the server will run authoritatively.
