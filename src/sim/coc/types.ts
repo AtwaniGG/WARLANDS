@@ -6,7 +6,10 @@ export type CocBuildingId =
   | "goldCollector"
   | "elixirCollector"
   | "goldStorage"
-  | "elixirStorage";
+  | "elixirStorage"
+  | "cannon"
+  | "mortar"
+  | "airDefense";
 
 /** A building placed on a hex. level 0 = under construction (not yet operational). */
 export interface PlacedBuilding {
@@ -29,6 +32,8 @@ export interface CocBase {
   centerKey: string;
   ownedHexes: string[];
   buildings: Record<string, PlacedBuilding>; // hexKey -> building
+  /** wall segments on edges between owned hexes; keyed by edgeKey -> level */
+  walls: Record<string, number>;
   gold: number;
   elixir: number;
   builders: number;
@@ -56,7 +61,9 @@ export type CocCommand =
   | { type: "placeBuilding"; hexKey: string; buildingId: CocBuildingId }
   | { type: "upgradeBuilding"; hexKey: string }
   | { type: "collect" }
-  | { type: "expandCluster"; q: number; r: number };
+  | { type: "expandCluster"; q: number; r: number }
+  | { type: "placeWall"; aKey: string; bKey: string }
+  | { type: "upgradeWall"; edgeKey: string };
 
 export interface CommandResult {
   state: CocWorld;

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { createWorld, addPlayer, storageCap, ccLevel, freeBuilders, normalizeWorld } from "./world";
+import { createWorld, addPlayer, storageCap, ccLevel, freeBuilders, normalizeWorld, edgeKey } from "./world";
 import { BASE_STORAGE_CAP, STARTING_BUILDERS, STARTING_WAR } from "./config";
 import type { CocBase } from "./types";
 
@@ -8,6 +8,7 @@ const base = (over: Partial<CocBase> = {}): CocBase => ({
   centerKey: "0,0",
   ownedHexes: ["0,0"],
   buildings: { "0,0": { id: "commandCenter", level: 1 } },
+  walls: {},
   gold: 0,
   elixir: 0,
   builders: STARTING_BUILDERS,
@@ -89,5 +90,16 @@ describe("normalizeWorld", () => {
     expect(w.bases).toEqual({});
     expect(w.claimedHexes).toEqual({});
     expect(w.players).toEqual({});
+  });
+  it("defaults walls on a restored base that predates them", () => {
+    const restored = { seed: 1, radius: 9, tick: 5, hexes: {}, players: {}, claimedHexes: {}, bases: { p1: { owner: "p1", centerKey: "0,0", ownedHexes: ["0,0"], buildings: {}, gold: 0, elixir: 0, builders: 2, jobs: [] } } } as never;
+    expect(normalizeWorld(restored).bases.p1.walls).toEqual({});
+  });
+});
+
+describe("edgeKey", () => {
+  it("is canonical regardless of hex order", () => {
+    expect(edgeKey("1,0", "0,0")).toBe(edgeKey("0,0", "1,0"));
+    expect(edgeKey("0,0", "1,0")).toBe("0,0|1,0");
   });
 });

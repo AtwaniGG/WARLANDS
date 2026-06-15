@@ -119,3 +119,59 @@ describe("expandCluster", () => {
     expect(r.state.claimedHexes["2,0"]).toBe("p1");
   });
 });
+
+describe("placeBuilding — defenses", () => {
+  it("builds a cannon (gold) at CC1, occupying a builder", () => {
+    const r = applyCommand(give(claimed(), 1000, 0), "p1", { type: "placeBuilding", hexKey: "1,0", buildingId: "cannon" });
+    expect(r.error).toBeUndefined();
+    expect(r.state.bases.p1.buildings["1,0"]).toEqual({ id: "cannon", level: 0, buffer: 0 });
+    expect(r.state.bases.p1.gold).toBe(800);
+  });
+  it("rejects air defense at CC1 (locked)", () => {
+    const r = applyCommand(give(claimed(), 5000, 0), "p1", { type: "placeBuilding", hexKey: "1,0", buildingId: "airDefense" });
+    expect(r.error).toMatch(/locked/i);
+  });
+});
+
+describe("placeWall", () => {
+  it("places a wall between two adjacent owned hexes, instantly, spending gold", () => {
+    const r = applyCommand(give(claimed(), 500, 0), "p1", { type: "placeWall", aKey: "0,0", bKey: "1,0" });
+    expect(r.error).toBeUndefined();
+    expect(r.state.bases.p1.walls["0,0|1,0"]).toBe(1);
+    expect(r.state.bases.p1.gold).toBe(400);
+    expect(r.state.bases.p1.jobs.length).toBe(0); // no builder used
+  });
+  it("rejects non-adjacent hexes", () => {
+    const r = applyCommand(give(claimed(), 500, 0), "p1", { type: "placeWall", aKey: "1,0", bKey: "-1,0" });
+    expect(r.error).toMatch(/adjacent/i);
+  });
+  it("rejects a hex outside the base", () => {
+    const r = applyCommand(give(claimed(), 500, 0), "p1", { type: "placeWall", aKey: "0,0", bKey: "5,5" });
+    expect(r.error).toMatch(/your base/i);
+  });
+  it("rejects a duplicate wall", () => {
+    let s = applyCommand(give(claimed(), 500, 0), "p1", { type: "placeWall", aKey: "0,0", bKey: "1,0" }).state;
+    const r = applyCommand(s, "p1", { type: "placeWall", aKey: "1,0", bKey: "0,0" });
+    expect(r.error).toMatch(/already/i);
+  });
+  it("rejects when gold is insufficient", () => {
+    const r = applyCommand(give(claimed(), 0, 0), "p1", { type: "placeWall", aKey: "0,0", bKey: "1,0" });
+    expect(r.error).toMatch(/gold/i);
+  });
+});
+
+describe("upgradeWall", () => {
+  it("rejects upgrading past the CC-gated wall cap (CC1 → L1 only)", () => {
+    let s = applyCommand(give(claimed(), 1000, 0), "p1", { type: "placeWall", aKey: "0,0", bKey: "1,0" }).state;
+    const r = applyCommand(s, "p1", { type: "upgradeWall", edgeKey: "0,0|1,0" });
+    expect(r.error).toMatch(/command center/i);
+  });
+  it("upgrades the wall once the CC level allows", () => {
+    let s = applyCommand(give(claimed(), 1000, 0), "p1", { type: "placeWall", aKey: "0,0", bKey: "1,0" }).state;
+    s = { ...s, bases: { p1: { ...s.bases.p1, gold: 1000, buildings: { ...s.bases.p1.buildings, "0,0": { id: "commandCenter", level: 2 } } } } };
+    const r = applyCommand(s, "p1", { type: "upgradeWall", edgeKey: "0,0|1,0" });
+    expect(r.error).toBeUndefined();
+    expect(r.state.bases.p1.walls["0,0|1,0"]).toBe(2);
+    expect(r.state.bases.p1.gold).toBe(600);
+  });
+});

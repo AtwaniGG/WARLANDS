@@ -36,6 +36,11 @@ export function freeBuilders(base: CocBase): number {
   return base.builders - base.jobs.length;
 }
 
+/** Canonical key for a wall on the edge between two adjacent hexes. */
+export function edgeKey(aKey: string, bKey: string): string {
+  return [aKey, bKey].sort().join("|");
+}
+
 /** Make a restored snapshot resilient to schema evolution. */
 export function normalizeWorld(state: CocWorld): CocWorld {
   const bases: CocWorld["bases"] = {};
@@ -44,6 +49,7 @@ export function normalizeWorld(state: CocWorld): CocWorld {
       ...b,
       ownedHexes: b.ownedHexes ?? [],
       buildings: b.buildings ?? {},
+      walls: b.walls ?? {},
       jobs: b.jobs ?? [],
       gold: b.gold ?? 0,
       elixir: b.elixir ?? 0,

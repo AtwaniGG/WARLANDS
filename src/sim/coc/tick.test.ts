@@ -8,6 +8,7 @@ const baseWith = (over: Partial<CocBase>): CocBase => ({
   centerKey: "0,0",
   ownedHexes: ["0,0", "1,0"],
   buildings: { "0,0": { id: "commandCenter", level: 1 } },
+  walls: {},
   gold: 0,
   elixir: 0,
   builders: 2,

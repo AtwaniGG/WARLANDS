@@ -1,6 +1,6 @@
 import { hexKey, hexNeighbors } from "@/game/world";
-import { BUILDINGS, ccTier, levelDef, maxLevelOf, STARTING_BUILDERS, STARTING_ELIXIR, STARTING_GOLD } from "./config";
-import { ccLevel, freeBuilders, storageCap } from "./world";
+import { BUILDINGS, ccTier, levelDef, maxLevelOf, maxWallLevel, STARTING_BUILDERS, STARTING_ELIXIR, STARTING_GOLD, WALL } from "./config";
+import { ccLevel, edgeKey, freeBuilders, storageCap } from "./world";
 import type { CocBase, CocBuildingId, CocCommand, CocResource, CocWorld, CommandResult, PlacedBuilding } from "./types";
 
 function fail(state: CocWorld, error: string): CommandResult {
@@ -35,6 +35,7 @@ function claimBase(state: CocWorld, playerId: string, q: number, r: number): Com
     centerKey,
     ownedHexes: cluster,
     buildings: { [centerKey]: { id: "commandCenter", level: 1 } },
+    walls: {},
     gold: STARTING_GOLD,
     elixir: STARTING_ELIXIR,
     builders: STARTING_BUILDERS,
@@ -145,6 +146,39 @@ function expandCluster(state: CocWorld, playerId: string, q: number, r: number):
   return { state: { ...state, bases: { ...state.bases, [playerId]: newBase }, claimedHexes: { ...state.claimedHexes, [key]: playerId } } };
 }
 
+function placeWall(state: CocWorld, playerId: string, aKey: string, bKey: string): CommandResult {
+  const base = state.bases[playerId];
+  if (!base) return fail(state, "You have no base.");
+  if (aKey === bKey) return fail(state, "A wall spans two hexes.");
+  if (!base.ownedHexes.includes(aKey) || !base.ownedHexes.includes(bKey)) {
+    return fail(state, "Both hexes must be in your base.");
+  }
+  const [aq, ar] = aKey.split(",").map(Number);
+  const adjacent = hexNeighbors(aq, ar).some((n) => hexKey(n.q, n.r) === bKey);
+  if (!adjacent) return fail(state, "Walls go between adjacent hexes.");
+  const ek = edgeKey(aKey, bKey);
+  if (base.walls[ek]) return fail(state, "There is already a wall here.");
+  const cost = WALL.levels[0].cost;
+  if (!canAfford(base, cost)) return fail(state, "Not enough gold.");
+  const { gold, elixir } = spend(base, cost);
+  const newBase: CocBase = { ...base, gold, elixir, walls: { ...base.walls, [ek]: 1 } };
+  return { state: { ...state, bases: { ...state.bases, [playerId]: newBase } } };
+}
+
+function upgradeWall(state: CocWorld, playerId: string, ek: string): CommandResult {
+  const base = state.bases[playerId];
+  if (!base) return fail(state, "You have no base.");
+  const level = base.walls[ek];
+  if (!level) return fail(state, "No wall there.");
+  const nextLevel = level + 1;
+  if (nextLevel > maxWallLevel(ccLevel(base))) return fail(state, "Upgrade the Command Center to raise the wall cap.");
+  const cost = WALL.levels[nextLevel - 1].cost;
+  if (!canAfford(base, cost)) return fail(state, "Not enough gold.");
+  const { gold, elixir } = spend(base, cost);
+  const newBase: CocBase = { ...base, gold, elixir, walls: { ...base.walls, [ek]: nextLevel } };
+  return { state: { ...state, bases: { ...state.bases, [playerId]: newBase } } };
+}
+
 export function applyCommand(state: CocWorld, playerId: string, cmd: CocCommand): CommandResult {
   switch (cmd.type) {
     case "claimBase":
@@ -157,6 +191,10 @@ export function applyCommand(state: CocWorld, playerId: string, cmd: CocCommand)
       return collect(state, playerId);
     case "expandCluster":
       return expandCluster(state, playerId, cmd.q, cmd.r);
+    case "placeWall":
+      return placeWall(state, playerId, cmd.aKey, cmd.bKey);
+    case "upgradeWall":
+      return upgradeWall(state, playerId, cmd.edgeKey);
     default:
       return fail(state, "Unknown command.");
   }
