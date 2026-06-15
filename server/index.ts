@@ -1,9 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { WebSocketServer, WebSocket } from "ws";
-import { createWorld, addPlayer, normalizeWorld } from "@/sim/world";
-import { applyCommand } from "@/sim/commands";
-import { applyTick } from "@/sim/tick";
-import type { WorldState, Command } from "@/sim/types";
+import { createWorld, addPlayer, normalizeWorld, applyCommand, applyTick } from "@/sim/coc";
+import type { CocWorld, CocCommand } from "@/sim/coc";
 import { initDb, loadLatest, saveSnapshot } from "./db";
 
 interface Options {
@@ -11,7 +9,7 @@ interface Options {
   seed?: number;
   tickMs?: number;
   persistEvery?: number;
-  initial?: WorldState;
+  initial?: CocWorld;
 }
 
 export interface ServerHandle {
@@ -23,7 +21,7 @@ export interface ServerHandle {
 export function startServer(opts: Options = {}): ServerHandle {
   const tickMs = opts.tickMs ?? 1000;
   const persistEvery = opts.persistEvery ?? 10;
-  let state: WorldState = opts.initial ?? createWorld(opts.seed ?? Number(process.env.WORLD_SEED ?? 1));
+  let state: CocWorld = opts.initial ?? createWorld(opts.seed ?? Number(process.env.WORLD_SEED ?? 1));
   const sockets = new Map<WebSocket, string>();
   const wss = new WebSocketServer({ port: opts.port ?? Number(process.env.PORT ?? 8080) });
 
@@ -40,7 +38,7 @@ export function startServer(opts: Options = {}): ServerHandle {
     broadcast();
 
     ws.on("message", (raw) => {
-      let parsed: { type?: string; cmd?: Command };
+      let parsed: { type?: string; cmd?: CocCommand };
       try {
         parsed = JSON.parse(raw.toString());
       } catch {
@@ -53,7 +51,6 @@ export function startServer(opts: Options = {}): ServerHandle {
         return;
       }
       state = result.state;
-      if (result.report) ws.send(JSON.stringify({ type: "report", report: result.report }));
       broadcast();
     });
 
