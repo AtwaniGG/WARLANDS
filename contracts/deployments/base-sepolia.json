@@ -1,0 +1,15 @@
+{
+  "network": "base-sepolia",
+  "chainId": 84532,
+  "deployedAt": "2026-06-15",
+  "deployer": "0xdbfF9062DE8e516bf1BF8f8471410BbC66F5cB72",
+  "contracts": {
+    "WarToken": "0x317e64c59E84b958629C4F0CCFbe9F14d0bF9c0B",
+    "StakingManager": "0xF0814Ec2822160B6c4d3156F5b8ba95648b422bF",
+    "SinkRouter": "0x76A246e04Ab8aFAac33B09417acdd4a0F37830fc",
+    "RewardDistributor": "0x7344D6F92dC5639f1bCde83c0b6DE8141b9A7560"
+  },
+  "token": { "name": "Warlands", "symbol": "WAR", "supply": "1000000000000000000000000000" },
+  "explorer": "https://sepolia.basescan.org/address/0x317e64c59E84b958629C4F0CCFbe9F14d0bF9c0B",
+  "note": "Wired into Vercel as NEXT_PUBLIC_WAR_TOKEN / _STAKING_MANAGER / _SINK_ROUTER / _REWARD_DISTRIBUTOR. Testnet deploy from a throwaway wallet."
+}
