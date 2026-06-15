@@ -146,7 +146,7 @@ describe("train", () => {
     expect(error).toBeUndefined();
     expect(after.plots[key].trainQueue.length).toBe(1);
     expect(after.players.p1.war).toBe(warBefore - 20); // infantry costWar
-    expect(after.burned).toBe(burnBefore + 10); // half of 20 burned
+    expect(after.burned).toBe(burnBefore + 20); // full training cost is a $WAR sink (conserves supply)
   });
 });
 

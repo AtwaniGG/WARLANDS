@@ -81,6 +81,7 @@ function build(state: WorldState, playerId: string, key: string, buildingId: Pla
       ...state,
       plots: { ...state.plots, [key]: updated },
       players: { ...state.players, [playerId]: { ...player, war: player.war - def.baseCost } },
+      burned: (state.burned ?? 0) + def.baseCost, // construction cost is a $WAR sink
     },
   };
 }
@@ -110,6 +111,7 @@ function upgrade(state: WorldState, playerId: string, key: string, index: number
       ...state,
       plots: { ...state.plots, [key]: { ...plot, buildings } },
       players: { ...state.players, [playerId]: { ...player, war: player.war - cost } },
+      burned: (state.burned ?? 0) + cost, // upgrade cost is a $WAR sink
     },
   };
 }
@@ -163,7 +165,7 @@ function train(state: WorldState, playerId: string, key: string, unit: keyof typ
       ...state,
       plots: { ...state.plots, [key]: { ...plot, resources, trainQueue } },
       players: { ...state.players, [playerId]: { ...player, war: player.war - u.costWar } },
-      burned: (state.burned ?? 0) + Math.round(u.costWar * 0.5), // §13 #7 training fee sink
+      burned: (state.burned ?? 0) + u.costWar, // §13 #7 training cost is a full $WAR sink
     },
   };
 }
@@ -288,11 +290,16 @@ function buy(state: WorldState, playerId: string, item: ResourceId, qty: number,
   const total = Math.ceil(cost) + fee;
   if (player.war < total) return fail(state, `Need ${total.toLocaleString()} $WAR (incl. ${fee} fee).`);
 
-  // pay sellers, deduct buyer, deposit goods, burn fee, shrink book
+  // pay sellers, deduct buyer, deposit goods, shrink book
   const players: Record<string, SimPlayer> = { ...state.players, [playerId]: { ...player, war: player.war - total } };
+  let paidToSellers = 0;
   for (const [seller, amt] of Object.entries(proceeds)) {
     const sp = players[seller];
-    if (sp) players[seller] = { ...sp, war: sp.war + Math.floor(amt) };
+    if (sp) {
+      const pay = Math.floor(amt);
+      players[seller] = { ...sp, war: sp.war + pay };
+      paidToSellers += pay;
+    }
   }
   const resources = { ...dest.resources };
   addRes(resources, item, filled, storageCap(dest));
@@ -300,12 +307,13 @@ function buy(state: WorldState, playerId: string, item: ResourceId, qty: number,
     .map((o) => (filledIds.has(o.id) ? { ...o, qty: o.qty - filledIds.get(o.id)! } : o))
     .filter((o) => o.qty > 0);
 
+  // everything removed from the buyer either reaches a seller or is burned (fee + rounding residue)
   return {
     state: {
       ...state,
       plots: { ...state.plots, [toKey]: { ...dest, resources } },
       players,
-      burned: (state.burned ?? 0) + fee,
+      burned: (state.burned ?? 0) + (total - paidToSellers),
       market: { ...state.market, book },
     },
   };
@@ -388,15 +396,17 @@ function leaveAllegiance(state: WorldState, playerId: string): CommandResult {
   const contributions = { ...ally.contributions };
   delete contributions[playerId];
   const allegiances = { ...state.allegiances };
+  let refund = 0;
   if (members.length === 0) {
-    delete allegiances[id]; // last one out disbands it
+    refund = ally.treasuryWar; // last one out disbands it and reclaims the remaining treasury
+    delete allegiances[id];
   } else {
     allegiances[id] = { ...ally, members, contributions, founder: ally.founder === playerId ? members[0] : ally.founder };
   }
   return {
     state: {
       ...state,
-      players: { ...state.players, [playerId]: { ...player, allegianceId: null } },
+      players: { ...state.players, [playerId]: { ...player, allegianceId: null, war: player.war + refund } },
       allegiances,
     },
   };
