@@ -1,5 +1,5 @@
 import { BUILDINGS } from "./config";
-import type { BuildJob, CocBase, CocWorld, PlacedBuilding } from "./types";
+import type { Army, BuildJob, CocBase, CocWorld, PlacedBuilding, TrainOrder } from "./types";
 
 function tickBase(base: CocBase, nextTick: number): CocBase {
   const buildings: Record<string, PlacedBuilding> = {};
@@ -27,7 +27,15 @@ function tickBase(base: CocBase, nextTick: number): CocBase {
     }
   }
 
-  return { ...base, buildings, jobs };
+  // Training queue: finished orders join the army.
+  const army: Army = { ...base.army };
+  const trainQueue: TrainOrder[] = [];
+  for (const order of base.trainQueue) {
+    if (nextTick >= order.finishesAtTick) army[order.unit] = (army[order.unit] ?? 0) + 1;
+    else trainQueue.push(order);
+  }
+
+  return { ...base, buildings, jobs, army, trainQueue };
 }
 
 export function applyTick(state: CocWorld): CocWorld {

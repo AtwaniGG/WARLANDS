@@ -9,7 +9,11 @@ export type CocBuildingId =
   | "elixirStorage"
   | "cannon"
   | "mortar"
-  | "airDefense";
+  | "airDefense"
+  | "barracks"
+  | "armyCamp";
+
+export type CocUnitId = "grunt" | "marksman" | "breacher" | "juggernaut" | "gunship";
 
 /** A building placed on a hex. level 0 = under construction (not yet operational). */
 export interface PlacedBuilding {
@@ -27,6 +31,13 @@ export interface BuildJob {
   finishesAtTick: number;
 }
 
+export interface TrainOrder {
+  unit: CocUnitId;
+  finishesAtTick: number;
+}
+
+export type Army = Partial<Record<CocUnitId, number>>;
+
 export interface CocBase {
   owner: string;
   centerKey: string;
@@ -38,6 +49,12 @@ export interface CocBase {
   elixir: number;
   builders: number;
   jobs: BuildJob[];
+  /** trained troops ready to attack with */
+  army: Army;
+  trainQueue: TrainOrder[];
+  /** tick until which the base is protected from raids (0 = none) */
+  shieldUntil: number;
+  trophies: number;
 }
 
 export interface CocPlayer {
@@ -63,9 +80,24 @@ export type CocCommand =
   | { type: "collect" }
   | { type: "expandCluster"; q: number; r: number }
   | { type: "placeWall"; aKey: string; bKey: string }
-  | { type: "upgradeWall"; edgeKey: string };
+  | { type: "upgradeWall"; edgeKey: string }
+  | { type: "trainTroop"; unit: CocUnitId }
+  | { type: "raid"; targetOwner: string; army: Army };
+
+/** Outcome of a raid, surfaced to the attacking client only. */
+export interface BattleReport {
+  attacker: string;
+  defender: string;
+  tick: number;
+  stars: number;
+  destructionPct: number;
+  loot: { gold: number; elixir: number };
+  trophies: number; // delta for the attacker (defender gets the negative)
+  armyUsed: Army;
+}
 
 export interface CommandResult {
   state: CocWorld;
   error?: string;
+  report?: BattleReport;
 }

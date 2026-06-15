@@ -175,3 +175,74 @@ describe("upgradeWall", () => {
     expect(r.state.bases.p1.gold).toBe(600);
   });
 });
+
+// army-capable base: barracks + army camp operational
+function withArmyBuildings(s: CocWorld, elixir: number): CocWorld {
+  const b = s.bases.p1;
+  return { ...s, bases: { ...s.bases, p1: { ...b, elixir, buildings: { ...b.buildings, "1,0": { id: "barracks", level: 1 }, "0,1": { id: "armyCamp", level: 1 } } } } };
+}
+
+describe("trainTroop", () => {
+  it("queues a troop, spending elixir", () => {
+    const s = withArmyBuildings(claimed(), 1000);
+    const r = applyCommand(s, "p1", { type: "trainTroop", unit: "grunt" });
+    expect(r.error).toBeUndefined();
+    expect(r.state.bases.p1.trainQueue.length).toBe(1);
+    expect(r.state.bases.p1.elixir).toBe(960);
+  });
+  it("rejects training without a barracks", () => {
+    const r = applyCommand(give(claimed(), 0, 1000), "p1", { type: "trainTroop", unit: "grunt" });
+    expect(r.error).toMatch(/barracks/i);
+  });
+  it("rejects training without enough army housing", () => {
+    const b = claimed().bases.p1;
+    const s = { ...claimed(), bases: { p1: { ...b, elixir: 1000, buildings: { ...b.buildings, "1,0": { id: "barracks", level: 1 } } } } } as CocWorld;
+    const r = applyCommand(s, "p1", { type: "trainTroop", unit: "grunt" });
+    expect(r.error).toMatch(/housing/i);
+  });
+  it("rejects training with insufficient elixir", () => {
+    const s = withArmyBuildings(claimed(), 0);
+    const r = applyCommand(s, "p1", { type: "trainTroop", unit: "grunt" });
+    expect(r.error).toMatch(/elixir/i);
+  });
+});
+
+function twoBases(): CocWorld {
+  let s = applyCommand(fresh(), "p1", { type: "claimBase", q: 0, r: 0 }).state;
+  s = addPlayer(s, "p2");
+  s = applyCommand(s, "p2", { type: "claimBase", q: 3, r: 0 }).state;
+  return s;
+}
+
+describe("raid", () => {
+  it("raids a neighbour: loots, awards stars, consumes the army, shields the defender", () => {
+    let s = twoBases();
+    s = { ...s, bases: { ...s.bases, p1: { ...s.bases.p1, gold: 500, army: { grunt: 80 } } } };
+    const r = applyCommand(s, "p1", { type: "raid", targetOwner: "p2", army: { grunt: 80 } });
+    expect(r.error).toBeUndefined();
+    expect(r.report).toBeDefined();
+    expect(r.report!.stars).toBe(3); // p2 base is just a Command Center
+    expect(r.state.bases.p1.army.grunt).toBe(0); // army consumed
+    expect(r.state.bases.p1.gold).toBe(500 + Math.floor(500 * 0.2)); // looted 20% of p2's 500
+    expect(r.state.bases.p2.gold).toBe(400);
+    expect(r.state.bases.p2.shieldUntil).toBeGreaterThan(s.tick);
+  });
+  it("rejects raiding your own base", () => {
+    let s = twoBases();
+    s = { ...s, bases: { ...s.bases, p1: { ...s.bases.p1, army: { grunt: 10 } } } };
+    const r = applyCommand(s, "p1", { type: "raid", targetOwner: "p1", army: { grunt: 10 } });
+    expect(r.error).toMatch(/your own/i);
+  });
+  it("rejects raiding a shielded base", () => {
+    let s = twoBases();
+    s = { ...s, bases: { ...s.bases, p1: { ...s.bases.p1, army: { grunt: 10 } }, p2: { ...s.bases.p2, shieldUntil: 9999 } } };
+    const r = applyCommand(s, "p1", { type: "raid", targetOwner: "p2", army: { grunt: 10 } });
+    expect(r.error).toMatch(/shield/i);
+  });
+  it("rejects deploying troops you don't have", () => {
+    let s = twoBases();
+    s = { ...s, bases: { ...s.bases, p1: { ...s.bases.p1, army: { grunt: 5 } } } };
+    const r = applyCommand(s, "p1", { type: "raid", targetOwner: "p2", army: { grunt: 50 } });
+    expect(r.error).toMatch(/don't have/i);
+  });
+});

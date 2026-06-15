@@ -1,7 +1,8 @@
 import { hexKey, hexNeighbors } from "@/game/world";
-import { BUILDINGS, ccTier, levelDef, maxLevelOf, maxWallLevel, STARTING_BUILDERS, STARTING_ELIXIR, STARTING_GOLD, WALL } from "./config";
-import { ccLevel, edgeKey, freeBuilders, storageCap } from "./world";
-import type { CocBase, CocBuildingId, CocCommand, CocResource, CocWorld, CommandResult, PlacedBuilding } from "./types";
+import { BUILDINGS, ccTier, levelDef, maxLevelOf, maxWallLevel, SHIELD_MAX_SECS, SHIELD_SECS_PER_PCT, STARTING_BUILDERS, STARTING_ELIXIR, STARTING_GOLD, UNITS, WALL } from "./config";
+import { ccLevel, edgeKey, freeBuilders, hasBarracks, housingCap, housingUsed, storageCap } from "./world";
+import { resolveRaid } from "./battle";
+import type { Army, CocBase, CocBuildingId, CocCommand, CocResource, CocUnitId, CocWorld, CommandResult, PlacedBuilding } from "./types";
 
 function fail(state: CocWorld, error: string): CommandResult {
   return { state, error };
@@ -40,6 +41,10 @@ function claimBase(state: CocWorld, playerId: string, q: number, r: number): Com
     elixir: STARTING_ELIXIR,
     builders: STARTING_BUILDERS,
     jobs: [],
+    army: {},
+    trainQueue: [],
+    shieldUntil: 0,
+    trophies: 0,
   };
   const claimedHexes = { ...state.claimedHexes };
   for (const k of cluster) claimedHexes[k] = playerId;
@@ -179,6 +184,89 @@ function upgradeWall(state: CocWorld, playerId: string, ek: string): CommandResu
   return { state: { ...state, bases: { ...state.bases, [playerId]: newBase } } };
 }
 
+function trainTroop(state: CocWorld, playerId: string, unit: CocUnitId): CommandResult {
+  const base = state.bases[playerId];
+  if (!base) return fail(state, "You have no base.");
+  if (!hasBarracks(base)) return fail(state, "Build a Barracks first.");
+  const def = UNITS[unit];
+  if (base.elixir < def.cost.elixir) return fail(state, "Not enough elixir.");
+  if (housingUsed(base) + def.housing > housingCap(base)) return fail(state, "Not enough army housing — build an Army Camp.");
+  const newBase: CocBase = {
+    ...base,
+    elixir: base.elixir - def.cost.elixir,
+    trainQueue: [...base.trainQueue, { unit, finishesAtTick: state.tick + def.trainTimeSec }],
+  };
+  return { state: { ...state, bases: { ...state.bases, [playerId]: newBase } } };
+}
+
+function fnv1a(s: string): number {
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+function raid(state: CocWorld, playerId: string, targetOwner: string, army: Army): CommandResult {
+  const attacker = state.bases[playerId];
+  if (!attacker) return fail(state, "You have no base.");
+  if (targetOwner === playerId) return fail(state, "You cannot raid your own base.");
+  const defender = state.bases[targetOwner];
+  if (!defender) return fail(state, "No such base.");
+  if (defender.shieldUntil > state.tick) return fail(state, "That base is shielded.");
+
+  let total = 0;
+  for (const [u, n] of Object.entries(army)) {
+    if (!n) continue;
+    if (n < 0) return fail(state, "Invalid army.");
+    total += n;
+    if ((attacker.army[u as CocUnitId] ?? 0) < n) return fail(state, "You don't have those troops.");
+  }
+  if (total <= 0) return fail(state, "Select an army to deploy.");
+
+  const seed = ((state.tick + 1) * 2654435761 + fnv1a(playerId) + fnv1a(targetOwner)) >>> 0;
+  const result = resolveRaid(army, defender, seed);
+
+  const lootGold = Math.min(defender.gold, result.loot.gold);
+  const lootElixir = Math.min(defender.elixir, result.loot.elixir);
+
+  const newAttackerArmy: Army = { ...attacker.army };
+  for (const [u, n] of Object.entries(army)) {
+    if (n) newAttackerArmy[u as CocUnitId] = (newAttackerArmy[u as CocUnitId] ?? 0) - n;
+  }
+  const newAttacker: CocBase = {
+    ...attacker,
+    army: newAttackerArmy,
+    gold: attacker.gold + lootGold,
+    elixir: attacker.elixir + lootElixir,
+    trophies: Math.max(0, attacker.trophies + result.trophies),
+  };
+
+  const shieldSecs = Math.min(SHIELD_MAX_SECS, Math.round(result.destructionPct * 100 * SHIELD_SECS_PER_PCT));
+  const newDefender: CocBase = {
+    ...defender,
+    gold: defender.gold - lootGold,
+    elixir: defender.elixir - lootElixir,
+    trophies: Math.max(0, defender.trophies - result.trophies),
+    shieldUntil: result.destructionPct > 0 ? state.tick + shieldSecs : defender.shieldUntil,
+  };
+
+  return {
+    state: { ...state, bases: { ...state.bases, [playerId]: newAttacker, [targetOwner]: newDefender } },
+    report: {
+      attacker: playerId,
+      defender: targetOwner,
+      tick: state.tick,
+      stars: result.stars,
+      destructionPct: result.destructionPct,
+      loot: { gold: lootGold, elixir: lootElixir },
+      trophies: result.trophies,
+      armyUsed: army,
+    },
+  };
+}
+
 export function applyCommand(state: CocWorld, playerId: string, cmd: CocCommand): CommandResult {
   switch (cmd.type) {
     case "claimBase":
@@ -195,6 +283,10 @@ export function applyCommand(state: CocWorld, playerId: string, cmd: CocCommand)
       return placeWall(state, playerId, cmd.aKey, cmd.bKey);
     case "upgradeWall":
       return upgradeWall(state, playerId, cmd.edgeKey);
+    case "trainTroop":
+      return trainTroop(state, playerId, cmd.unit);
+    case "raid":
+      return raid(state, playerId, cmd.targetOwner, cmd.army);
     default:
       return fail(state, "Unknown command.");
   }

@@ -13,6 +13,10 @@ const base = (over: Partial<CocBase> = {}): CocBase => ({
   elixir: 0,
   builders: STARTING_BUILDERS,
   jobs: [],
+  army: {},
+  trainQueue: [],
+  shieldUntil: 0,
+  trophies: 0,
   ...over,
 });
 

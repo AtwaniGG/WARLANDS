@@ -1,4 +1,4 @@
-import type { CocBuildingId, CocResource } from "./types";
+import type { CocBuildingId, CocResource, CocUnitId } from "./types";
 
 export const STARTING_WAR = 200_000;
 export const STARTING_GOLD = 500;
@@ -14,18 +14,20 @@ export interface BuildingLevel {
   producePerTick?: number; // collectors
   bufferCap?: number; // collectors
   storageCap?: number; // storages
-  // ---- defense combat stats (inert until SP2) ----
+  // ---- defense combat stats ----
   hp?: number;
   dps?: number;
   range?: number;
   targets?: DefenseTarget;
   splash?: boolean;
+  // ---- army camp ----
+  housing?: number;
 }
 
 export interface BuildingDef {
   id: CocBuildingId;
   name: string;
-  category: "hq" | "collector" | "storage" | "defense";
+  category: "hq" | "collector" | "storage" | "defense" | "army";
   produces?: CocResource;
   stores?: CocResource;
   levels: BuildingLevel[]; // index 0 => level 1
@@ -118,7 +120,60 @@ export const BUILDINGS: Record<CocBuildingId, BuildingDef> = {
       { cost: { gold: 6000 }, buildTimeSec: 3600, hp: 1040, dps: 44, range: 4, targets: "air" },
     ],
   },
+  barracks: {
+    id: "barracks",
+    name: "Barracks",
+    category: "army",
+    levels: [
+      { cost: { elixir: 250 }, buildTimeSec: 60, hp: 300 },
+      { cost: { elixir: 1000 }, buildTimeSec: 300, hp: 450 },
+      { cost: { elixir: 3000 }, buildTimeSec: 1200, hp: 650 },
+    ],
+  },
+  armyCamp: {
+    id: "armyCamp",
+    name: "Army Camp",
+    category: "army",
+    levels: [
+      { cost: { elixir: 200 }, buildTimeSec: 60, hp: 250, housing: 20 },
+      { cost: { elixir: 800 }, buildTimeSec: 300, hp: 350, housing: 40 },
+      { cost: { elixir: 2500 }, buildTimeSec: 1200, hp: 500, housing: 70 },
+    ],
+  },
 };
+
+/** Combat troops (cost elixir; housed in army camps). */
+export interface UnitDef {
+  id: CocUnitId;
+  name: string;
+  role: string;
+  hp: number;
+  dps: number;
+  housing: number;
+  trainTimeSec: number;
+  cost: { elixir: number };
+  /** flying troops ignore walls and are only hit by air defense */
+  flying?: boolean;
+  /** wall-breakers prioritise walls and deal a multiplier against them */
+  favoriteTarget?: "wall";
+  wallMultiplier?: number;
+}
+
+export const UNITS: Record<CocUnitId, UnitDef> = {
+  grunt: { id: "grunt", name: "Grunt", role: "Melee swarm", hp: 80, dps: 10, housing: 1, trainTimeSec: 10, cost: { elixir: 40 } },
+  marksman: { id: "marksman", name: "Marksman", role: "Ranged", hp: 40, dps: 14, housing: 1, trainTimeSec: 12, cost: { elixir: 60 } },
+  breacher: { id: "breacher", name: "Breacher", role: "Wall-breaker", hp: 30, dps: 8, housing: 2, trainTimeSec: 20, cost: { elixir: 120 }, favoriteTarget: "wall", wallMultiplier: 40 },
+  juggernaut: { id: "juggernaut", name: "Juggernaut", role: "Tank", hp: 600, dps: 18, housing: 5, trainTimeSec: 60, cost: { elixir: 300 } },
+  gunship: { id: "gunship", name: "Gunship", role: "Air", hp: 120, dps: 22, housing: 4, trainTimeSec: 45, cost: { elixir: 250 }, flying: true },
+};
+
+export const UNIT_IDS: CocUnitId[] = ["grunt", "marksman", "breacher", "juggernaut", "gunship"];
+
+/** Fraction of the defender's available resources that can be looted at 100% destruction. */
+export const LOOT_PCT = 0.2;
+/** Seconds of shield granted per 1% destruction taken (capped). */
+export const SHIELD_SECS_PER_PCT = 6;
+export const SHIELD_MAX_SECS = 8 * 3600;
 
 /** Walls live on hex edges, not hexes: instant, gold-only, no builder. */
 export interface WallLevel {
@@ -157,6 +212,8 @@ export const CC_PROGRESSION: CcTier[] = [
       goldStorage: { maxCount: 1, maxLevel: 1 },
       elixirStorage: { maxCount: 1, maxLevel: 1 },
       cannon: { maxCount: 1, maxLevel: 1 },
+      barracks: { maxCount: 1, maxLevel: 1 },
+      armyCamp: { maxCount: 1, maxLevel: 1 },
     },
   },
   {
@@ -168,6 +225,8 @@ export const CC_PROGRESSION: CcTier[] = [
       elixirStorage: { maxCount: 1, maxLevel: 2 },
       cannon: { maxCount: 1, maxLevel: 2 },
       mortar: { maxCount: 1, maxLevel: 1 },
+      barracks: { maxCount: 1, maxLevel: 2 },
+      armyCamp: { maxCount: 2, maxLevel: 2 },
     },
   },
   {
@@ -180,6 +239,8 @@ export const CC_PROGRESSION: CcTier[] = [
       cannon: { maxCount: 2, maxLevel: 3 },
       mortar: { maxCount: 1, maxLevel: 2 },
       airDefense: { maxCount: 1, maxLevel: 1 },
+      barracks: { maxCount: 1, maxLevel: 3 },
+      armyCamp: { maxCount: 2, maxLevel: 3 },
     },
   },
   {
@@ -192,6 +253,8 @@ export const CC_PROGRESSION: CcTier[] = [
       cannon: { maxCount: 2, maxLevel: 3 },
       mortar: { maxCount: 2, maxLevel: 3 },
       airDefense: { maxCount: 1, maxLevel: 2 },
+      barracks: { maxCount: 1, maxLevel: 3 },
+      armyCamp: { maxCount: 3, maxLevel: 3 },
     },
   },
   {
@@ -204,6 +267,8 @@ export const CC_PROGRESSION: CcTier[] = [
       cannon: { maxCount: 3, maxLevel: 3 },
       mortar: { maxCount: 2, maxLevel: 3 },
       airDefense: { maxCount: 2, maxLevel: 3 },
+      barracks: { maxCount: 1, maxLevel: 3 },
+      armyCamp: { maxCount: 4, maxLevel: 3 },
     },
   },
 ];

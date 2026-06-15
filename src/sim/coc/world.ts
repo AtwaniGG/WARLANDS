@@ -1,5 +1,5 @@
 import { generateWorld, hexKey } from "@/game/world";
-import { BASE_STORAGE_CAP, BUILDINGS, STARTING_WAR } from "./config";
+import { BASE_STORAGE_CAP, BUILDINGS, STARTING_WAR, UNITS } from "./config";
 import type { CocBase, CocPlayer, CocResource, CocWorld } from "./types";
 
 export const WORLD_RADIUS = 9;
@@ -41,6 +41,28 @@ export function edgeKey(aKey: string, bKey: string): string {
   return [aKey, bKey].sort().join("|");
 }
 
+/** Total troop housing from operational army camps. */
+export function housingCap(base: CocBase): number {
+  let cap = 0;
+  for (const b of Object.values(base.buildings)) {
+    if (b.id === "armyCamp" && b.level >= 1) cap += BUILDINGS.armyCamp.levels[b.level - 1]?.housing ?? 0;
+  }
+  return cap;
+}
+
+/** Housing consumed by the standing army plus in-progress training. */
+export function housingUsed(base: CocBase): number {
+  let used = 0;
+  for (const [unit, n] of Object.entries(base.army)) used += UNITS[unit as keyof typeof UNITS].housing * (n ?? 0);
+  for (const order of base.trainQueue) used += UNITS[order.unit].housing;
+  return used;
+}
+
+/** Does the base have a barracks ready to train? */
+export function hasBarracks(base: CocBase): boolean {
+  return Object.values(base.buildings).some((b) => b.id === "barracks" && b.level >= 1);
+}
+
 /** Make a restored snapshot resilient to schema evolution. */
 export function normalizeWorld(state: CocWorld): CocWorld {
   const bases: CocWorld["bases"] = {};
@@ -54,6 +76,10 @@ export function normalizeWorld(state: CocWorld): CocWorld {
       gold: b.gold ?? 0,
       elixir: b.elixir ?? 0,
       builders: b.builders ?? 2,
+      army: b.army ?? {},
+      trainQueue: b.trainQueue ?? [],
+      shieldUntil: b.shieldUntil ?? 0,
+      trophies: b.trophies ?? 0,
     };
   }
   return {
