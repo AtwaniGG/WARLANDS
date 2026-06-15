@@ -1,7 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { WebSocketServer, WebSocket } from "ws";
-import { createWorld, addPlayer, normalizeWorld, applyCommand, applyTick } from "@/sim/coc";
-import type { CocWorld, CocCommand } from "@/sim/coc";
+import { createWorld, addPlayer, normalizeWorld } from "@/sim/coc/world";
+import { applyCommand } from "@/sim/coc/commands";
+import { applyTick } from "@/sim/coc/tick";
+import type { CocWorld, CocCommand } from "@/sim/coc/types";
 import { initDb, loadLatest, saveSnapshot } from "./db";
 
 interface Options {
