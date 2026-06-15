@@ -1,0 +1,10 @@
+{
+  "cluster": "devnet",
+  "rpc": "https://api.devnet.solana.com",
+  "deployer": "DQ4NGW79Vs8DNqyJniMbx8E1v3ZEvarsHB7m1N6pNNUJ",
+  "warMint": "BHdvBpziU37TjyNCxjrFy4FFQ1DP2TButgrZyP9Qi8pT",
+  "tokenProgram": "Token-2022 (TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb)",
+  "decimals": 9,
+  "supply": "1000000000",
+  "stakingProgram": "TBD"
+}

@@ -1,15 +1,23 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
-import { WagmiProvider } from "wagmi";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { wagmiConfig } from "./config";
+import { useMemo, type ReactNode } from "react";
+import { Buffer } from "buffer";
+import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react";
+import { PhantomWalletAdapter } from "@solana/wallet-adapter-phantom";
+import { SOLANA_RPC } from "./solana";
+
+// web3.js / wallet-adapter expect a global Buffer in the browser.
+if (typeof window !== "undefined" && !window.Buffer) {
+  (window as unknown as { Buffer: typeof Buffer }).Buffer = Buffer;
+}
 
 export function Web3Provider({ children }: { children: ReactNode }) {
-  const [queryClient] = useState(() => new QueryClient());
+  const wallets = useMemo(() => [new PhantomWalletAdapter()], []);
   return (
-    <WagmiProvider config={wagmiConfig}>
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    </WagmiProvider>
+    <ConnectionProvider endpoint={SOLANA_RPC}>
+      <WalletProvider wallets={wallets} autoConnect>
+        {children}
+      </WalletProvider>
+    </ConnectionProvider>
   );
 }

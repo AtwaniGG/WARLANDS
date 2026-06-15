@@ -40,3 +40,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Solana keypairs (never commit)
+solana/keys/
+*-keypair.json
+
+# Claude worktrees / local
+.claude/
