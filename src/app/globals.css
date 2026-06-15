@@ -136,3 +136,7 @@ html.cb {
 }
 .wl-hazard { background-image: repeating-linear-gradient(45deg, #f5b301 0 10px, #0a0d12 10px 20px); animation: wl-march 1.2s linear infinite; }
 .wl-glow { animation: wl-pulse 5s ease-in-out infinite; }
+
+/* Scrollable strips that hide the bar (mobile top bar / tab rail). */
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.no-scrollbar::-webkit-scrollbar { display: none; }

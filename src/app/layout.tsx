@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Oswald } from "next/font/google";
 import "./globals.css";
 
@@ -22,6 +22,14 @@ const oswald = Oswald({
 export const metadata: Metadata = {
   title: "WARLANDS — Web3 Strategy MMO",
   description: "Stake. Claim land. Build your empire. Wage war on a persistent live world map.",
+};
+
+// Mobile: device-width scaling, cover notches/safe-areas, dark theme chrome.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#0c1018",
 };
 
 export default function RootLayout({

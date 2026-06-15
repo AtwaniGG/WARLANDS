@@ -82,6 +82,9 @@ export default function Landing() {
           <a href="#loop" className="border border-zinc-700 px-7 py-3.5 text-sm font-bold uppercase tracking-widest text-zinc-300 transition hover:border-zinc-500 hover:text-white">
             How it works
           </a>
+          <Link href="/whitepaper" className="px-3 py-3.5 text-sm font-bold uppercase tracking-widest text-amber-300/90 underline-offset-4 transition hover:text-amber-300 hover:underline">
+            Whitepaper ↗
+          </Link>
         </div>
 
         {/* status readout strip */}

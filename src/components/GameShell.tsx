@@ -74,15 +74,15 @@ export function GameShell() {
       <Tabs tabs={TABS} value={view} onChange={setView} />
       <EventBanner />
 
-      <div className="flex min-h-0 flex-1">
+      <div className="flex min-h-0 flex-1 flex-col md:flex-row">
         {view === "map" ? (
           <>
-            <main className="relative min-w-0 flex-1">
+            <main className="relative min-w-0 h-[42vh] shrink-0 md:h-auto md:flex-1">
               <HexMap />
             </main>
             <aside
-              className="flex w-[360px] flex-col"
-              style={{ borderLeft: "1px solid var(--hairline)", background: "var(--panel)" }}
+              className="flex min-h-0 w-full flex-1 flex-col border-t md:w-[360px] md:flex-none md:border-l md:border-t-0"
+              style={{ borderColor: "var(--hairline)", background: "var(--panel)" }}
             >
               <div className="min-h-0 flex-1 overflow-y-auto">
                 <PlotPanel />

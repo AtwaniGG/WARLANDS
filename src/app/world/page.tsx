@@ -53,7 +53,7 @@ export default function WorldPage() {
       </div>
       {error && <div style={{ color: "#ff6b6b", fontSize: 12, marginTop: 4 }}>⚠ {error}</div>}
 
-      <svg viewBox="-180 -180 360 360" width={540} height={540} style={{ marginTop: 12, background: "#11141b", borderRadius: 8 }}>
+      <svg viewBox="-180 -180 360 360" style={{ marginTop: 12, background: "#11141b", borderRadius: 8, width: "100%", maxWidth: 540, height: "auto", display: "block", touchAction: "manipulation" }}>
         {Object.values(state.hexes).map((h) => {
           const key = `${h.q},${h.r}`;
           const { x, y } = axialToPixel(h.q, h.r, SIZE);
@@ -327,10 +327,10 @@ export default function WorldPage() {
   );
 }
 
-const page: React.CSSProperties = { padding: 16, fontFamily: "monospace", color: "#e8e8e8", background: "#0d0f14", minHeight: "100vh" };
-const btn: React.CSSProperties = { background: "#1f2a44", color: "#e8e8e8", border: "1px solid #2f3e63", borderRadius: 6, padding: "6px 10px", fontFamily: "monospace", fontSize: 12, cursor: "pointer" };
-const btnSm: React.CSSProperties = { ...btn, padding: "3px 7px", fontSize: 11 };
+const page: React.CSSProperties = { padding: "14px max(12px, env(safe-area-inset-left)) calc(32px + env(safe-area-inset-bottom))", fontFamily: "monospace", color: "#e8e8e8", background: "#0d0f14", minHeight: "100vh" };
+const btn: React.CSSProperties = { background: "#1f2a44", color: "#e8e8e8", border: "1px solid #2f3e63", borderRadius: 6, padding: "9px 13px", fontFamily: "monospace", fontSize: 13, cursor: "pointer", minHeight: 38, touchAction: "manipulation" };
+const btnSm: React.CSSProperties = { ...btn, padding: "7px 10px", fontSize: 12, minHeight: 34 };
 const btnDanger: React.CSSProperties = { ...btn, background: "#3a1d1d", border: "1px solid #6b2f2f" };
-const select: React.CSSProperties = { background: "#1f2a44", color: "#e8e8e8", border: "1px solid #2f3e63", borderRadius: 6, padding: "2px 4px", fontFamily: "monospace", fontSize: 11 };
+const select: React.CSSProperties = { background: "#1f2a44", color: "#e8e8e8", border: "1px solid #2f3e63", borderRadius: 6, padding: "6px 8px", fontFamily: "monospace", fontSize: 12, minHeight: 34 };
 const overlay: React.CSSProperties = { position: "fixed", inset: 0, background: "#000a", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 };
 const modal: React.CSSProperties = { background: "#141821", border: "1px solid #2f3e63", borderRadius: 10, padding: 20, maxWidth: 420, fontFamily: "monospace", color: "#e8e8e8" };
