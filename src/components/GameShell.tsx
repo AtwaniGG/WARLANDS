@@ -66,7 +66,7 @@ export function GameShell() {
       <GameClock />
       <SettingsEffects />
       <Toaster />
-      <TutorialOverlay />
+      <TutorialOverlay onView={(v) => setView(v as View)} />
       <BattleReport />
       {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
       <TopBar onOpenSettings={() => setSettingsOpen(true)} />

@@ -9,6 +9,7 @@ export interface Settings {
   colorblind: boolean;
   speed: number; // tick-rate multiplier (0.5 .. 4)
   tutorialDone: boolean;
+  tutorialStep: number; // resume point for the guided tutorial
   set: <K extends keyof Omit<Settings, "set">>(key: K, value: Settings[K]) => void;
 }
 
@@ -23,6 +24,7 @@ export const useSettings = create<Settings>()(
       colorblind: false,
       speed: 1,
       tutorialDone: false,
+      tutorialStep: 0,
       set: (key, value) => set({ [key]: value } as Partial<Settings>),
     }),
     {
