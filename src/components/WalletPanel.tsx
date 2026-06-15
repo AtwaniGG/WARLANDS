@@ -1,206 +1,101 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import {
-  useAccount,
-  useChainId,
-  useReadContract,
-  useWriteContract,
-  useWaitForTransactionReceipt,
-  useSwitchChain,
-} from "wagmi";
-import { formatUnits, parseUnits } from "viem";
-import { ADDRESSES, CONTRACTS_CONFIGURED } from "@/web3/addresses";
-import { DEFAULT_CHAIN } from "@/web3/config";
-import { warTokenAbi, stakingManagerAbi, sinkRouterAbi, rewardDistributorAbi } from "@/web3/abis";
-import { TERRAIN_IDS, PLOT_TYPES } from "@/game/plotTypes";
+import { useCallback, useEffect, useState } from "react";
+import { useConnection, useWallet } from "@solana/wallet-adapter-react";
+import { PublicKey } from "@solana/web3.js";
+import { getAssociatedTokenAddressSync, TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
+import { WAR_MINT, WAR_SYMBOL, SOLANA_CONFIGURED, explorerAddress } from "@/web3/solana";
 import { WalletButton } from "./WalletButton";
-import { Button, Panel, Stat, type StatAccent } from "./ui";
+import { Panel, Stat, type StatAccent } from "./ui";
 
-const CHAIN_ID = DEFAULT_CHAIN.id; // Base Sepolia (84532)
-const EXPLORER = "https://sepolia.basescan.org";
-const STATUS = ["Unclaimed", "Active", "Unbonding"] as const;
-const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
+const MINT = SOLANA_CONFIGURED ? new PublicKey(WAR_MINT) : null;
 
-function fmt(v: bigint | undefined, decimals = 18) {
-  if (v === undefined) return "—";
-  const n = Number(formatUnits(v, decimals));
-  return n.toLocaleString(undefined, { maximumFractionDigits: 2 });
-}
-function short(a?: string) {
-  return a && a !== ZERO_ADDR ? `${a.slice(0, 6)}…${a.slice(-4)}` : "—";
+function fmt(n: number | null): string {
+  return n === null ? "—" : n.toLocaleString(undefined, { maximumFractionDigits: 4 });
 }
 
 export function WalletPanel() {
-  const { address, isConnected, chain } = useAccount();
-  const chainId = useChainId();
-  const { switchChain, isPending: switching } = useSwitchChain();
-  const wrongChain = isConnected && chainId !== CHAIN_ID;
+  const { connection } = useConnection();
+  const { publicKey, connected } = useWallet();
+  const [sol, setSol] = useState<number | null>(null);
+  const [war, setWar] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const [plotId, setPlotId] = useState("1");
-  const [plotType, setPlotType] = useState(0);
-  const stakeAmount = parseUnits(String(PLOT_TYPES[TERRAIN_IDS[plotType]].stake), 18);
+  const refresh = useCallback(async () => {
+    if (!publicKey || !MINT) return;
+    setLoading(true);
+    try {
+      const lamports = await connection.getBalance(publicKey);
+      setSol(lamports / 1e9);
+    } catch {
+      setSol(null);
+    }
+    try {
+      const ata = getAssociatedTokenAddressSync(MINT, publicKey, false, TOKEN_2022_PROGRAM_ID);
+      const bal = await connection.getTokenAccountBalance(ata);
+      setWar(bal.value.uiAmount ?? 0);
+    } catch {
+      setWar(0); // no WAR token account yet
+    }
+    setLoading(false);
+  }, [publicKey, connection]);
 
-  const { writeContract, data: hash, isPending, error, reset } = useWriteContract();
-  const { isLoading: confirming, isSuccess: confirmed } = useWaitForTransactionReceipt({ hash });
-
-  const enabled = CONTRACTS_CONFIGURED;
-  const me = address ? ([address] as const) : undefined;
-
-  const balanceR = useReadContract({ address: ADDRESSES.warToken, abi: warTokenAbi, functionName: "balanceOf", args: me, query: { enabled: enabled && !!address } });
-  const allowanceR = useReadContract({ address: ADDRESSES.warToken, abi: warTokenAbi, functionName: "allowance", args: address ? [address, ADDRESSES.stakingManager] : undefined, query: { enabled: enabled && !!address } });
-  const totalStakedR = useReadContract({ address: ADDRESSES.stakingManager, abi: stakingManagerAbi, functionName: "totalStaked", query: { enabled } });
-  const totalBurnedR = useReadContract({ address: ADDRESSES.sinkRouter, abi: sinkRouterAbi, functionName: "totalBurned", query: { enabled } });
-  const totalFundedR = useReadContract({ address: ADDRESSES.rewardDistributor, abi: rewardDistributorAbi, functionName: "totalFunded", query: { enabled } });
-  const refundR = useReadContract({ address: ADDRESSES.stakingManager, abi: stakingManagerAbi, functionName: "refunds", args: me, query: { enabled: enabled && !!address } });
-  const plotStakerR = useReadContract({ address: ADDRESSES.stakingManager, abi: stakingManagerAbi, functionName: "stakerOf", args: [BigInt(plotId || "0")], query: { enabled } });
-  const plotStatusR = useReadContract({ address: ADDRESSES.stakingManager, abi: stakingManagerAbi, functionName: "plotStatus", args: [BigInt(plotId || "0")], query: { enabled } });
-
-  const allowance = allowanceR.data as bigint | undefined;
-  const balance = balanceR.data as bigint | undefined;
-  const needsApproval = allowance === undefined || allowance < stakeAmount;
-  const lowBalance = balance !== undefined && balance < stakeAmount;
-  const plotStaker = plotStakerR.data as string | undefined;
-  const plotStatus = plotStatusR.data as number | undefined;
-  const refund = refundR.data as bigint | undefined;
-  const mineHere = !!address && !!plotStaker && plotStaker.toLowerCase() === address.toLowerCase();
-
-  // Re-read on-chain state whenever a tx confirms.
   useEffect(() => {
-    if (!confirmed) return;
-    balanceR.refetch(); allowanceR.refetch(); totalStakedR.refetch(); totalBurnedR.refetch();
-    totalFundedR.refetch(); refundR.refetch(); plotStakerR.refetch(); plotStatusR.refetch();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [confirmed, hash]);
-
-  const busy = isPending || confirming || wrongChain || !enabled || !isConnected;
-
-  function approve() { reset(); writeContract({ address: ADDRESSES.warToken, abi: warTokenAbi, functionName: "approve", args: [ADDRESSES.stakingManager, stakeAmount] }); }
-  function stake() { reset(); writeContract({ address: ADDRESSES.stakingManager, abi: stakingManagerAbi, functionName: "stakeForPlot", args: [BigInt(plotId || "0"), plotType] }); }
-  function requestUnstake() { reset(); writeContract({ address: ADDRESSES.stakingManager, abi: stakingManagerAbi, functionName: "requestUnstake", args: [BigInt(plotId || "0")] }); }
-  function claimRefund() { reset(); writeContract({ address: ADDRESSES.stakingManager, abi: stakingManagerAbi, functionName: "claimRefund", args: [] }); }
-
-  const inputStyle: React.CSSProperties = { borderRadius: "var(--radius-sm)", background: "var(--panel-2)", border: "1px solid var(--hairline)", color: "var(--text-hi)" };
+    if (!connected) { setSol(null); setWar(null); return; }
+    refresh();
+    const t = setInterval(refresh, 12000);
+    return () => clearInterval(t);
+  }, [connected, refresh]);
 
   return (
     <div className="mx-auto max-w-2xl p-5">
-      <div className="mb-1 flex items-center justify-between">
+      <div className="mb-1 flex items-center justify-between gap-2">
         <h2 className="wl-title" style={{ fontSize: "22px", color: "var(--amber)" }}>Wallet &amp; On-Chain</h2>
         <WalletButton />
       </div>
       <p className="mb-4" style={{ fontSize: "12px", color: "var(--text-muted)" }}>
-        Real $WAR staking on <b>Base Sepolia</b> (testnet). Connect a wallet on Base Sepolia, approve, and
-        stake against the live StakingManager. This is separate from the in-browser mock economy.
+        $WAR is an SPL token on <b>Solana devnet</b>. Connect a Solana wallet (Phantom) set to devnet to see
+        your balance. This on-chain layer is separate from the in-browser mock economy.
       </p>
 
-      {/* Connection status */}
       <div className="mb-3 p-3" style={{ borderRadius: "var(--radius-lg)", border: "1px solid var(--hairline)", background: "var(--panel)", fontSize: "12px" }}>
-        <Row label="Wallet" value={isConnected && address ? address : "not connected"} />
-        <Row label="Network" value={isConnected ? `${chain?.name ?? "unknown"} (${chainId})` : "—"} />
-        <Row label="Contracts" value={CONTRACTS_CONFIGURED ? "Base Sepolia ✓" : "not configured"} />
+        <Row label="Wallet" value={connected && publicKey ? publicKey.toBase58() : "not connected"} />
+        <Row label="Network" value="Solana devnet" />
+        <Row label="WAR mint" value={WAR_MINT} link={explorerAddress(WAR_MINT)} />
       </div>
 
-      {/* wrong-network guard */}
-      {wrongChain && (
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 p-3" style={{ borderRadius: "var(--radius-lg)", border: "1px solid var(--blood)", background: "rgba(156,43,43,0.12)", fontSize: "12px", color: "var(--blood-text)" }}>
-          <span>Wrong network. Switch your wallet to <b>Base Sepolia</b> to stake.</span>
-          <Button variant="primary" size="sm" disabled={switching} onClick={() => switchChain({ chainId: CHAIN_ID })}>
-            {switching ? "Switching…" : "Switch to Base Sepolia"}
-          </Button>
-        </div>
-      )}
-
-      {!CONTRACTS_CONFIGURED && (
-        <div className="mb-4 p-3" style={{ borderRadius: "var(--radius-lg)", border: "1px solid rgba(245,179,1,0.3)", background: "rgba(245,179,1,0.08)", fontSize: "12px", color: "var(--amber-text)" }}>
-          Contracts not configured — set <code>NEXT_PUBLIC_*</code> addresses to enable on-chain mode.
-        </div>
-      )}
-
-      {/* On-chain reads */}
       <div className="mb-4 grid grid-cols-2 gap-3">
-        <ChainStat label="Your $WAR" value={fmt(balance)} accent="amber" />
-        <ChainStat label="Total Staked (protocol)" value={fmt(totalStakedR.data as bigint | undefined)} accent="amber" />
-        <ChainStat label="Total Burned (sinks)" value={fmt(totalBurnedR.data as bigint | undefined)} accent="blood" />
-        <ChainStat label="Reward Pool Funded" value={fmt(totalFundedR.data as bigint | undefined)} accent="emerald" />
+        <ChainStat label={`Your ${WAR_SYMBOL}`} value={connected ? fmt(war) : "—"} accent="amber" />
+        <ChainStat label="Your SOL" value={connected ? fmt(sol) : "—"} accent="sky" />
       </div>
 
-      {/* Stake on-chain */}
-      <Panel title="Stake a plot on-chain (Base Sepolia)">
-        <div className="flex flex-wrap items-end gap-2">
-          <label style={{ fontSize: "12px", color: "var(--text-lo)" }}>
-            Plot ID
-            <input value={plotId} onChange={(e) => setPlotId(e.target.value.replace(/\D/g, ""))}
-              inputMode="numeric" className="wl-num mt-1 block w-24 px-2 py-2" style={{ ...inputStyle, fontSize: "13px" }} />
-          </label>
-          <label style={{ fontSize: "12px", color: "var(--text-lo)" }}>
-            Plot type
-            <select value={plotType} onChange={(e) => setPlotType(Number(e.target.value))}
-              className="mt-1 block px-2 py-2" style={{ ...inputStyle, fontSize: "13px" }}>
-              {TERRAIN_IDS.map((t, i) => (
-                <option key={t} value={i}>{PLOT_TYPES[t].name} — {PLOT_TYPES[t].stake.toLocaleString()} WAR</option>
-              ))}
-            </select>
-          </label>
+      <Panel title="Solana devnet">
+        <div style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
+          WAR token ({WAR_SYMBOL}) is live on devnet — Token-2022, 9 decimals, 1,000,000,000 supply.{" "}
+          <a href={explorerAddress(WAR_MINT)} target="_blank" rel="noreferrer" style={{ color: "var(--teal-text)" }}>View the mint ↗</a>
         </div>
-
-        {/* live on-chain status for this plot id */}
-        <div className="mt-2" style={{ fontSize: "11px", color: "var(--text-muted)" }}>
-          Plot {plotId || "0"} on-chain: <b style={{ color: "var(--text-secondary)" }}>{plotStatus !== undefined ? STATUS[plotStatus] ?? "?" : "…"}</b>
-          {plotStaker && plotStaker !== ZERO_ADDR && <> · staker {short(plotStaker)}{mineHere ? " (you)" : ""}</>}
-          {" · "}allowance {fmt(allowance)} {!needsApproval && <span style={{ color: "var(--emerald-text)" }}>✓ approved</span>}
-        </div>
-
-        <div className="mt-3 flex flex-wrap gap-2">
-          <Button variant="info" size="sm" disabled={busy || !needsApproval} onClick={approve}
-            title={needsApproval ? "Approve the StakingManager to pull your $WAR" : "Already approved"}>
-            {needsApproval ? `1. Approve ${PLOT_TYPES[TERRAIN_IDS[plotType]].stake.toLocaleString()} WAR` : "1. Approved ✓"}
-          </Button>
-          <Button variant="primary" size="sm" disabled={busy || needsApproval || lowBalance} onClick={stake}
-            title={needsApproval ? "Approve first" : lowBalance ? "Not enough $WAR" : "Stake & claim this plot"}>
-            2. Stake &amp; Claim Plot
-          </Button>
-          {mineHere && plotStatus === 1 && (
-            <Button variant="secondary" size="sm" disabled={busy} onClick={requestUnstake}
-              title="Begin the 7-day unbonding period">
-              Request Unstake
-            </Button>
-          )}
-          <Button variant="secondary" size="sm" disabled={busy || !(refund && refund > BigInt(0))} onClick={claimRefund}
-            title="Reclaim full principal credited by a conquest">
-            Claim Refund {refund !== undefined && refund > BigInt(0) ? `(${fmt(refund)})` : ""}
-          </Button>
-        </div>
-
-        {lowBalance && <p className="mt-2" style={{ fontSize: "11px", color: "var(--amber-text)" }}>Not enough $WAR for this plot type. Use a wallet funded with test $WAR.</p>}
-
-        {/* tx feedback */}
-        {hash && (
-          <div className="mt-3 p-2" style={{ borderRadius: "var(--radius-sm)", border: "1px solid var(--hairline)", background: "var(--panel)", fontSize: "11px" }}>
-            <span style={{ color: confirmed ? "var(--emerald-text)" : "var(--amber-text)" }}>
-              {confirming ? "⏳ Confirming…" : confirmed ? "✓ Confirmed" : "Submitted"}
-            </span>{" "}
-            <a href={`${EXPLORER}/tx/${hash}`} target="_blank" rel="noreferrer" style={{ color: "var(--teal-text)" }}>
-              {hash.slice(0, 10)}…{hash.slice(-8)} ↗
-            </a>
-          </div>
-        )}
-        {error && <p className="wl-num mt-2" style={{ fontSize: "11px", color: "var(--blood-text)" }}>{(error as Error).message.split("\n")[0].slice(0, 160)}</p>}
-
         <p className="mt-3" style={{ fontSize: "11px", color: "var(--text-muted)" }}>
-          Need test $WAR? Import the throwaway deployer key into your wallet (it holds the supply), or send
-          $WAR to your address. Staked $WAR is locked, never spent, and conquest returns full principal.
-          Withdrawing after <code>Request Unstake</code> needs a 7-day unbond.
+          On-chain staking (an Anchor program with a principal-safe vault) is the next step. For now this panel
+          reads your live devnet $WAR balance. {loading ? "Refreshing…" : ""}
+        </p>
+        <p className="mt-2" style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+          Need test $WAR? Send some to your address from the deployer wallet, or import the deployer key into
+          Phantom (it holds the supply). Get devnet SOL for gas from a faucet.
         </p>
       </Panel>
     </div>
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Row({ label, value, link }: { label: string; value: string; link?: string }) {
   return (
     <div className="flex justify-between gap-2 py-0.5">
       <span style={{ color: "var(--text-muted)" }}>{label}</span>
-      <span className="wl-num truncate" style={{ color: "var(--text-secondary)" }}>{value}</span>
+      {link ? (
+        <a href={link} target="_blank" rel="noreferrer" className="wl-num truncate" style={{ color: "var(--teal-text)", maxWidth: "70%" }}>{value} ↗</a>
+      ) : (
+        <span className="wl-num truncate" style={{ color: "var(--text-secondary)", maxWidth: "70%" }}>{value}</span>
+      )}
     </div>
   );
 }
