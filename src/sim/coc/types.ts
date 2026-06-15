@@ -82,7 +82,10 @@ export type CocCommand =
   | { type: "placeWall"; aKey: string; bKey: string }
   | { type: "upgradeWall"; edgeKey: string }
   | { type: "trainTroop"; unit: CocUnitId }
-  | { type: "raid"; targetOwner: string; army: Army };
+  | { type: "raid"; targetOwner: string; army: Army }
+  | { type: "finishNow"; hexKey: string }
+  | { type: "buyBuilder" }
+  | { type: "extendShield"; hours: number };
 
 /** Outcome of a raid, surfaced to the attacking client only. */
 export interface BattleReport {

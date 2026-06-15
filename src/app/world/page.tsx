@@ -5,7 +5,7 @@ import { axialToPixel } from "@/game/world";
 import { Badge, Button, Panel, ProgressBar, Stat } from "@/components/ui";
 import { BaseTutorial } from "@/components/BaseTutorial";
 import {
-  BUILDINGS, LOOT_PCT, UNITS, UNIT_IDS, WALL, ccTier, housingCap, housingUsed, levelDef, maxLevelOf, maxWallLevel,
+  BUILDINGS, LOOT_PCT, MAX_BUILDERS, UNITS, UNIT_IDS, WALL, builderCost, ccTier, finishCost, housingCap, housingUsed, levelDef, maxLevelOf, maxWallLevel,
   type Army, type BattleReport, type CocBase, type CocBuildingId, type CocResource, type CocUnitId, type CocWorld, type PlacedBuilding,
 } from "@/sim/coc";
 
@@ -54,6 +54,7 @@ export default function WorldPage() {
   }
 
   const myBase: CocBase | null = playerId ? state.bases[playerId] ?? null : null;
+  const me = playerId ? state.players[playerId] ?? null : null;
   const tier = myBase ? ccTier(ccLevelOf(myBase)) : null;
   const freeBuilders = myBase ? myBase.builders - myBase.jobs.length : 0;
   const jobByHex = new Map(myBase?.jobs.map((j) => [j.hexKey, j]) ?? []);
@@ -102,10 +103,24 @@ export default function WorldPage() {
           <div style={{ display: "flex", gap: 18, flexWrap: "wrap", alignItems: "center" }}>
             <Stat label="🪙 GOLD" value={`${num(myBase.gold)} / ${num(storageCapOf(myBase, "gold"))}`} accent="amber" />
             <Stat label="🧪 ELIXIR" value={`${num(myBase.elixir)} / ${num(storageCapOf(myBase, "elixir"))}`} accent="violet" />
+            <Stat label="💎 $WAR" value={num(me?.war ?? 0)} accent="amber" />
             <Stat label="🏆 TROPHIES" value={`${myBase.trophies}`} accent="amber" />
             <Stat label="CMD CENTER" value={`L${ccLevelOf(myBase)}`} accent="sky" />
             <Stat label="BUILDERS" value={`${freeBuilders}/${myBase.builders}`} accent={freeBuilders > 0 ? "emerald" : "neutral"} />
             <Stat label="ARMY" value={`${housingUsed(myBase)}/${housingCap(myBase)}`} accent="blood" />
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
+            {myBase.builders < MAX_BUILDERS && (
+              <Button size="sm" variant="outline" icon="🔨" onClick={() => send({ type: "buyBuilder" })}>
+                +BUILDER · 💎{num(builderCost(myBase.builders))}
+              </Button>
+            )}
+            <Button size="sm" variant="outline" icon="🛡️" onClick={() => send({ type: "extendShield", hours: 2 })}>
+              +2h SHIELD · 💎1,000
+            </Button>
+            {myBase.shieldUntil > state.tick && (
+              <Badge tone="emerald" variant="soft">SHIELDED {Math.ceil((myBase.shieldUntil - state.tick) / 3600)}h</Badge>
+            )}
           </div>
         </Panel>
       ) : (
@@ -175,7 +190,9 @@ export default function WorldPage() {
           headerRight={<button onClick={() => setSel(null)} style={closeBtn}>✕</button>}>
           {selBuilding ? (
             <BuildingInfo base={myBase} building={selBuilding} job={jobByHex.get(sel)} tick={state.tick} freeBuilders={freeBuilders}
-              onUpgrade={() => send({ type: "upgradeBuilding", hexKey: sel })} />
+              war={me?.war ?? 0}
+              onUpgrade={() => send({ type: "upgradeBuilding", hexKey: sel })}
+              onFinish={() => send({ type: "finishNow", hexKey: sel })} />
           ) : (
             <div style={{ display: "grid", gap: 12 }}>
               <BuildGroup label="RESOURCES" ids={resourceBuildings} base={myBase} tier={tier!} freeBuilders={freeBuilders} onBuild={(id) => send({ type: "placeBuilding", hexKey: sel, buildingId: id })} />
@@ -346,8 +363,8 @@ function BuildGroup({ label, ids, base, tier, freeBuilders, onBuild }: {
   );
 }
 
-function BuildingInfo({ base, building, job, tick, freeBuilders, onUpgrade }: {
-  base: CocBase; building: PlacedBuilding; job?: { toLevel: number; buildingId: CocBuildingId; finishesAtTick: number }; tick: number; freeBuilders: number; onUpgrade: () => void;
+function BuildingInfo({ base, building, job, tick, freeBuilders, war, onUpgrade, onFinish }: {
+  base: CocBase; building: PlacedBuilding; job?: { toLevel: number; buildingId: CocBuildingId; finishesAtTick: number }; tick: number; freeBuilders: number; war: number; onUpgrade: () => void; onFinish: () => void;
 }) {
   const def = BUILDINGS[building.id];
   const next = building.level + 1;
@@ -369,9 +386,15 @@ function BuildingInfo({ base, building, job, tick, freeBuilders, onUpgrade }: {
         {def.category === "army" && building.id === "armyCamp" && stats?.housing && <Badge tone="blood" variant="soft">⌂ {stats.housing}</Badge>}
         {building.buffer != null && building.level >= 1 && def.category === "collector" && <span className="wl-num" style={{ fontSize: 11, color: "var(--text-secondary)" }}>BUFFER {num(building.buffer)}</span>}
       </div>
-      {job ? <ProgressBar tone="amber" label="BUILDING" valueText={`${remaining}s`} value={total - remaining} max={total} />
-        : maxed ? <Badge tone="neutral" variant="soft">MAX LEVEL</Badge>
-          : <Button variant="primary" full disabled={!ok} icon="⬆" onClick={onUpgrade}>UPGRADE → L{next} · {costStr(cost)} · {lv?.buildTimeSec}s{ccBlocked ? "  · RAISE CC" : ""}</Button>}
+      {job ? (
+        <div style={{ display: "grid", gap: 8 }}>
+          <ProgressBar tone="amber" label="BUILDING" valueText={`${remaining}s`} value={total - remaining} max={total} />
+          <Button variant="outline" full icon="💎" disabled={war < finishCost(remaining)} onClick={onFinish}>
+            FINISH NOW · 💎{finishCost(remaining).toLocaleString()}
+          </Button>
+        </div>
+      ) : maxed ? <Badge tone="neutral" variant="soft">MAX LEVEL</Badge>
+        : <Button variant="primary" full disabled={!ok} icon="⬆" onClick={onUpgrade}>UPGRADE → L{next} · {costStr(cost)} · {lv?.buildTimeSec}s{ccBlocked ? "  · RAISE CC" : ""}</Button>}
     </div>
   );
 }

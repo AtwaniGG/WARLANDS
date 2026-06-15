@@ -245,4 +245,50 @@ describe("raid", () => {
     const r = applyCommand(s, "p1", { type: "raid", targetOwner: "p2", army: { grunt: 50 } });
     expect(r.error).toMatch(/don't have/i);
   });
+  it("awards $WAR to the attacker scaled by stars", () => {
+    let s = twoBases();
+    s = { ...s, bases: { ...s.bases, p1: { ...s.bases.p1, army: { grunt: 80 } } } };
+    const before = s.players.p1.war;
+    const r = applyCommand(s, "p1", { type: "raid", targetOwner: "p2", army: { grunt: 80 } });
+    expect(r.report!.stars).toBe(3);
+    expect(r.state.players.p1.war).toBe(before + 3 * 50);
+  });
+});
+
+describe("$WAR premium economy", () => {
+  it("finishNow instantly completes a job for $WAR", () => {
+    let s = give(claimed(), 0, 1000);
+    s = applyCommand(s, "p1", { type: "placeBuilding", hexKey: "1,0", buildingId: "goldCollector" }).state;
+    expect(s.bases.p1.jobs.length).toBe(1);
+    const warBefore = s.players.p1.war;
+    const r = applyCommand(s, "p1", { type: "finishNow", hexKey: "1,0" });
+    expect(r.error).toBeUndefined();
+    expect(r.state.bases.p1.jobs.length).toBe(0);
+    expect(r.state.bases.p1.buildings["1,0"].level).toBe(1);
+    expect(r.state.players.p1.war).toBeLessThan(warBefore);
+  });
+  it("buyBuilder adds a builder for $WAR and is capped", () => {
+    const r = applyCommand(claimed(), "p1", { type: "buyBuilder" });
+    expect(r.error).toBeUndefined();
+    expect(r.state.bases.p1.builders).toBe(3);
+    expect(r.state.players.p1.war).toBe(claimed().players.p1.war - 2000 * (2 - 1));
+  });
+  it("rejects buying a builder past the maximum", () => {
+    let s = claimed();
+    s = { ...s, bases: { p1: { ...s.bases.p1, builders: 5 } } };
+    const r = applyCommand(s, "p1", { type: "buyBuilder" });
+    expect(r.error).toMatch(/maximum/i);
+  });
+  it("extendShield buys shield time for $WAR", () => {
+    const r = applyCommand(claimed(), "p1", { type: "extendShield", hours: 2 });
+    expect(r.error).toBeUndefined();
+    expect(r.state.bases.p1.shieldUntil).toBe(2 * 3600); // tick 0 + 2h
+    expect(r.state.players.p1.war).toBe(claimed().players.p1.war - 1000);
+  });
+  it("rejects premium actions without enough $WAR", () => {
+    let s = claimed();
+    s = { ...s, players: { p1: { ...s.players.p1, war: 0 } } };
+    const r = applyCommand(s, "p1", { type: "buyBuilder" });
+    expect(r.error).toMatch(/\$WAR/i);
+  });
 });

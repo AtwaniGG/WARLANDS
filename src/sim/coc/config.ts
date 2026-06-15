@@ -175,6 +175,23 @@ export const LOOT_PCT = 0.2;
 export const SHIELD_SECS_PER_PCT = 6;
 export const SHIELD_MAX_SECS = 8 * 3600;
 
+// ---- $WAR premium economy (in-game balance; on-chain bridge is later infra) ----
+export const MAX_BUILDERS = 5;
+export const WAR_FINISH_PER_SEC = 1; // $WAR to instant-finish, per remaining second
+export const WAR_MIN_FINISH = 10;
+export const WAR_BUILDER_BASE = 2000; // 3rd builder costs 2000, 4th 4000, 5th 6000
+export const WAR_SHIELD_PER_HOUR = 500;
+export const WAR_RAID_REWARD_PER_STAR = 50;
+
+/** $WAR to instant-finish a job with `remainingSecs` left. */
+export function finishCost(remainingSecs: number): number {
+  return Math.max(WAR_MIN_FINISH, Math.ceil(remainingSecs * WAR_FINISH_PER_SEC));
+}
+/** $WAR to buy the next builder, given the current builder count. */
+export function builderCost(currentBuilders: number): number {
+  return WAR_BUILDER_BASE * (currentBuilders - 1);
+}
+
 /** Walls live on hex edges, not hexes: instant, gold-only, no builder. */
 export interface WallLevel {
   cost: Partial<Record<CocResource, number>>;

@@ -1,5 +1,5 @@
 import { hexKey, hexNeighbors } from "@/game/world";
-import { BUILDINGS, ccTier, levelDef, maxLevelOf, maxWallLevel, SHIELD_MAX_SECS, SHIELD_SECS_PER_PCT, STARTING_BUILDERS, STARTING_ELIXIR, STARTING_GOLD, UNITS, WALL } from "./config";
+import { builderCost, BUILDINGS, ccTier, finishCost, levelDef, maxLevelOf, maxWallLevel, MAX_BUILDERS, SHIELD_MAX_SECS, SHIELD_SECS_PER_PCT, STARTING_BUILDERS, STARTING_ELIXIR, STARTING_GOLD, UNITS, WALL, WAR_RAID_REWARD_PER_STAR, WAR_SHIELD_PER_HOUR } from "./config";
 import { ccLevel, edgeKey, freeBuilders, hasBarracks, housingCap, housingUsed, storageCap } from "./world";
 import { resolveRaid } from "./battle";
 import type { Army, CocBase, CocBuildingId, CocCommand, CocResource, CocUnitId, CocWorld, CommandResult, PlacedBuilding } from "./types";
@@ -252,8 +252,15 @@ function raid(state: CocWorld, playerId: string, targetOwner: string, army: Army
     shieldUntil: result.destructionPct > 0 ? state.tick + shieldSecs : defender.shieldUntil,
   };
 
+  // $WAR reward for the attacker, scaled by stars (faucet).
+  const warReward = result.stars * WAR_RAID_REWARD_PER_STAR;
+  const attackerPlayer = state.players[playerId];
+  const players = warReward > 0 && attackerPlayer
+    ? { ...state.players, [playerId]: { ...attackerPlayer, war: attackerPlayer.war + warReward } }
+    : state.players;
+
   return {
-    state: { ...state, bases: { ...state.bases, [playerId]: newAttacker, [targetOwner]: newDefender } },
+    state: { ...state, players, bases: { ...state.bases, [playerId]: newAttacker, [targetOwner]: newDefender } },
     report: {
       attacker: playerId,
       defender: targetOwner,
@@ -263,6 +270,59 @@ function raid(state: CocWorld, playerId: string, targetOwner: string, army: Army
       loot: { gold: lootGold, elixir: lootElixir },
       trophies: result.trophies,
       armyUsed: army,
+    },
+  };
+}
+
+function finishNow(state: CocWorld, playerId: string, key: string): CommandResult {
+  const base = state.bases[playerId];
+  const player = state.players[playerId];
+  if (!base || !player) return fail(state, "You have no base.");
+  const job = base.jobs.find((j) => j.hexKey === key);
+  if (!job) return fail(state, "Nothing is building there.");
+  const cost = finishCost(Math.max(0, job.finishesAtTick - state.tick));
+  if (player.war < cost) return fail(state, `Not enough $WAR (need ${cost.toLocaleString()}).`);
+  const buildings = { ...base.buildings };
+  if (buildings[key]) buildings[key] = { ...buildings[key], level: job.toLevel };
+  const newBase: CocBase = { ...base, buildings, jobs: base.jobs.filter((j) => j !== job) };
+  return {
+    state: {
+      ...state,
+      players: { ...state.players, [playerId]: { ...player, war: player.war - cost } },
+      bases: { ...state.bases, [playerId]: newBase },
+    },
+  };
+}
+
+function buyBuilder(state: CocWorld, playerId: string): CommandResult {
+  const base = state.bases[playerId];
+  const player = state.players[playerId];
+  if (!base || !player) return fail(state, "You have no base.");
+  if (base.builders >= MAX_BUILDERS) return fail(state, "You already have the maximum builders.");
+  const cost = builderCost(base.builders);
+  if (player.war < cost) return fail(state, `Not enough $WAR (need ${cost.toLocaleString()}).`);
+  return {
+    state: {
+      ...state,
+      players: { ...state.players, [playerId]: { ...player, war: player.war - cost } },
+      bases: { ...state.bases, [playerId]: { ...base, builders: base.builders + 1 } },
+    },
+  };
+}
+
+function extendShield(state: CocWorld, playerId: string, hours: number): CommandResult {
+  const base = state.bases[playerId];
+  const player = state.players[playerId];
+  if (!base || !player) return fail(state, "You have no base.");
+  if (hours <= 0 || hours > 24) return fail(state, "Pick 1–24 hours.");
+  const cost = Math.round(hours * WAR_SHIELD_PER_HOUR);
+  if (player.war < cost) return fail(state, `Not enough $WAR (need ${cost.toLocaleString()}).`);
+  const from = Math.max(state.tick, base.shieldUntil);
+  return {
+    state: {
+      ...state,
+      players: { ...state.players, [playerId]: { ...player, war: player.war - cost } },
+      bases: { ...state.bases, [playerId]: { ...base, shieldUntil: from + hours * 3600 } },
     },
   };
 }
@@ -287,6 +347,12 @@ export function applyCommand(state: CocWorld, playerId: string, cmd: CocCommand)
       return trainTroop(state, playerId, cmd.unit);
     case "raid":
       return raid(state, playerId, cmd.targetOwner, cmd.army);
+    case "finishNow":
+      return finishNow(state, playerId, cmd.hexKey);
+    case "buyBuilder":
+      return buyBuilder(state, playerId);
+    case "extendShield":
+      return extendShield(state, playerId, cmd.hours);
     default:
       return fail(state, "Unknown command.");
   }
