@@ -199,3 +199,60 @@ describe("raid (PvP)", () => {
     expect(error).toMatch(/don't have/i);
   });
 });
+
+describe("market (shared order book)", () => {
+  function twoWithPlots() {
+    let w = addPlayer(addPlayer(createWorld(1), "p1"), "p2");
+    const keys = Object.keys(w.hexes).filter((k) => w.hexes[k].terrain === "plains").slice(0, 2);
+    const [k1, k2] = keys;
+    const [q1, r1] = k1.split(",").map(Number);
+    const [q2, r2] = k2.split(",").map(Number);
+    w = applyCommand(w, "p1", { type: "stake", q: q1, r: r1 }).state;
+    w = applyCommand(w, "p2", { type: "stake", q: q2, r: r2 }).state;
+    // give the seller food to list
+    w = { ...w, plots: { ...w.plots, [k1]: { ...w.plots[k1], resources: { food: 200 } } } };
+    return { w, k1, k2 };
+  }
+
+  it("lists, escrows the goods, and burns the listing fee", () => {
+    const { w, k1 } = twoWithPlots();
+    const warBefore = w.players.p1.war;
+    const { state, error } = applyCommand(w, "p1", { type: "list", key: k1, item: "food", qty: 50, price: 2 });
+    expect(error).toBeUndefined();
+    expect(state.market.book.length).toBe(1);
+    expect(state.plots[k1].resources.food).toBe(150); // 50 escrowed into the order
+    expect(state.players.p1.war).toBe(warBefore - 5); // listing fee
+    expect(state.burned).toBe(5);
+  });
+
+  it("buy transfers $WAR from buyer to seller, burns the fee, and delivers goods", () => {
+    let { w, k1, k2 } = twoWithPlots();
+    w = applyCommand(w, "p1", { type: "list", key: k1, item: "food", qty: 50, price: 2 }).state;
+    const sellerBefore = w.players.p1.war;
+    const buyerBefore = w.players.p2.war;
+    const { state, error } = applyCommand(w, "p2", { type: "buy", item: "food", qty: 50, toKey: k2 });
+    expect(error).toBeUndefined();
+    // cost 50*2=100, fee ceil(100*0.04)=4, total 104
+    expect(state.players.p2.war).toBe(buyerBefore - 104);
+    expect(state.players.p1.war).toBe(sellerBefore + 100);
+    expect(state.plots[k2].resources.food).toBe(150); // 100 starter + 50 bought
+    expect(state.market.book.length).toBe(0); // fully filled
+  });
+
+  it("cancel returns the escrowed goods to a plot", () => {
+    const { w, k1 } = twoWithPlots();
+    const listed = applyCommand(w, "p1", { type: "list", key: k1, item: "food", qty: 50, price: 2 });
+    const orderId = listed.state.market.book[0].id;
+    const { state, error } = applyCommand(listed.state, "p1", { type: "cancel", orderId, toKey: k1 });
+    expect(error).toBeUndefined();
+    expect(state.market.book.length).toBe(0);
+    expect(state.plots[k1].resources.food).toBe(200); // 150 + 50 returned
+  });
+
+  it("won't fill against your own listings", () => {
+    let { w, k1 } = twoWithPlots();
+    w = applyCommand(w, "p1", { type: "list", key: k1, item: "food", qty: 50, price: 2 }).state;
+    const { error } = applyCommand(w, "p1", { type: "buy", item: "food", qty: 50, toKey: k1 });
+    expect(error).toMatch(/no sell liquidity/i);
+  });
+});

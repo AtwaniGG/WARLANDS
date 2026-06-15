@@ -39,6 +39,9 @@ export default function WorldPage() {
     .filter((x) => x.size > 0)
     .sort((a, b) => b.size - a.size)[0];
 
+  // where market purchases / cancellations deposit goods: selected owned plot, else first owned plot
+  const destKey: string | null = selPlot?.owner === playerId ? sel : myPlots[0]?.[0] ?? null;
+
   return (
     <main style={page}>
       <h1 style={{ margin: "0 0 8px", fontSize: 20 }}>WARLANDS · Live World</h1>
@@ -133,6 +136,27 @@ export default function WorldPage() {
                 ))}
               </div>
 
+              {/* sell on market */}
+              {Object.entries(selPlot.resources).some(([, v]) => (v ?? 0) >= 10) && (
+                <>
+                  <div style={{ fontSize: 11, opacity: 0.7, marginBottom: 2 }}>Sell on market (lists 50 @ ref price):</div>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
+                    {(Object.keys(selPlot.resources) as ResourceId[])
+                      .filter((it) => (selPlot.resources[it] ?? 0) >= 10)
+                      .map((it) => {
+                        const qty = Math.min(50, Math.floor(selPlot.resources[it] ?? 0));
+                        const price = state.market.refPrices[it] ?? 1;
+                        return (
+                          <button key={it} style={btnSm}
+                            onClick={() => send({ type: "list", key: sel!, item: it, qty, price })}>
+                            {RESOURCES[it].icon} ×{qty} @{price}
+                          </button>
+                        );
+                      })}
+                  </div>
+                </>
+              )}
+
               <button onClick={() => { send({ type: "unstake", key: sel! }); setSel(null); }} style={btnDanger}>Unstake (3% fee)</button>
             </div>
           )}
@@ -156,6 +180,33 @@ export default function WorldPage() {
           )}
         </div>
       )}
+
+      {/* ---- MARKETPLACE ---- */}
+      <div style={{ marginTop: 16, maxWidth: 560 }}>
+        <div style={{ fontSize: 13, marginBottom: 4 }}>🏪 Marketplace {destKey ? "" : "(stake a plot to trade)"}</div>
+        {state.market.book.length === 0 ? (
+          <div style={{ fontSize: 12, opacity: 0.6 }}>No listings yet — sell something from one of your plots.</div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+            {[...state.market.book].sort((a, b) => a.item.localeCompare(b.item) || a.price - b.price).slice(0, 16).map((o) => {
+              const mine = o.owner === playerId;
+              return (
+                <div key={o.id} style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 12 }}>
+                  <span style={{ minWidth: 150 }}>{RESOURCES[o.item].icon} {RESOURCES[o.item].name} ×{o.qty} @ {o.price} $WAR</span>
+                  {mine ? (
+                    <button style={btnSm} disabled={!destKey} onClick={() => send({ type: "cancel", orderId: o.id, toKey: destKey! })}>Cancel</button>
+                  ) : (
+                    <button style={btnSm} disabled={!destKey} onClick={() => send({ type: "buy", item: o.item, qty: o.qty, toKey: destKey! })}>
+                      Buy ×{o.qty}
+                    </button>
+                  )}
+                  <span style={{ fontSize: 11, opacity: 0.5 }}>{mine ? "yours" : ""}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       {/* ---- BATTLE REPORT ---- */}
       {report && (

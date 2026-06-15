@@ -4,9 +4,10 @@ import { hexKey } from "@/game/world";
 import { upgradeCost } from "@/game/formulas";
 import { UNITS, UNIT_IDS, armySize, type Army } from "@/game/units";
 import { resolveBattle, type BattleIntent } from "@/game/combat";
+import { MARKET_FEE, LISTING_FEE, round2 } from "@/game/market";
 import { storageCap } from "./world";
 import type { ResourceBag, ResourceId } from "@/game/resources";
-import type { Command, CommandResult, PlacedBuilding, SimPlot, WorldState } from "./types";
+import type { Command, CommandResult, MarketOrder, PlacedBuilding, SimPlayer, SimPlot, WorldState } from "./types";
 
 function hasResources(bag: ResourceBag, cost: Partial<Record<ResourceId, number>>): boolean {
   return Object.entries(cost).every(([k, v]) => (bag[k as ResourceId] ?? 0) >= (v ?? 0));
@@ -223,6 +224,108 @@ function addRes(bag: ResourceBag, id: ResourceId, amount: number, cap: number): 
   bag[id] = Math.min(cap, (bag[id] ?? 0) + amount);
 }
 
+// ---------- Marketplace (GDD §7) — shared player order book ----------
+
+function list(state: WorldState, playerId: string, key: string, item: ResourceId, qty: number, price: number): CommandResult {
+  const got = ownedPlot(state, playerId, key);
+  if ("fail" in got) return got.fail;
+  const plot = got.plot;
+  const player = state.players[playerId];
+  if (!player) return fail(state, "Unknown player.");
+  if (qty <= 0 || price <= 0) return fail(state, "Invalid listing.");
+  if ((plot.resources[item] ?? 0) < qty) return fail(state, `Not enough ${item} to list ${qty}.`);
+  if (player.war < LISTING_FEE) return fail(state, `Need ${LISTING_FEE} $WAR listing fee.`);
+
+  const resources = { ...plot.resources, [item]: (plot.resources[item] ?? 0) - qty }; // escrow into order
+  const order: MarketOrder = { id: `m-${state.market.nextOrderId}`, item, qty, price: round2(price), owner: playerId };
+  return {
+    state: {
+      ...state,
+      plots: { ...state.plots, [key]: { ...plot, resources } },
+      players: { ...state.players, [playerId]: { ...player, war: player.war - LISTING_FEE } },
+      burned: (state.burned ?? 0) + LISTING_FEE, // §13 #10 listing fee sink
+      market: { ...state.market, book: [...state.market.book, order], nextOrderId: state.market.nextOrderId + 1 },
+    },
+  };
+}
+
+function buy(state: WorldState, playerId: string, item: ResourceId, qty: number, toKey: string): CommandResult {
+  const got = ownedPlot(state, playerId, toKey);
+  if ("fail" in got) return got.fail;
+  const dest = got.plot;
+  const player = state.players[playerId];
+  if (!player) return fail(state, "Unknown player.");
+  if (qty <= 0) return fail(state, "Invalid quantity.");
+
+  // cap fill to the destination plot's free capacity for this item
+  const space = Math.floor(storageCap(dest) - (dest.resources[item] ?? 0));
+  let remaining = Math.min(qty, space);
+  if (remaining <= 0) return fail(state, "No storage space for that item.");
+
+  // sweep cheapest sell orders that aren't your own
+  const sells = state.market.book
+    .filter((o) => o.item === item && o.owner !== playerId)
+    .sort((a, b) => a.price - b.price);
+
+  let cost = 0;
+  const proceeds: Record<string, number> = {};
+  const filledIds = new Map<string, number>(); // orderId -> qty taken
+  for (const o of sells) {
+    if (remaining <= 0) break;
+    const take = Math.min(remaining, o.qty);
+    cost += take * o.price;
+    proceeds[o.owner] = (proceeds[o.owner] ?? 0) + take * o.price;
+    filledIds.set(o.id, take);
+    remaining -= take;
+  }
+  const filled = Math.min(qty, space) - remaining;
+  if (filled <= 0) return fail(state, "No sell liquidity for that item.");
+
+  const fee = Math.ceil(cost * MARKET_FEE);
+  const total = Math.ceil(cost) + fee;
+  if (player.war < total) return fail(state, `Need ${total.toLocaleString()} $WAR (incl. ${fee} fee).`);
+
+  // pay sellers, deduct buyer, deposit goods, burn fee, shrink book
+  const players: Record<string, SimPlayer> = { ...state.players, [playerId]: { ...player, war: player.war - total } };
+  for (const [seller, amt] of Object.entries(proceeds)) {
+    const sp = players[seller];
+    if (sp) players[seller] = { ...sp, war: sp.war + Math.floor(amt) };
+  }
+  const resources = { ...dest.resources };
+  addRes(resources, item, filled, storageCap(dest));
+  const book = state.market.book
+    .map((o) => (filledIds.has(o.id) ? { ...o, qty: o.qty - filledIds.get(o.id)! } : o))
+    .filter((o) => o.qty > 0);
+
+  return {
+    state: {
+      ...state,
+      plots: { ...state.plots, [toKey]: { ...dest, resources } },
+      players,
+      burned: (state.burned ?? 0) + fee,
+      market: { ...state.market, book },
+    },
+  };
+}
+
+function cancel(state: WorldState, playerId: string, orderId: string, toKey: string): CommandResult {
+  const order = state.market.book.find((o) => o.id === orderId);
+  if (!order) return fail(state, "No such order.");
+  if (order.owner !== playerId) return fail(state, "Not your order.");
+  const got = ownedPlot(state, playerId, toKey);
+  if ("fail" in got) return got.fail;
+  const dest = got.plot;
+  const resources = { ...dest.resources };
+  addRes(resources, order.item, order.qty, storageCap(dest)); // return escrowed goods
+  return {
+    state: {
+      ...state,
+      plots: { ...state.plots, [toKey]: { ...dest, resources } },
+      market: { ...state.market, book: state.market.book.filter((o) => o.id !== orderId) },
+    },
+  };
+}
+
 export function applyCommand(state: WorldState, playerId: string, cmd: Command): CommandResult {
   switch (cmd.type) {
     case "stake":
@@ -239,6 +342,12 @@ export function applyCommand(state: WorldState, playerId: string, cmd: Command):
       return train(state, playerId, cmd.key, cmd.unit);
     case "raid":
       return raid(state, playerId, cmd.fromKey, cmd.targetKey, cmd.army, cmd.intent);
+    case "list":
+      return list(state, playerId, cmd.key, cmd.item, cmd.qty, cmd.price);
+    case "buy":
+      return buy(state, playerId, cmd.item, cmd.qty, cmd.toKey);
+    case "cancel":
+      return cancel(state, playerId, cmd.orderId, cmd.toKey);
     default:
       return fail(state, "Unknown command.");
   }

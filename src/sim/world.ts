@@ -1,16 +1,21 @@
 import { generateWorld, hexKey } from "@/game/world";
 import { BUILDINGS } from "@/game/buildings";
-import type { SimPlot, SimPlayer, WorldState } from "./types";
+import { BASE_PRICE } from "@/game/market";
+import type { Market, SimPlot, SimPlayer, WorldState } from "./types";
 
 export const WORLD_RADIUS = 9;
 export const STORAGE_BASE_CAP = 1500;
 export const STARTING_WAR = 200_000;
 
+function freshMarket(): Market {
+  return { refPrices: { ...BASE_PRICE }, book: [], nextOrderId: 1 };
+}
+
 export function createWorld(seed: number): WorldState {
   const { radius, hexes } = generateWorld(WORLD_RADIUS);
   const hexRecord: WorldState["hexes"] = {};
   for (const [k, h] of hexes) hexRecord[k] = h;
-  return { seed, radius, tick: 0, hexes: hexRecord, plots: {}, players: {}, burned: 0 };
+  return { seed, radius, tick: 0, hexes: hexRecord, plots: {}, players: {}, burned: 0, market: freshMarket() };
 }
 
 export function addPlayer(state: WorldState, id: string): WorldState {
@@ -44,7 +49,14 @@ export function normalizeWorld(state: WorldState): WorldState {
       buildings: p.buildings ?? [{ id: "camp", level: 1 }],
     };
   }
-  return { ...state, burned: state.burned ?? 0, plots };
+  const market: Market = state.market
+    ? {
+        refPrices: { ...BASE_PRICE, ...state.market.refPrices },
+        book: state.market.book ?? [],
+        nextOrderId: state.market.nextOrderId ?? 1,
+      }
+    : freshMarket();
+  return { ...state, burned: state.burned ?? 0, plots, market };
 }
 
 export { hexKey };

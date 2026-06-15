@@ -2,6 +2,7 @@ import { BUILDINGS } from "@/game/buildings";
 import { PLOT_TYPES } from "@/game/plotTypes";
 import { productionPerTick, plotUpkeep, levelMult, diminishingReturns } from "@/game/formulas";
 import { RESOURCES, type ResourceBag, type ResourceId } from "@/game/resources";
+import { driftPrices } from "@/game/market";
 import type { Army } from "@/game/units";
 import type { SimPlot, TrainOrder, WorldState } from "./types";
 import { storageCap } from "./world";
@@ -79,5 +80,7 @@ function tickPlot(plot: SimPlot, tick: number): SimPlot {
 export function applyTick(state: WorldState): WorldState {
   const plots: WorldState["plots"] = {};
   for (const [key, plot] of Object.entries(state.plots)) plots[key] = tickPlot(plot, state.tick);
-  return { ...state, tick: state.tick + 1, plots };
+  // Market life: reference prices drift each tick (book persists).
+  const market = { ...state.market, refPrices: driftPrices(state.market.refPrices, state.tick + 1) };
+  return { ...state, tick: state.tick + 1, plots, market };
 }
