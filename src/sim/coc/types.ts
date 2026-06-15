@@ -61,6 +61,14 @@ export interface CocPlayer {
   id: string;
   war: number;
   joinedTick: number;
+  clanId?: string | null;
+}
+
+export interface Clan {
+  id: string;
+  name: string;
+  founder: string;
+  members: string[];
 }
 
 export interface CocWorld {
@@ -71,6 +79,8 @@ export interface CocWorld {
   bases: Record<string, CocBase>; // keyed by owner playerId
   claimedHexes: Record<string, string>; // hexKey -> owner
   players: Record<string, CocPlayer>;
+  clans: Record<string, Clan>;
+  nextClanId: number;
 }
 
 export type CocCommand =
@@ -85,7 +95,11 @@ export type CocCommand =
   | { type: "raid"; targetOwner: string; army: Army }
   | { type: "finishNow"; hexKey: string }
   | { type: "buyBuilder" }
-  | { type: "extendShield"; hours: number };
+  | { type: "extendShield"; hours: number }
+  | { type: "createClan"; name: string }
+  | { type: "joinClan"; clanId: string }
+  | { type: "leaveClan" }
+  | { type: "donateTroops"; toOwner: string; army: Army };
 
 /** Outcome of a raid, surfaced to the attacking client only. */
 export interface BattleReport {

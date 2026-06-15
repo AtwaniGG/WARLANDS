@@ -2,7 +2,9 @@ import { hexKey, hexNeighbors } from "@/game/world";
 import { builderCost, BUILDINGS, ccTier, finishCost, levelDef, maxLevelOf, maxWallLevel, MAX_BUILDERS, SHIELD_MAX_SECS, SHIELD_SECS_PER_PCT, STARTING_BUILDERS, STARTING_ELIXIR, STARTING_GOLD, UNITS, WALL, WAR_RAID_REWARD_PER_STAR, WAR_SHIELD_PER_HOUR } from "./config";
 import { ccLevel, edgeKey, freeBuilders, hasBarracks, housingCap, housingUsed, storageCap } from "./world";
 import { resolveRaid } from "./battle";
-import type { Army, CocBase, CocBuildingId, CocCommand, CocResource, CocUnitId, CocWorld, CommandResult, PlacedBuilding } from "./types";
+import type { Army, Clan, CocBase, CocBuildingId, CocCommand, CocResource, CocUnitId, CocWorld, CommandResult, PlacedBuilding } from "./types";
+
+const CLAN_MAX_MEMBERS = 10;
 
 function fail(state: CocWorld, error: string): CommandResult {
   return { state, error };
@@ -327,6 +329,93 @@ function extendShield(state: CocWorld, playerId: string, hours: number): Command
   };
 }
 
+function createClan(state: CocWorld, playerId: string, name: string): CommandResult {
+  const player = state.players[playerId];
+  if (!player) return fail(state, "Unknown player.");
+  if (player.clanId) return fail(state, "Leave your current clan first.");
+  const clean = name.trim();
+  if (clean.length < 3 || clean.length > 24) return fail(state, "Clan name must be 3–24 characters.");
+  const id = `clan${state.nextClanId}`;
+  const clan: Clan = { id, name: clean, founder: playerId, members: [playerId] };
+  return {
+    state: {
+      ...state,
+      clans: { ...state.clans, [id]: clan },
+      nextClanId: state.nextClanId + 1,
+      players: { ...state.players, [playerId]: { ...player, clanId: id } },
+    },
+  };
+}
+
+function joinClan(state: CocWorld, playerId: string, clanId: string): CommandResult {
+  const player = state.players[playerId];
+  if (!player) return fail(state, "Unknown player.");
+  if (player.clanId) return fail(state, "Leave your current clan first.");
+  const clan = state.clans[clanId];
+  if (!clan) return fail(state, "No such clan.");
+  if (clan.members.length >= CLAN_MAX_MEMBERS) return fail(state, "That clan is full.");
+  return {
+    state: {
+      ...state,
+      clans: { ...state.clans, [clanId]: { ...clan, members: [...clan.members, playerId] } },
+      players: { ...state.players, [playerId]: { ...player, clanId } },
+    },
+  };
+}
+
+function leaveClan(state: CocWorld, playerId: string): CommandResult {
+  const player = state.players[playerId];
+  if (!player) return fail(state, "Unknown player.");
+  const clanId = player.clanId;
+  if (!clanId || !state.clans[clanId]) return fail(state, "You are not in a clan.");
+  const clan = state.clans[clanId];
+  const members = clan.members.filter((m) => m !== playerId);
+  const clans = { ...state.clans };
+  if (members.length === 0) delete clans[clanId];
+  else clans[clanId] = { ...clan, members, founder: clan.founder === playerId ? members[0] : clan.founder };
+  return {
+    state: { ...state, clans, players: { ...state.players, [playerId]: { ...player, clanId: null } } },
+  };
+}
+
+function donateTroops(state: CocWorld, playerId: string, toOwner: string, army: Army): CommandResult {
+  const donor = state.bases[playerId];
+  const dp = state.players[playerId];
+  const recip = state.bases[toOwner];
+  const rp = state.players[toOwner];
+  if (!donor || !dp) return fail(state, "You have no base.");
+  if (!recip || !rp) return fail(state, "No such ally.");
+  if (toOwner === playerId) return fail(state, "Donate to a clanmate, not yourself.");
+  if (!dp.clanId || dp.clanId !== rp.clanId) return fail(state, "You can only donate to clanmates.");
+  let housing = 0, total = 0;
+  for (const [u, n] of Object.entries(army)) {
+    if (!n) continue;
+    if (n < 0) return fail(state, "Invalid donation.");
+    if ((donor.army[u as CocUnitId] ?? 0) < n) return fail(state, "You don't have those troops.");
+    housing += UNITS[u as CocUnitId].housing * n;
+    total += n;
+  }
+  if (total <= 0) return fail(state, "Select troops to donate.");
+  if (housingUsed(recip) + housing > housingCap(recip)) return fail(state, "Your clanmate has no army housing free.");
+  const donorArmy: Army = { ...donor.army };
+  const recipArmy: Army = { ...recip.army };
+  for (const [u, n] of Object.entries(army)) {
+    if (!n) continue;
+    donorArmy[u as CocUnitId] = (donorArmy[u as CocUnitId] ?? 0) - n;
+    recipArmy[u as CocUnitId] = (recipArmy[u as CocUnitId] ?? 0) + n;
+  }
+  return {
+    state: {
+      ...state,
+      bases: {
+        ...state.bases,
+        [playerId]: { ...donor, army: donorArmy },
+        [toOwner]: { ...recip, army: recipArmy },
+      },
+    },
+  };
+}
+
 export function applyCommand(state: CocWorld, playerId: string, cmd: CocCommand): CommandResult {
   switch (cmd.type) {
     case "claimBase":
@@ -353,6 +442,14 @@ export function applyCommand(state: CocWorld, playerId: string, cmd: CocCommand)
       return buyBuilder(state, playerId);
     case "extendShield":
       return extendShield(state, playerId, cmd.hours);
+    case "createClan":
+      return createClan(state, playerId, cmd.name);
+    case "joinClan":
+      return joinClan(state, playerId, cmd.clanId);
+    case "leaveClan":
+      return leaveClan(state, playerId);
+    case "donateTroops":
+      return donateTroops(state, playerId, cmd.toOwner, cmd.army);
     default:
       return fail(state, "Unknown command.");
   }

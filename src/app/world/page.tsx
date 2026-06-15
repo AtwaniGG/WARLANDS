@@ -41,6 +41,7 @@ export default function WorldPage() {
   const [wallMode, setWallMode] = useState(false);
   const [wallFrom, setWallFrom] = useState<string | null>(null);
   const [armyOpen, setArmyOpen] = useState(false);
+  const [clanOpen, setClanOpen] = useState(false);
   const [raidTarget, setRaidTarget] = useState<string | null>(null);
   const [deploy, setDeploy] = useState<Army>({});
 
@@ -88,6 +89,7 @@ export default function WorldPage() {
         <Badge tone={connected ? "emerald" : "blood"} variant="soft">{connected ? "● ONLINE" : "● OFFLINE"}</Badge>
         <span className="wl-num" style={{ fontSize: 11, color: "var(--text-secondary)" }}>TICK {state.tick} · {Object.keys(state.players).length} CMDR</span>
         {myBase && <Button size="sm" variant="outline" icon="⚔️" onClick={() => setArmyOpen(true)}>ARMY ({armyTotal(myBase.army)})</Button>}
+        {myBase && <Button size="sm" variant="outline" icon="🤝" onClick={() => setClanOpen(true)}>CLAN</Button>}
         {myBase && (
           <Button size="sm" variant={wallMode ? "primary" : "outline"} icon="🧱"
             onClick={() => { setWallMode((w) => !w); setWallFrom(null); setSel(null); setSelWall(null); }}>
@@ -222,6 +224,13 @@ export default function WorldPage() {
         </Overlay>
       )}
 
+      {/* Clan */}
+      {myBase && clanOpen && playerId && (
+        <Overlay onClose={() => setClanOpen(false)}>
+          <ClanPanel state={state} playerId={playerId} send={send} onClose={() => setClanOpen(false)} />
+        </Overlay>
+      )}
+
       {/* Result card */}
       {report && (
         <Overlay onClose={clearReport}>
@@ -311,6 +320,71 @@ function AttackPanel({ me, target, tick, deploy, setDeploy, onAttack, onClose }:
         <Button variant="danger" full icon="⚔️" disabled={shielded || selected === 0} onClick={onAttack}>
           {shielded ? "TARGET SHIELDED" : selected === 0 ? "SELECT TROOPS" : `ATTACK WITH ${selected}`}
         </Button>
+      </div>
+    </Panel>
+  );
+}
+
+function ClanPanel({ state, playerId, send, onClose }: { state: CocWorld; playerId: string; send: (c: import("@/sim/coc").CocCommand) => void; onClose: () => void }) {
+  const [name, setName] = useState("");
+  const me = state.players[playerId];
+  const myClan = me?.clanId ? state.clans[me.clanId] : null;
+  const myArmy = state.bases[playerId]?.army ?? {};
+  const short = (id: string) => id.slice(0, 6).toUpperCase();
+
+  if (myClan) {
+    const mates = myClan.members.filter((m) => m !== playerId);
+    const myUnits = UNIT_IDS.filter((u) => (myArmy[u] ?? 0) > 0);
+    return (
+      <Panel title={myClan.name} accent padding="14px" headerRight={<button onClick={onClose} style={closeBtn}>✕</button>}>
+        <span className="wl-label">ROSTER ({myClan.members.length})</span>
+        <div style={{ display: "grid", gap: 4, margin: "8px 0 12px" }}>
+          {myClan.members.map((m) => (
+            <div key={m} style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
+              <span className="wl-num">{short(m)}{m === playerId ? " (you)" : ""}</span>
+              {m === myClan.founder && <Badge tone="amber" variant="soft">FOUNDER</Badge>}
+            </div>
+          ))}
+        </div>
+        {mates.length > 0 && myUnits.length > 0 && (
+          <>
+            <span className="wl-label">DONATE A TROOP</span>
+            <div style={{ display: "grid", gap: 6, marginTop: 8 }}>
+              {mates.map((m) => (
+                <div key={m} style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                  <span className="wl-num" style={{ fontSize: 11, minWidth: 56 }}>{short(m)}</span>
+                  {myUnits.map((u) => (
+                    <Button key={u} size="sm" variant="secondary" onClick={() => send({ type: "donateTroops", toOwner: m, army: { [u]: 1 } })}>
+                      🎁{UNIT_ICON[u]}
+                    </Button>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+        <div style={{ marginTop: 14 }}><Button variant="danger" full onClick={() => { send({ type: "leaveClan" }); onClose(); }}>LEAVE CLAN</Button></div>
+      </Panel>
+    );
+  }
+
+  const clans = Object.values(state.clans);
+  return (
+    <Panel title="CLANS" accent padding="14px" headerRight={<button onClick={onClose} style={closeBtn}>✕</button>}>
+      <span className="wl-label">FOUND A CLAN</span>
+      <div style={{ display: "flex", gap: 6, margin: "8px 0 14px" }}>
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Clan name" style={input} />
+        <Button variant="primary" disabled={name.trim().length < 3} onClick={() => { send({ type: "createClan", name }); onClose(); }}>CREATE</Button>
+      </div>
+      <span className="wl-label">JOIN A CLAN</span>
+      <div style={{ display: "grid", gap: 6, marginTop: 8 }}>
+        {clans.length === 0 && <span style={{ fontSize: 12, color: "var(--text-muted)" }}>No clans yet — found the first.</span>}
+        {clans.map((c) => (
+          <Button key={c.id} variant="secondary" full style={rowBtn} onClick={() => { send({ type: "joinClan", clanId: c.id }); onClose(); }}>
+            <span>{c.name}</span>
+            <span className="wl-num" style={{ fontSize: 11, color: "var(--text-secondary)" }}>{c.members.length}/10</span>
+          </Button>
+        ))}
       </div>
     </Panel>
   );
@@ -455,3 +529,4 @@ const rowBtn: CSSProperties = { justifyContent: "space-between", textAlign: "lef
 const closeBtn: CSSProperties = { background: "transparent", color: "var(--text-secondary)", border: 0, cursor: "pointer", fontSize: 14, lineHeight: 1 };
 const overlay: CSSProperties = { position: "fixed", inset: 0, zIndex: 60, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 };
 const step: CSSProperties = { width: 26, height: 26, borderRadius: "var(--radius-sm)", border: "1px solid var(--hairline)", background: "var(--panel-2)", color: "var(--text-primary)", cursor: "pointer", fontSize: 14 };
+const input: CSSProperties = { flex: 1, background: "var(--surface-sunken)", border: "1px solid var(--hairline)", borderRadius: "var(--radius-sm)", color: "var(--text-primary)", padding: "8px 10px", fontSize: 13, fontFamily: "var(--font-ui)" };

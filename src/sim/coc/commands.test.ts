@@ -292,3 +292,59 @@ describe("$WAR premium economy", () => {
     expect(r.error).toMatch(/\$WAR/i);
   });
 });
+
+describe("clans", () => {
+  it("creates a clan and enrolls the founder", () => {
+    const r = applyCommand(twoBases(), "p1", { type: "createClan", name: "Iron Vanguard" });
+    expect(r.error).toBeUndefined();
+    const clan = Object.values(r.state.clans)[0];
+    expect(clan.members).toEqual(["p1"]);
+    expect(r.state.players.p1.clanId).toBe(clan.id);
+  });
+  it("lets a second player join", () => {
+    let s = applyCommand(twoBases(), "p1", { type: "createClan", name: "Iron Vanguard" }).state;
+    const clanId = Object.keys(s.clans)[0];
+    const r = applyCommand(s, "p2", { type: "joinClan", clanId });
+    expect(r.error).toBeUndefined();
+    expect(r.state.clans[clanId].members).toEqual(["p1", "p2"]);
+    expect(r.state.players.p2.clanId).toBe(clanId);
+  });
+  it("reassigns the founder when they leave a non-empty clan", () => {
+    let s = applyCommand(twoBases(), "p1", { type: "createClan", name: "Iron Vanguard" }).state;
+    const clanId = Object.keys(s.clans)[0];
+    s = applyCommand(s, "p2", { type: "joinClan", clanId }).state;
+    const r = applyCommand(s, "p1", { type: "leaveClan" });
+    expect(r.state.clans[clanId].members).toEqual(["p2"]);
+    expect(r.state.clans[clanId].founder).toBe("p2");
+    expect(r.state.players.p1.clanId).toBeNull();
+  });
+  it("deletes the clan when the last member leaves", () => {
+    let s = applyCommand(twoBases(), "p1", { type: "createClan", name: "Lone Wolf" }).state;
+    const clanId = Object.keys(s.clans)[0];
+    const r = applyCommand(s, "p1", { type: "leaveClan" });
+    expect(r.state.clans[clanId]).toBeUndefined();
+  });
+  it("donates troops to a clanmate with housing", () => {
+    let s = applyCommand(twoBases(), "p1", { type: "createClan", name: "Iron Vanguard" }).state;
+    const clanId = Object.keys(s.clans)[0];
+    s = applyCommand(s, "p2", { type: "joinClan", clanId }).state;
+    s = {
+      ...s,
+      bases: {
+        ...s.bases,
+        p1: { ...s.bases.p1, army: { grunt: 5 } },
+        p2: { ...s.bases.p2, buildings: { ...s.bases.p2.buildings, "4,0": { id: "armyCamp", level: 1 } } },
+      },
+    };
+    const r = applyCommand(s, "p1", { type: "donateTroops", toOwner: "p2", army: { grunt: 3 } });
+    expect(r.error).toBeUndefined();
+    expect(r.state.bases.p1.army.grunt).toBe(2);
+    expect(r.state.bases.p2.army.grunt).toBe(3);
+  });
+  it("rejects donating to a non-clanmate", () => {
+    let s = applyCommand(twoBases(), "p1", { type: "createClan", name: "Iron Vanguard" }).state;
+    s = { ...s, bases: { ...s.bases, p1: { ...s.bases.p1, army: { grunt: 5 } } } };
+    const r = applyCommand(s, "p1", { type: "donateTroops", toOwner: "p2", army: { grunt: 1 } });
+    expect(r.error).toMatch(/clanmate/i);
+  });
+});

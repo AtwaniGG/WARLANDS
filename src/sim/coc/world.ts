@@ -8,7 +8,7 @@ export function createWorld(seed: number): CocWorld {
   const { radius, hexes } = generateWorld(WORLD_RADIUS);
   const hexRecord: CocWorld["hexes"] = {};
   for (const [k, h] of hexes) hexRecord[k] = h;
-  return { seed, radius, tick: 0, hexes: hexRecord, bases: {}, claimedHexes: {}, players: {} };
+  return { seed, radius, tick: 0, hexes: hexRecord, bases: {}, claimedHexes: {}, players: {}, clans: {}, nextClanId: 1 };
 }
 
 export function addPlayer(state: CocWorld, id: string): CocWorld {
@@ -87,6 +87,8 @@ export function normalizeWorld(state: CocWorld): CocWorld {
     bases,
     claimedHexes: state.claimedHexes ?? {},
     players: state.players ?? {},
+    clans: state.clans ?? {},
+    nextClanId: state.nextClanId ?? 1,
   };
 }
 
