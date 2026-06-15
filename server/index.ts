@@ -53,6 +53,7 @@ export function startServer(opts: Options = {}): ServerHandle {
         return;
       }
       state = result.state;
+      if (result.report) ws.send(JSON.stringify({ type: "report", report: result.report }));
       broadcast();
     });
 
