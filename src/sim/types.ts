@@ -45,6 +45,21 @@ export interface BattleReport {
   tick: number;
 }
 
+/** A standing sell order in the shared marketplace; goods are escrowed in the order. */
+export interface MarketOrder {
+  id: string;
+  item: ResourceId;
+  qty: number;
+  price: number; // $WAR per unit
+  owner: string; // SimPlayer.id
+}
+
+export interface Market {
+  refPrices: Record<ResourceId, number>;
+  book: MarketOrder[];
+  nextOrderId: number;
+}
+
 export interface WorldState {
   seed: number;
   radius: number;
@@ -54,6 +69,7 @@ export interface WorldState {
   players: Record<string, SimPlayer>;
   /** total $WAR removed via sinks (early-unstake fees, etc.) — GDD §13 */
   burned: number;
+  market: Market;
 }
 
 export type Command =
@@ -63,7 +79,10 @@ export type Command =
   | { type: "setProduct"; key: string; index: number; product: ResourceId }
   | { type: "unstake"; key: string }
   | { type: "train"; key: string; unit: UnitId }
-  | { type: "raid"; fromKey: string; targetKey: string; army: Army; intent: BattleIntent };
+  | { type: "raid"; fromKey: string; targetKey: string; army: Army; intent: BattleIntent }
+  | { type: "list"; key: string; item: ResourceId; qty: number; price: number }
+  | { type: "buy"; item: ResourceId; qty: number; toKey: string }
+  | { type: "cancel"; orderId: string; toKey: string };
 
 export interface CommandResult {
   state: WorldState;
