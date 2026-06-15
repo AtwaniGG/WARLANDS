@@ -1,0 +1,24 @@
+<!-- @dsCard group="Spacing" viewport="700x150" name="Radii" subtitle="Sharp & tactical — 4 to 12px + pill" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  body { margin: 0; background: var(--panel-void); padding: 22px; }
+  .row { display: flex; gap: 20px; align-items: flex-end; }
+  .sw { text-align: center; }
+  .box { width: 80px; height: 64px; background: var(--panel-2); border: 1px solid var(--border-strong); }
+  .nm { font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.06em; font-size: 10px; color: var(--text-hi); margin-top: 8px; }
+  .hx { font-family: var(--font-mono); font-size: 10px; color: var(--text-lo); margin-top: 2px; }
+</style>
+</head>
+<body>
+  <div class="row">
+    <div class="sw"><div class="box" style="border-radius:var(--radius-sm)"></div><div class="nm">Small</div><div class="hx">4px · buttons</div></div>
+    <div class="sw"><div class="box" style="border-radius:var(--radius-md)"></div><div class="nm">Medium</div><div class="hx">8px · cards</div></div>
+    <div class="sw"><div class="box" style="border-radius:var(--radius-lg)"></div><div class="nm">Large</div><div class="hx">12px · panels</div></div>
+    <div class="sw"><div class="box" style="border-radius:var(--radius-pill);width:120px"></div><div class="nm">Pill</div><div class="hx">999px · tracks</div></div>
+  </div>
+</body>
+</html>

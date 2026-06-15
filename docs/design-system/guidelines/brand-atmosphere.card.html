@@ -1,0 +1,26 @@
+<!-- @dsCard group="Brand" viewport="700x200" name="Atmosphere" subtitle="Hex grid · radar scanline · amber glow · hazard stripe" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  body { margin: 0; background: var(--panel-void); padding: 0; }
+  .stage { position: relative; height: 200px; overflow: hidden; background: #0a0d12; }
+  .glow { position: absolute; top: -120px; left: 50%; height: 320px; width: 480px; transform: translateX(-50%); border-radius: 50%; background: rgba(245,179,1,0.12); filter: blur(100px); }
+  .label { position: absolute; left: 22px; bottom: 38px; font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.2em; font-size: 13px; color: var(--amber-text); z-index: 2; }
+  .sub { position: absolute; left: 22px; bottom: 20px; font-family: var(--font-mono); font-size: 10px; color: var(--text-lo); z-index: 2; }
+  .hazard { position: absolute; left: 0; right: 0; bottom: 0; height: 6px; }
+</style>
+</head>
+<body>
+  <div class="stage wl-grain">
+    <div class="wl-hexgrid" style="position:absolute;inset:0;opacity:0.5"></div>
+    <div class="glow wl-glow"></div>
+    <div class="wl-scanline"></div>
+    <div class="label">Persistent world · always running</div>
+    <div class="sub">.wl-hexgrid · .wl-scanline · .wl-glow · .wl-grain · .wl-hazard</div>
+    <div class="hazard wl-hazard"></div>
+  </div>
+</body>
+</html>

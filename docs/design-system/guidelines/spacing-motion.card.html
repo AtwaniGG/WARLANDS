@@ -1,0 +1,25 @@
+<!-- @dsCard group="Spacing" viewport="700x160" name="Motion & Easing" subtitle="120/200ms · ease-out & snap — hover to replay" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  body { margin: 0; background: var(--panel-void); padding: 22px; }
+  .row { display: flex; gap: 20px; }
+  .lane { flex: 1; background: var(--panel); border: 1px solid var(--hairline); border-radius: var(--radius-md); padding: 14px; }
+  .dot { width: 22px; height: 22px; border-radius: var(--radius-sm); background: var(--amber); transform: translateX(0); }
+  .track:hover .out { transform: translateX(140px); transition: transform var(--dur) var(--ease-out); }
+  .track:hover .snap { transform: translateX(140px); transition: transform var(--dur) var(--ease-snap); }
+  .track { height: 22px; }
+  .nm { font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.06em; font-size: 10px; color: var(--text-hi); margin-bottom: 10px; }
+  .hx { font-family: var(--font-mono); font-size: 9px; color: var(--text-lo); margin-top: 10px; }
+</style>
+</head>
+<body>
+  <div class="row">
+    <div class="lane"><div class="nm">Ease-out · 200ms</div><div class="track"><div class="dot out"></div></div><div class="hx">cubic-bezier(.2,.8,.2,1) · hover to play</div></div>
+    <div class="lane"><div class="nm">Snap · 200ms</div><div class="track"><div class="dot snap"></div></div><div class="hx">cubic-bezier(.34,1.4,.5,1) · placement pop</div></div>
+  </div>
+</body>
+</html>

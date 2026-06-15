@@ -1,0 +1,28 @@
+<!-- @dsCard group="Colors" viewport="700x150" name="Terrain Fills" subtitle="The 9 plot types — plains to warzone" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  body { margin: 0; background: var(--panel-void); padding: 20px; }
+  .grid { display: grid; grid-template-columns: repeat(9, 1fr); gap: 8px; }
+  .sw { text-align: center; }
+  .chip { height: 52px; border-radius: var(--radius-sm); border: 1px solid rgba(0,0,0,0.4); }
+  .nm { font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.04em; font-size: 9px; color: var(--text-lo); margin-top: 6px; line-height: 1.2; }
+</style>
+</head>
+<body>
+  <div class="grid">
+    <div class="sw"><div class="chip" style="background:var(--terrain-plains)"></div><div class="nm">Plains</div></div>
+    <div class="sw"><div class="chip" style="background:var(--terrain-forest)"></div><div class="nm">Forest</div></div>
+    <div class="sw"><div class="chip" style="background:var(--terrain-river)"></div><div class="nm">River</div></div>
+    <div class="sw"><div class="chip" style="background:var(--terrain-mountain)"></div><div class="nm">Mountain</div></div>
+    <div class="sw"><div class="chip" style="background:var(--terrain-desert)"></div><div class="nm">Desert</div></div>
+    <div class="sw"><div class="chip" style="background:var(--terrain-coastal)"></div><div class="nm">Coastal</div></div>
+    <div class="sw"><div class="chip" style="background:var(--terrain-industrial)"></div><div class="nm">Industrial</div></div>
+    <div class="sw"><div class="chip" style="background:var(--terrain-techruins)"></div><div class="nm">Tech Ruins</div></div>
+    <div class="sw"><div class="chip" style="background:var(--terrain-warzone)"></div><div class="nm">Warzone</div></div>
+  </div>
+</body>
+</html>

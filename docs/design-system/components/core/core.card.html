@@ -1,89 +1,105 @@
-<!-- @dsCard group="Components" viewport="700x440" name="Core — Button, Badge, Stat, Panel" subtitle="Buttons, status tags, readouts & panels" -->
+<!-- @dsCard group="Components" viewport="700x640" name="Core Primitives" subtitle="Button · Badge · Stat · ProgressBar · ResourceChip · Tabs · Panel" -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="stylesheet" href="../../styles.css" />
-<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
-<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
-<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
-<script src="../../_ds_bundle.js"></script>
 <style>
-  body { padding: 22px; }
-  .row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
-  .block { margin-bottom: 22px; }
-  .cap { font-family: var(--font-display); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 9px; }
-  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  body { margin: 0; background: var(--panel-void); padding: 22px; }
+  #root { display: flex; flex-direction: column; gap: 22px; }
+  .grp { display: flex; flex-direction: column; gap: 10px; }
+  .grp > .cap { font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.1em; font-size: 10px; color: var(--text-faint); border-bottom: 1px solid var(--hairline); padding-bottom: 5px; }
+  .rowwrap { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 </style>
 </head>
 <body>
-<div id="root"></div>
-<script type="text/babel">
-  const { Button, Badge, Stat, Panel } = window.WARLANDSDesignSystem_e0d283;
+  <div id="root"></div>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script src="../../_ds_bundle.js"></script>
+  <script type="text/babel">
+    const { Button, Badge, Stat, ProgressBar, ResourceChip, Tabs, Panel } = window.WARLANDSDesignSystem_2e7699;
+    const img = (p) => <img src={"../../assets/resources/" + p} width="15" height="15" />;
 
-  function Demo() {
-    return (
-      <div>
-        <div className="block">
-          <div className="cap">Button — variants</div>
-          <div className="row">
+    function Group({ cap, children }) {
+      return <div className="grp"><div className="cap">{cap}</div><div className="rowwrap">{children}</div></div>;
+    }
+
+    function Demo() {
+      const [tab, setTab] = React.useState("map");
+      return (
+        <>
+          <Group cap="Button — variants">
             <Button variant="primary" icon="⚔️">Stake &amp; Claim</Button>
-            <Button variant="secondary">Cancel</Button>
-            <Button variant="info" icon="🔭">Scout</Button>
-            <Button variant="danger" icon="🏰">Siege</Button>
-            <Button variant="success">Contribute</Button>
+            <Button variant="secondary">Scout</Button>
+            <Button variant="danger">Siege</Button>
+            <Button variant="info">Reinforce</Button>
+            <Button variant="success">Collect</Button>
             <Button variant="outline">Unstake</Button>
-            <Button variant="ghost">Dismiss</Button>
-          </div>
-        </div>
-
-        <div className="block">
-          <div className="cap">Button — sizes &amp; disabled</div>
-          <div className="row">
-            <Button variant="primary" size="sm">Small</Button>
-            <Button variant="primary" size="md">Medium</Button>
-            <Button variant="primary" size="lg">Large</Button>
+            <Button variant="ghost">Cancel</Button>
             <Button variant="primary" disabled>Insufficient $WAR</Button>
-          </div>
-        </div>
-
-        <div className="grid2">
-          <div>
-            <div className="cap">Badge — tones</div>
-            <div className="row">
-              <Badge tone="amber">Owned</Badge>
-              <Badge tone="blood" variant="solid">Prototype</Badge>
-              <Badge tone="sky">Tier 3</Badge>
-              <Badge tone="emerald">Passed</Badge>
-              <Badge tone="violet">Legendary</Badge>
-              <Badge tone="neutral">Council</Badge>
+          </Group>
+          <Group cap="Button — sizes">
+            <Button size="sm">Small</Button>
+            <Button size="md">Medium</Button>
+            <Button size="lg" icon="⬆">Upgrade</Button>
+          </Group>
+          <Group cap="Badge — tones">
+            <Badge tone="amber">Owned</Badge>
+            <Badge tone="emerald" variant="solid">Shielded</Badge>
+            <Badge tone="blood" variant="solid">Under Attack</Badge>
+            <Badge tone="sky">Staked</Badge>
+            <Badge tone="violet">Tier 3</Badge>
+            <Badge tone="teal">Scouted</Badge>
+            <Badge tone="neutral">Idle</Badge>
+          </Group>
+          <Group cap="Stat — HUD readouts">
+            <Stat label="$WAR" value="48,210" accent="amber" />
+            <Stat label="Staked" value="120,000" accent="sky" />
+            <Stat label="Burned" value="6,540" accent="blood" />
+            <Stat label="Pool" value="312,900" accent="emerald" />
+            <Stat label="Plots" value="7" accent="emerald" />
+          </Group>
+          <Group cap="ResourceChip — tiers">
+            <ResourceChip icon={img("iron.svg")} name="Iron" amount="1,240" tier="raw" />
+            <ResourceChip icon={img("steel.svg")} name="Steel" amount="430" tier="intermediate" />
+            <ResourceChip icon={img("tanks.svg")} name="Tanks" amount="12" tier="finished" />
+            <ResourceChip icon={img("fuel.svg")} amount="320" tier="intermediate" size="sm" />
+          </Group>
+          <div className="grp">
+            <div className="cap">ProgressBar &amp; Tabs</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12, maxWidth: 340 }}>
+              <ProgressBar value={62} tone="amber" label="Season 4" valueText="18d 04h" />
+              <ProgressBar value={34} tone="blood" label="Defense" valueText="34%" />
             </div>
-            <div className="cap" style={{marginTop:'18px'}}>Stat — HUD readouts</div>
-            <div className="row" style={{gap:'18px'}}>
-              <Stat label="$WAR" value="48,210" accent="amber" />
-              <Stat label="Staked" value="120,000" accent="sky" />
-              <Stat label="Burned" value="6,540" accent="blood" />
-              <Stat label="Pool" value="9,640" accent="emerald" />
+            <div style={{ marginTop: 6 }}>
+              <Tabs value={tab} onChange={setTab} tabs={[
+                { id: "map", label: "World", icon: "🗺️" },
+                { id: "market", label: "Market", icon: "💱" },
+                { id: "army", label: "Army", icon: "🎖️" },
+                { id: "clan", label: "Allegiance", icon: "🤝" },
+              ]} />
             </div>
           </div>
-          <div>
+          <div className="grp">
             <div className="cap">Panel</div>
-            <Panel title="Hostile Camp" rim="blood" padding="12px">
-              <div style={{display:'flex', flexDirection:'column', gap:'8px'}}>
-                <span style={{fontSize:'12px', color:'var(--text-secondary)'}}>Unknown strength. Scout first to reveal the garrison.</span>
-                <div className="row">
-                  <Button variant="info" size="sm" icon="🔭">Scout (50$)</Button>
-                  <Button variant="danger" size="sm" icon="🗡️">Raid</Button>
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+              <Panel title="Stockpile" accent headerRight={<Badge tone="amber">Owned</Badge>} style={{ width: 260 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                  <ResourceChip icon={img("food.svg")} name="Food" amount="820" size="sm" />
+                  <ResourceChip icon={img("oil.svg")} name="Oil" amount="190" size="sm" />
                 </div>
-              </div>
-            </Panel>
+              </Panel>
+              <Panel label="Defense Report" rim="blood" style={{ width: 240 }}>
+                <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>2 plots raided · 1,240 $WAR lost</div>
+              </Panel>
+            </div>
           </div>
-        </div>
-      </div>
-    );
-  }
-  ReactDOM.createRoot(document.getElementById("root")).render(<Demo />);
-</script>
+        </>
+      );
+    }
+    ReactDOM.createRoot(document.getElementById("root")).render(<Demo />);
+  </script>
 </body>
 </html>

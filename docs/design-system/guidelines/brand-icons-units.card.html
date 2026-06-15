@@ -1,0 +1,26 @@
+<!-- @dsCard group="Brand" viewport="700x150" name="Unit Tokens" subtitle="6 combat classes — circular map tokens" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  body { margin: 0; background: var(--panel-void); padding: 20px; }
+  .grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
+  .cell { text-align: center; }
+  .ico { height: 62px; border-radius: var(--radius-md); display: grid; place-items: center; }
+  .ico img { width: 44px; height: 44px; display: block; }
+  .nm { font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.04em; font-size: 9px; color: var(--text-lo); margin-top: 6px; line-height: 1.15; }
+</style>
+</head>
+<body>
+  <div class="grid">
+    <div class="cell"><div class="ico" style="background:var(--panel);border:1px solid var(--hairline);"><img src="../assets/units/aircraft.svg" alt="aircraft" /></div><div class="nm">Aircraft</div></div>
+    <div class="cell"><div class="ico" style="background:var(--panel);border:1px solid var(--hairline);"><img src="../assets/units/artillery.svg" alt="artillery" /></div><div class="nm">Artillery</div></div>
+    <div class="cell"><div class="ico" style="background:var(--panel);border:1px solid var(--hairline);"><img src="../assets/units/drones.svg" alt="drones" /></div><div class="nm">Drones</div></div>
+    <div class="cell"><div class="ico" style="background:var(--panel);border:1px solid var(--hairline);"><img src="../assets/units/engineers.svg" alt="engineers" /></div><div class="nm">Engineers</div></div>
+    <div class="cell"><div class="ico" style="background:var(--panel);border:1px solid var(--hairline);"><img src="../assets/units/infantry.svg" alt="infantry" /></div><div class="nm">Infantry</div></div>
+    <div class="cell"><div class="ico" style="background:var(--panel);border:1px solid var(--hairline);"><img src="../assets/units/tanks.svg" alt="tanks" /></div><div class="nm">Tanks</div></div>
+  </div>
+</body>
+</html>

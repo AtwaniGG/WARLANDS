@@ -1,212 +1,180 @@
 # WARLANDS — Design System
 
-> Gritty, militarized near-future realism — lightly stylized for tactical readability.
-> A weathered, lived-in war economy on a shared hex world map: rust, oil, concrete,
-> sandbags, cold steel. Tense geopolitics and industrial scale, not heroic sci-fi.
+A field-console design system for **WARLANDS**, a persistent-world, PvP-first Web3 strategy MMO.
+Players stake the native token **$WAR** to secure finite land on one shared live hex map, build
+industrial-military supply chains, trade a player-driven economy, and wage war — solo or in
+**Allegiances**.
 
-**WARLANDS** is a persistent-world, PvP-first **Web3 strategy MMO**. Players stake a
-native token (`$WAR`) to secure finite land on one shared live hex map, build
-industrial-military supply chains, trade on a player-driven market, raid hostile camps,
-and compete in Allegiances for top-heavy, sink-funded season rewards. The core loop:
+The aesthetic is a **tactical command console / field map**: near-black gunmetal surfaces, an amber
+command accent, blood-red hostility, teal intel, condensed stencil display type (Oswald), and
+ammo-counter mono numerics. Avoid: cartoon medieval, pastel, glassy SaaS gradients, neumorphism.
 
-```
-STAKE → CLAIM → BUILD → FARM → MANUFACTURE → TRAIN → RAID → TRADE → ALLY → COMPETE FOR SEASON REWARDS
-```
-
-This design system is built from the **playable prototype** and the project's Art
-Direction Bible, so any artifact you generate matches what the product actually looks
-like: a dark, dense, tactical HUD where **color carries information** and numbers are
-always monospace.
-
----
+> This system is reverse-engineered from the live WARLANDS codebase — tokens, fonts, components and
+> screens are ported from the real app, not invented.
 
 ## Sources
 
-The system was reverse-engineered from the live prototype. Explore these to do a
-better job building WARLANDS-branded work:
+- **GitHub:** [`AtwaniGG/WARLANDS`](https://github.com/AtwaniGG/WARLANDS) — Next.js 16 / React 19 /
+  Tailwind v4 codebase. The design tokens here are vendored verbatim from `src/app/globals.css`;
+  components are ported from `src/components/ui/*`; UI kits recreate `src/app/page.tsx` (landing) and
+  `src/components/GameShell.tsx` + `HexMap` + `PlotPanel` (the game). Game data mirrors `src/game/*`.
+  Icons are the project's own SVGs from `public/assets/`. **Explore this repo to go deeper** — the
+  full game logic, GDD, and panel set live there.
 
-- **GitHub — AtwaniGG/WARLANDS** · https://github.com/AtwaniGG/WARLANDS
-  - Next.js 16 + React 19 + TypeScript + Tailwind v4 prototype of the full core loop.
-  - Visual source of truth: `src/components/*` (GameShell, TopBar, HexMap, PlotPanel,
-    MarketPanel, AllegiancePanel, SeasonPanel, BattleReport).
-  - Game data (names, icons, stakes, recipes, colors) mirrored verbatim into this
-    system: `src/game/{resources,plotTypes,buildings,units,allegiance}.ts`.
-  - `docs/GDD.md` — the full 24-section design / tokenomics / architecture doc (referenced
-    throughout the prototype as `GDD §N`; not all sections were accessible here).
-- **Art Direction Bible** — the brand "constitution" (palette tokens, type, materials,
-  lighting, anti-patterns). Its exact hex tokens match the terrain/accent values shipped
-  in the prototype, so they are treated as canonical here.
-
-> The current build is a single-player, client-side prototype demonstrating the complete
-> economic + military + political + seasonal loop. On-chain `$WAR`, server-authoritative
-> multiplayer, and PvP are modelled but not yet live.
+Nothing from the repo is assumed to be accessible to the reader; everything needed is copied into
+this project.
 
 ---
 
-## Content Fundamentals
+## CONTENT FUNDAMENTALS — how WARLANDS writes
 
-How WARLANDS writes copy. Match this voice in any UI, marketing, or in-game text.
+**Voice.** Military-doctrinal, terse, confident. Reads like a field manual crossed with a tokenomics
+whitepaper. Short declaratives, often fragments. *"Stake the land. Never spend it." · "Easy to
+understand, brutal to master." · "The world is already at war."*
 
-- **Voice: a terse tactical briefing.** Short, declarative, confident. Imperative CTAs:
-  "Stake & Claim", "Scout (50$)", "End Season Now & Distribute Rewards". No fluff, no
-  exclamation marks, no hype.
-- **Second person, player-as-commander.** Copy addresses **"you"** ("Claim your first
-  land", "your owned plots", "Train troops there first"). The player is a commander
-  running a war economy.
-- **Casing:** ALL-CAPS condensed for section labels and status (`STOCKPILE`, `TRAIN
-  UNITS`, `OWNED`, `PROTOTYPE`, `VICTORY` / `DEFEAT`). **Sentence case** for body and
-  descriptions. Title case for proper nouns (Allegiance, Trade Hub, the Crucible).
-- **Numbers are concrete and rule-traceable.** Real figures everywhere — "10,000 $WAR",
-  "×2.5", "+40% all yields", "4% transaction + 5 $WAR listing fees", "A32/D26". Mechanics
-  are frequently footnoted to their design-doc section (`GDD §9.4`), which signals rigor.
-- **Honest about state.** The product openly labels itself `PROTOTYPE` and says what is
-  "mocked client-side" vs live. Tone is transparent, not marketing-glossy.
-- **Domain lexicon (use consistently):** stake (locked, never spent), claim, plot, hex,
-  the Crucible (intense red center), newbie ring (muted edge), Allegiance (never
-  "guild"/"clan"), upkeep, sink, season pool, contribution score (CS), garrison, raid vs
-  siege, scout, hostile camp.
-- **Emoji** are used functionally as inline icons (resource/unit/building glyphs, tab
-  icons), **never** decoratively in prose. Don't add celebratory/marketing emoji.
-- **Vibe:** war-room telemetry. Every screen reads like a recon console — labels,
-  readouts, and consequences, with the danger of the Crucible always implied.
+**Person.** Second person to the player as commander ("Claim your ground", "Your headquarters"),
+third person for systems and factions ("Conquest transfers the right to the land"). Rarely first
+person.
 
-Example copy, verbatim from the product:
-> "Staked $WAR is locked, never spent. You get it back on unstake (minus a small
-> early-unstake fee). It can never be looted by other players."
-> "+40% all yields, season-point ×2.5. No protection. Highest risk."
-> "Unknown strength. Scout first (50 $WAR) to reveal the garrison."
+**Casing.**
+- **Display headings & screen titles** → ALL CAPS, Oswald, tight tracking (`STAKE THE LAND`, `LIVE
+  WORLD MAP`, `FINITE LAND · REAL SCARCITY`).
+- **Micro-labels & stat captions** → ALL CAPS, wide tracking (`$WAR`, `STAKED`, `DEF ×1.3`, `SLOTS
+  3/6`).
+- **Badges / tags** → ALL CAPS (`OWNED`, `SHIELDED`, `UNDER ATTACK`, `PROTOTYPE`).
+- **Body copy** → sentence case.
 
----
+**Numbers.** Always mono + tabular (`48,210 $WAR`, `18d 04h 37m`, `×2.5`). Currency is suffixed
+`$WAR`. Multipliers use `×`. Percentages for defense / destruction. Section markers use `01`, `02`
+or `A`, `B`.
 
-## Visual Foundations
+**Lexicon (use the real terms).** Stake · claim · plot · hex · Command Center / Camp (HQ) · builder ·
+extractor · factory · Allegiance (clan) · raid · siege · scout · season · sink · burn · $WAR ·
+trophies · shield · Crucible (high-risk center) · newbie ring (safe edge). Land is **staked, not
+bought**; stake is **locked, never spent, never lootable**.
 
-The motifs and rules that make a screen read as WARLANDS.
+**Tone rules.** State stakes plainly ("No infinite emissions. No death spiral."). No hype emoji, no
+exclamation spam. Punchy section ledes that promise depth ("Learnable in ten minutes; … take
+years.").
 
-**Mood & palette.** A desaturated gunmetal/sand/olive world where **saturation is a UI
-signal, not decoration**. Surfaces are near-black, blue-tinted "recon screen" panels
-(`--panel-void #0c1018` → `--panel #12161f` → `--panel-2 #1a2030`). Meaning rides on a
-few high-chroma accents: **amber** = owned land / economy / `$WAR` / primary CTA;
-**blood-red** = warzone / combat / danger / enemy; **teal** = market / coastal / info;
-**sky** = allegiance / defense / scouting; **toxic-green** = tech / research / "active";
-**violet** = rare / tech-ruins / premium. Hard rule: **≤ 2 accent colors per
-composition**, and never rely on color alone — always pair it with an icon, shape, or
-rim (accessibility + map legibility).
-
-**Type.** Three roles. **Display** = Oswald, a condensed industrial grotesque, set
-ALL-CAPS for section labels and big titles. **UI/body** = Geist (the prototype's real
-face), high-legibility, sentence case. **Numbers** = Geist Mono with **tabular figures,
-always** — every resource count, price, timer and power rating. The system is dense:
-body is 13–14px, labels 10px uppercase with wide tracking, the wordmark is black-weight.
-
-**Backgrounds.** Flat dark panels, not gradients or imagery — except the **map**, which
-sits on `--panel-void` with a faint radial **Crucible glow** (blood-red, center) and a
-center→edge risk gradient. No photographic hero imagery in the UI; the world map *is* the
-hero. The Art Direction target for marketing/key art is painterly-but-grounded recon
-light (long NW shadows, diesel haze), not flat vector.
-
-**The hex map.** Pointy-top hexes tile seamlessly; terrain identity is a fill color +
-one signal. Ownership is shown by **rim**: thin **amber rim** = yours (with a 🏕️ glyph),
-**red rim** = hostile camp (💀), **hairline** = unclaimed, **bright amber 3px** =
-selected. The Crucible center marks unclaimed tiles with ⚔.
-
-**Cards & panels.** `--radius-lg` (12px) bordered surfaces with a 1px hairline border, a
-subtle inset top-edge highlight (`--edge-inset`), and deep shadows on near-black (no
-glow). Panels can take an accent **rim** — amber for "your" panels, blood for hostile
-contexts. Header rows are ALL-CAPS condensed labels over a slightly darker strip.
-
-**Buttons & controls.** Primary action is **solid amber with near-black text** (the
-claim/$WAR CTA). Secondary recedes to a raised panel; danger is red; info is sky; ghost
-is transparent. Radii are a tight **4 / 8 / 12** set; chips and buttons use 4px.
-
-**Borders & dividers.** Everything is separated by 1px `--hairline (#232b3a)` rather than
-spacing alone — reinforces the machined, instrument-panel feel. Stronger 2px rims signal
-ownership/selection.
-
-**Hover / press / motion.** Restrained and fast. Hover lifts buttons 1px and lightens the
-fill; tabs swap to a raised surface; rows tint. Press uses `--ease-snap` for a touch of
-"juice" on claims/confirms. Default easing `--ease-out (0.2,0.8,0.2,1)`, durations
-120–200ms, `prefers-reduced-motion` respected. No infinite decorative loops; the only
-ambient motion is the live tick clock and (in spec) a radar sweep.
-
-**Transparency & blur.** Used sparingly — the map's info card is `rgba(0,0,0,0.6)` over
-the world; modals dim the field with `bg-black/70`. No frosted-glass everywhere.
-
-**Imagery tone (for generated art).** Warm-cool tension: amber dusk key light against
-cold steel and blue shadow, with a subtle grain/noise overlay on everything. Material
-honesty — metal reads as metal, concrete as concrete. Avoid: neon cyberpunk, fantasy
-magic FX, glossy mobile-cartoon gloss, centered-subject-on-gradient, lens-flare spam,
-five-accent rainbows.
+**Emoji.** Used as **functional UI icons only** (resources, buildings, tabs, actions) — never as
+decoration in prose. See ICONOGRAPHY.
 
 ---
 
-## Iconography
+## VISUAL FOUNDATIONS
 
-WARLANDS uses **emoji as its functional icon set** — they are the real, shipped glyphs,
-explicitly noted in code as "emoji placeholder; swap for sprite later." They carry game
-identity and should be used as-is for fidelity:
+**Color.** Dark theme only. Surfaces stack from `--panel-void` (#0C1018, app bg) → `--surface-sunken`
+→ `--panel` (cards) → `--panel-2` (raised), separated by hairlines (`--hairline` #232B3A). One
+**command accent: amber** (#F5B301) carries every primary CTA, selection rim, and $WAR readout.
+Semantic roles: **blood** #9C2B2B (hostile/danger), **teal** #3F9AA6 (intel/info), **sky** #4A90D9
+(ally/staked), **success** #34D399 (safe/shield), **warning** #FBBF24 (timer), **violet** #8B5CF6
+(rare). Accent *text* colors are lifted a step for legibility on dark (`--amber-text` #FBBF24).
+Nine terrain fills key the map; ownership rims (owned amber, enemy red, selected bright amber,
+neutral near-black) ride the hex borders. A colorblind-safe remap (`html.cb`) swaps red→orange,
+green→blue.
 
-- **Resources (20):** 🌾 Food · 💧 Water · 🪵 Wood · 🪨 Stone · ⛓️ Iron · 💎 Rare Minerals ·
-  🛢️ Oil · 💽 Data Chips · ⛽ Fuel · 🔩 Steel · 🔌 Electronics · ⚙️ Machine Parts · 🧨 Ammunition ·
-  🧪 Chemicals · 🔫 Rifles · 🛡️ Tanks · 🛸 Drones · ✈️ Aircraft · 🗼 Turrets · 🧱 Building Components.
-- **Units (6):** 🪖 Infantry · 🛡️ Tanks · 💥 Artillery · ✈️ Aircraft · 🛸 Drones · 🔧 Engineers.
-- **Buildings:** 🏕️ Camp · 🌾 Farm · 💧 Well · 🪵 Lumber Camp · 🪨 Quarry · ⛓️ Iron Mine · 💎 Mineral
-  Mine · 🛢️ Oil Derrick · 💽 Data Excavator · 🏭 Refinery · ⚒️ Foundry · 🔫 Arms Factory · 🛠️ Heavy
-  Works · 🔬 Electronics Lab · 📦 Warehouse.
-- **Allegiance:** 🏛️ HQ · 🏰 Fortress · 🏪 Trade Hub · 📡 Radar Network · 🔬 Research Center · 🏭
-  Alliance Factory · 🛡️ Shield Network.
-- **Navigation & combat:** 🗺️ World · 💱 Market · 🤝 Allegiance · 🏆 Season · 💀 Hostile camp ·
-  ⚔ Crucible · 🔭 Scout · 🗡️ Raid · 🏰 Siege.
+**Type.** Three families, no others. **Oswald** (condensed industrial grotesque) for display —
+screen titles, building names, big resource readouts, the 3-star result; uppercase, tight tracking.
+**Geist Sans** for body / interface. **Geist Mono** for all numerics, addresses, tx hashes —
+tabular so ticking counters don't jitter. Scale runs dense: 10/11/12/13/14/16/18/20/24/32/48px.
+Recipes: `.wl-label` (10px caps, wide track), `.wl-title` (uppercase Oswald), `.wl-num` (mono
+tabular).
 
-**Rules.** Emoji are inline content glyphs, sized ~1em, never decorative in prose. They
-satisfy the "never rely on color alone" rule — every terrain/resource/unit pairs its
-color with a glyph. For **UI chrome** that emoji can't express (close ✕, chevrons, arrows,
-external-link), use **[Lucide](https://lucide.dev) via CDN** — a thin-stroke line set that
-sits quietly next to the emoji without competing. The **Art Direction target** is a custom
-**silhouette-first sprite system** (identifiable as a black silhouette at 32px); when that
-ships it replaces the emoji on map/unit/building tokens. There is no brand icon font in the
-codebase; `assets/favicon.ico` is the only binary brand mark, and the wordmark is purely
-typographic (black-weight amber "WARLANDS").
+**Spacing & radii.** 8pt rhythm (4→64). Radii are **small and military** — 4px (buttons), 8px
+(cards), 12px (panels), pill only for progress tracks. Nothing bubbly.
 
-> **Substitution flagged:** **Oswald** (display) and the **Lucide** chrome icon set are
-> design-system choices — Oswald is named as an approved display face in the Art Direction
-> Bible; Lucide is the closest CDN line set for the missing chrome icons. Geist / Geist Mono
-> are the product's real fonts. If you have licensed display fonts or a sprite/icon set,
-> send them and they'll be swapped in.
+**Elevation.** Three tiers — `--shadow-1` (raised card), `--shadow-2` (floating), `--shadow-modal`
+(dialog/sheet) — plus an **amber inner-glow** (`--glow-amber`) for selected/active hexes and a 2px
+amber focus ring.
+
+**Cards.** Dark `--panel` fill, 1px hairline border, 12px radius, `--shadow-1`. Optional colored
+**rim** (amber/blood/sky/emerald) signals status. Header is a caps Oswald title on a slightly
+darker strip; body is inset 16px.
+
+**Backgrounds & texture.** No photography. Atmosphere is built from CSS: a faint **amber hex-grid**
+overlay (`.wl-hexgrid`), a slow **radar scanline** sweep (`.wl-scanline`), a soft amber **glow**
+bloom (`.wl-glow`), a 6% **film grain** (`.wl-grain`), a marching **hazard stripe** divider
+(`.wl-hazard`), and a radial vignette to `#05070b` at the edges. Map terrain uses flat-fill clipped
+hex SVG tiles.
+
+**Motion & juice.** Fast and tactile — `--dur-fast` 120ms, `--dur` 200ms. `--ease-out`
+cubic-bezier(.2,.8,.2,1) for most transitions; `--ease-snap` cubic-bezier(.34,1.4,.5,1) for
+placement "snap" and pop. Counters count up (don't snap), timers sweep, hover lifts buttons −1px,
+selected hexes lift + glow while neighbors dim. Every interactive element has tap feedback. All juice
+has a `prefers-reduced-motion` / `html.rm` static fallback. **Entrance animations must keep the
+visible state as the base** and animate only transform — never strand content at opacity 0.
+
+**Hover / press.** Buttons: hover lightens fill + lifts 1px; disabled → `--disabled` grey, no
+pointer. Tabs: active = solid amber on near-black, hover = raised surface. Ghost/outline use subtle
+white/amber tints.
+
+**Borders & transparency.** Hairlines everywhere (1px `--hairline`); strong borders `--border-strong`
+for emphasis. Translucent dark scrims (`rgba(0,0,0,0.6)`) float map overlays; tinted accent fills
+(e.g. `rgba(245,179,1,0.08)`) back amber chips. Blur is reserved for the glow bloom, not glass.
+
+**Layout.** Mobile-first, touch-native (≥44px targets, iOS safe-area aware), scaling up to desktop
+sidebars. The game shell is a fixed top HUD + horizontal tab rail + map/rail split. Explicit
+zoom/recenter controls always present so map gestures never trap scroll.
 
 ---
 
-## Index / Manifest
+## ICONOGRAPHY
 
-Root files:
+WARLANDS uses **two cohesive icon systems**, both shipped in `assets/`:
 
-| Path | What |
-|---|---|
-| `styles.css` | Global entry point — `@import` manifest only. Consumers link this. |
-| `tokens/colors.css` | Base palette, accents, state, terrain fills, rims + semantic aliases. |
-| `tokens/typography.css` | Font families, weights, type scale, tracking, text recipes. |
-| `tokens/spacing.css` | Spacing scale, radii, elevation/shadows, focus ring, motion. |
-| `tokens/fonts.css` | Webfont loading (Oswald, Geist, Geist Mono via Google Fonts). |
-| `tokens/base.css` | Minimal element resets + focus ring + reduced-motion. |
-| `assets/favicon.ico` | Imported brand mark from the prototype. |
-| `SKILL.md` | Agent-Skills entry point (works in Claude Code). |
+1. **Flat-fill SVG art** (the project's own set) — gunmetal tones with a teal/amber accent, drawn on
+   the same palette as the UI. Three families:
+   - `assets/resources/*.svg` — **20** resource icons (raw → intermediate → finished), ~34–48px.
+   - `assets/buildings/*.svg` — **15** building icons + `assets/buildings/allegiance/*.svg` (4 shared
+     structures), ~34px, used as plot markers and in build menus.
+   - `assets/units/*.svg` — **6** combat-unit map tokens (circular dark badge + teal rim), ~44px.
+   - `assets/terrain/*.svg` — **9** pointy-top hex terrain tiles, clipped to the hex silhouette.
+2. **Emoji as functional icons.** The codebase deliberately uses emoji for tabs (🗺️ 💱 🎖️ 🤝 🏆),
+   actions (⚔️ ⬆ 🔭 ⚙️), and as the fallback when SVG art isn't present (`GameIcons.tsx` does exactly
+   this — real art when available, emoji fallback otherwise). Emoji appear **only** in UI chrome,
+   never in prose.
 
-Components (`window.WARLANDSDesignSystem_e0d283`):
+Map status glyphs are lightweight unicode/emoji: 🏕️ owned camp, 💀 hostile camp, ⚔ Crucible cell.
+**Never hand-draw new icons** — reuse the SVG set or fall back to an emoji that matches the existing
+vocabulary. There is no separate icon font.
 
-| Component | Dir | Role |
-|---|---|---|
-| `Button` | `components/core` | Tactical action — amber primary / danger / info / ghost / outline. |
-| `Badge` | `components/core` | Uppercase status / ownership tag. |
-| `Panel` | `components/core` | Bordered dark surface with optional rim + header. |
-| `Stat` | `components/core` | Labelled mono numeric readout (resource bar). |
-| `ResourceChip` | `components/game` | Icon + name + mono amount, tiered frame. |
-| `ProgressBar` | `components/game` | Season / upkeep / defense / queue track. |
-| `Tabs` | `components/game` | Primary view switcher (amber active). |
+**Brand mark.** No logo file ships in the repo — the wordmark is type: a "W" set in Oswald 800 on an
+amber square, followed by `WARLANDS` in Oswald 700 with 0.2em tracking. Recreate it with markup
+(see `guidelines/brand-logo.card.html`), don't rasterize.
 
-UI kit:
+---
 
-| Path | What |
-|---|---|
-| `ui_kits/warlands-game/index.html` | Interactive game shell — world map, plot inspector, market order-book, allegiance, season. Claim hexes, build, trade, raid. |
+## Index / manifest
 
-Specimen cards live in `guidelines/` (Colors, Type, Spacing, Brand) and the component
-`*.card.html` files — all surfaced in the **Design System** tab.
+**Foundations**
+- `styles.css` — root entry point (import this one file). `@import`s everything below.
+- `tokens/fonts.css` · `colors.css` · `typography.css` · `spacing.css` · `terrain.css` — CSS custom
+  properties + webfont loads (Oswald, Geist, Geist Mono via Google Fonts).
+- `base.css` — body reset, focus ring, reduced-motion, colorblind remap, atmosphere utilities
+  (`.wl-hexgrid` / `.wl-scanline` / `.wl-glow` / `.wl-grain` / `.wl-hazard`).
+
+**Components** (`components/core/`) — ported React primitives, exposed on `window.<Namespace>`:
+`Button` · `Badge` · `Panel` · `Stat` · `Tabs` · `ProgressBar` · `ResourceChip`. Each has a `.jsx`,
+`.d.ts`, and `.prompt.md`; `core.card.html` is the showcase.
+
+**UI kits**
+- `ui_kits/landing/index.html` — the marketing landing page (hero, core loop, doctrine, land,
+  $WAR tokenomics). Self-contained.
+- `ui_kits/warroom/index.html` — the **War Room** game shell: top HUD, tab rail, interactive hex
+  world map (drag/zoom/select), and the plot panel (claim land, build & upgrade, manage stockpile),
+  plus Market and Army surfaces. Composes the DS primitives + `data.js` / `shell.js` / `panels.js` /
+  `app.js`.
+
+**Foundation cards** (`guidelines/*.card.html`) — specimen cards rendered in the Design System tab:
+Colors (surfaces, accents, state, rims, terrain), Type (display, body, mono, recipes), Spacing
+(scale, radii, elevation, motion), Brand (logo, atmosphere, resource/building/unit icons, terrain
+tiles).
+
+**Assets** (`assets/`) — resources, buildings (+ allegiance), units, terrain SVG sets. `SOURCE_README.md`
+is the original repo's asset map.
+
+---
+
+*Built from the live WARLANDS codebase. Explore [`AtwaniGG/WARLANDS`](https://github.com/AtwaniGG/WARLANDS)
+to build with deeper fidelity.*

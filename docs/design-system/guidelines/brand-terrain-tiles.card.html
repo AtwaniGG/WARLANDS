@@ -1,0 +1,29 @@
+<!-- @dsCard group="Brand" viewport="700x150" name="Terrain Tiles" subtitle="9 pointy-top hex plot tiles" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  body { margin: 0; background: var(--panel-void); padding: 20px; }
+  .grid { display: grid; grid-template-columns: repeat(9, 1fr); gap: 12px; }
+  .cell { text-align: center; }
+  .ico { height: 66px; border-radius: var(--radius-md); display: grid; place-items: center; }
+  .ico img { width: 48px; height: 48px; display: block; }
+  .nm { font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.04em; font-size: 9px; color: var(--text-lo); margin-top: 6px; line-height: 1.15; }
+</style>
+</head>
+<body>
+  <div class="grid">
+    <div class="cell"><div class="ico" style=""><img src="../assets/terrain/coastal.svg" alt="coastal" /></div><div class="nm">Coastal</div></div>
+    <div class="cell"><div class="ico" style=""><img src="../assets/terrain/desert.svg" alt="desert" /></div><div class="nm">Desert</div></div>
+    <div class="cell"><div class="ico" style=""><img src="../assets/terrain/forest.svg" alt="forest" /></div><div class="nm">Forest</div></div>
+    <div class="cell"><div class="ico" style=""><img src="../assets/terrain/industrial.svg" alt="industrial" /></div><div class="nm">Industrial</div></div>
+    <div class="cell"><div class="ico" style=""><img src="../assets/terrain/mountain.svg" alt="mountain" /></div><div class="nm">Mountain</div></div>
+    <div class="cell"><div class="ico" style=""><img src="../assets/terrain/plains.svg" alt="plains" /></div><div class="nm">Plains</div></div>
+    <div class="cell"><div class="ico" style=""><img src="../assets/terrain/river.svg" alt="river" /></div><div class="nm">River</div></div>
+    <div class="cell"><div class="ico" style=""><img src="../assets/terrain/techRuins.svg" alt="techRuins" /></div><div class="nm">Tech Ruins</div></div>
+    <div class="cell"><div class="ico" style=""><img src="../assets/terrain/warzone.svg" alt="warzone" /></div><div class="nm">Warzone</div></div>
+  </div>
+</body>
+</html>

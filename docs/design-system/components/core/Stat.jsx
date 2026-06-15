@@ -1,10 +1,5 @@
-import React from "react";
+import * as React from "react";
 
-/**
- * WARLANDS Stat — a labelled numeric readout, as used in the top resource bar.
- * Micro uppercase label + a mono, tabular value tinted by accent. Numbers are
- * ALWAYS monospace in WARLANDS (resource counts, prices, timers, power).
- */
 const ACCENTS = {
   amber: "var(--amber-text)",
   blood: "var(--blood-text)",
@@ -15,42 +10,35 @@ const ACCENTS = {
   neutral: "var(--text-secondary)",
 };
 
-export function Stat({ label, value, accent = "neutral", align = "row", size = "md", style, ...rest }) {
+/** Labelled mono numeric readout for the resource bar & dashboards. */
+export function Stat({
+  label,
+  value,
+  accent = "neutral",
+  align = "row",
+  size = "md",
+  style,
+  ...rest
+}) {
   const valueSize = size === "lg" ? "18px" : size === "sm" ? "12px" : "14px";
-  const isStacked = align === "stack";
-
+  const stacked = align === "stack";
   return (
     <div
       style={{
         display: "flex",
-        flexDirection: isStacked ? "column" : "row",
-        alignItems: isStacked ? "flex-start" : "baseline",
-        gap: isStacked ? "2px" : "6px",
+        flexDirection: stacked ? "column" : "row",
+        alignItems: stacked ? "flex-start" : "baseline",
+        gap: stacked ? "2px" : "6px",
         ...style,
       }}
       {...rest}
     >
-      <span
-        style={{
-          fontSize: "10px",
-          fontWeight: "var(--fw-semibold)",
-          letterSpacing: "0.08em",
-          textTransform: "uppercase",
-          color: "var(--text-muted)",
-          whiteSpace: "nowrap",
-        }}
-      >
+      <span className="wl-label" style={{ whiteSpace: "nowrap" }}>
         {label}
       </span>
       <span
-        style={{
-          fontFamily: "var(--font-mono)",
-          fontVariantNumeric: "tabular-nums",
-          fontWeight: "var(--fw-semibold)",
-          fontSize: valueSize,
-          color: ACCENTS[accent] || ACCENTS.neutral,
-          lineHeight: 1.1,
-        }}
+        className="wl-num"
+        style={{ fontWeight: 600, fontSize: valueSize, color: ACCENTS[accent], lineHeight: 1.1 }}
       >
         {value}
       </span>

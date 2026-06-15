@@ -1,26 +1,32 @@
-import React from "react";
+import * as React from "react";
 
-/**
- * WARLANDS Panel — the bordered dark surface that frames every group of
- * controls (the rounded-lg border + panel background used across the HUD).
- * Optional ALL-CAPS title and an accent rim (e.g. amber for "your" panels,
- * blood for hostile-camp panels).
- */
-export function Panel({ children, title, label, accent, rim, padding = "16px", style, headerRight, ...rest }) {
-  const rimColor = {
-    amber: "rgba(245,179,1,0.3)",
-    blood: "rgba(220,38,38,0.3)",
-    sky: "rgba(74,144,217,0.3)",
-    emerald: "rgba(52,211,153,0.3)",
-  }[rim];
+const RIMS = {
+  amber: "rgba(245,179,1,0.3)",
+  blood: "rgba(220,38,38,0.3)",
+  sky: "rgba(74,144,217,0.3)",
+  emerald: "rgba(52,211,153,0.3)",
+};
 
+/** Dark bordered surface that frames a group of HUD controls. */
+export function Panel({
+  children,
+  title,
+  label,
+  accent,
+  rim,
+  padding = "16px",
+  headerRight,
+  style,
+  ...rest
+}) {
+  const rimColor = rim ? RIMS[rim] : undefined;
   return (
     <section
       style={{
         background: "var(--surface-card)",
         border: `1px solid ${rimColor || "var(--border-default)"}`,
         borderRadius: "var(--radius-lg)",
-        boxShadow: "var(--shadow-1), var(--edge-inset)",
+        boxShadow: "var(--shadow-1)",
         overflow: "hidden",
         ...style,
       }}
@@ -38,12 +44,11 @@ export function Panel({ children, title, label, accent, rim, padding = "16px", s
           }}
         >
           <span
+            className="wl-title"
             style={{
-              fontFamily: "var(--font-display)",
               fontSize: title ? "13px" : "10px",
-              fontWeight: "var(--fw-semibold)",
+              fontWeight: 600,
               letterSpacing: "0.1em",
-              textTransform: "uppercase",
               color: accent ? "var(--amber-text)" : "var(--text-secondary)",
             }}
           >

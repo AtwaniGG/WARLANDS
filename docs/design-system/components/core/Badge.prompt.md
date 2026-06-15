@@ -1,10 +1,9 @@
-Compact uppercase status tag. `soft` (tinted) for inline labels, `solid` for emphasis.
+Compact uppercase status / ownership tag — OWNED, SHIELDED, UNDER ATTACK, TIER 3, PROTOTYPE.
 
 ```jsx
-<Badge tone="amber">OWNED</Badge>
-<Badge tone="blood" variant="solid">PROTOTYPE</Badge>
-<Badge tone="sky">TIER 3</Badge>
-<Badge tone="emerald">PASSED</Badge>
+<Badge tone="amber">Owned</Badge>
+<Badge tone="emerald" variant="solid">Shielded</Badge>
+<Badge tone="blood" variant="solid">Under Attack</Badge>
 ```
 
-Tones map to the semantic palette: `amber` (owned/economy), `blood` (war/danger), `sky` (ally), `emerald` (success), `violet` (rare), `teal` (trade), `neutral`.
+Tones: `amber | blood | sky | emerald | violet | teal | neutral`. `variant="soft"` (tinted bg, colored text) or `"solid"` (filled). Tiny 10px uppercase — always reads as a tag, never a button.

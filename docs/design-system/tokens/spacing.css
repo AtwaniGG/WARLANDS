@@ -1,59 +1,35 @@
-/* WARLANDS — Spacing, radii, elevation, motion
-   ==================================================================
-   8px grid (Art Direction Bible §7), with 2/4px substeps for the
-   dense HUD. Radii are a tight 4 / 8 / 12 set (§M7). Surfaces are
-   dark, so elevation reads through hairline borders + deep shadows,
-   not bright glows.
+/* ==================================================================
+   WARLANDS — Spacing, radii, elevation & motion
+   8pt spacing rhythm. Small radii (military, not bubbly).
+   3-tier elevation + amber inner-glow for selected/active.
    ================================================================== */
-
 :root {
-  /* ---- Spacing scale (8px grid + substeps) ---- */
-  --space-0:   0;
-  --space-px:  1px;
-  --space-0_5: 2px;
-  --space-1:   4px;
-  --space-1_5: 6px;
-  --space-2:   8px;
-  --space-3:   12px;
-  --space-4:   16px;
-  --space-5:   20px;
-  --space-6:   24px;
-  --space-8:   32px;
-  --space-10:  40px;
-  --space-12:  48px;
-  --space-16:  64px;
+  /* ---- Spacing scale (8pt base) ---- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
 
-  /* ---- Radii (4 / 8 / 12) ---- */
-  --radius-sm:   4px;   /* chips, buttons, table cells */
-  --radius-md:   8px;   /* panels, inputs */
-  --radius-lg:   12px;  /* modals, big cards */
-  --radius-pill: 999px; /* token coins, status dots */
+  /* ---- Radii (sharp / tactical) ---- */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-pill: 999px;
 
-  /* ---- Borders ---- */
-  --border-w:  1px;
-  --border-w-strong: 2px;   /* owned/enemy rims, selection */
-
-  /* ---- Elevation (deep shadows on near-black, no glow) ---- */
-  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.5);
-  --shadow-2: 0 4px 12px rgba(0, 0, 0, 0.55);
-  --shadow-modal: 0 24px 60px rgba(0, 0, 0, 0.7);
-  /* inset hairline that gives panels a "machined" edge */
-  --edge-inset: inset 0 1px 0 rgba(255, 255, 255, 0.03);
-
-  /* ---- Focus ring (amber, never removed for a11y) ---- */
-  --focus-ring-w: 2px;
+  /* ---- Elevation (3 tiers + focus + glow) ---- */
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.5);          /* raised card */
+  --shadow-2: 0 4px 12px rgba(0, 0, 0, 0.55);        /* floating */
+  --shadow-modal: 0 24px 60px rgba(0, 0, 0, 0.7);    /* dialog / sheet */
   --focus-ring: 0 0 0 2px var(--panel-void), 0 0 0 4px var(--amber);
-
-  /* ---- Glow accents (restrained — radar sweep / active state) ---- */
   --glow-amber: 0 0 0 1px rgba(245, 179, 1, 0.4), 0 0 12px rgba(245, 179, 1, 0.18);
-  --glow-blood: 0 0 0 1px rgba(220, 38, 38, 0.45), 0 0 12px rgba(220, 38, 38, 0.2);
 
-  /* ---- Motion (tasteful, performant, mobile-first 60fps) ---- */
-  --dur-instant: 75ms;  /* @kind other */
-  --dur-fast:    120ms; /* @kind other */
-  --dur:         200ms; /* @kind other */
-  --dur-slow:    320ms; /* @kind other */
-  --ease-out:    cubic-bezier(0.2, 0.8, 0.2, 1);  /* @kind other */
-  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);    /* @kind other */
-  --ease-snap:   cubic-bezier(0.34, 1.4, 0.5, 1); /* @kind other */  /* press/claim "juice" */
+  /* ---- Motion ---- */
+  --dur-fast: 120ms; /* @kind other */
+  --dur: 200ms; /* @kind other */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1); /* @kind other */
+  --ease-snap: cubic-bezier(0.34, 1.4, 0.5, 1); /* @kind other */ /* placement "snap" / pop */
 }

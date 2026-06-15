@@ -1,0 +1,265 @@
+<!-- @dsCard group="Landing" viewport="1280x760" name="Marketing Landing" subtitle="Tactical hero — Stake the Land. Forge an Empire. Wage War." -->
+<!-- @startingPoint section="Marketing" subtitle="WARLANDS landing page — hero, loop, doctrine, land, $WAR" viewport="1280x900" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>WARLANDS — Web3 Strategy MMO</title>
+<link rel="stylesheet" href="../../styles.css" />
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #0a0d12; color: #d4d4d8; font-family: var(--font-ui); overflow-x: hidden; }
+  a { text-decoration: none; color: inherit; }
+  .wrap { position: relative; max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+
+  /* atmosphere layers */
+  .atmos { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+  .atmos .hex { position: absolute; inset: 0; opacity: 0.4; }
+  .atmos .glow { position: absolute; top: -160px; left: 50%; height: 520px; width: 820px; transform: translateX(-50%); border-radius: 50%; background: rgba(245,179,1,0.10); filter: blur(120px); }
+  .atmos .vig { position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 55%, #05070b 100%); }
+
+  /* nav */
+  nav.bar { position: relative; z-index: 10; display: flex; align-items: center; justify-content: space-between; padding: 20px 0; }
+  .brand { display: flex; align-items: center; gap: 9px; }
+  .brand .mk { display: grid; place-items: center; height: 28px; width: 28px; background: var(--amber); color: #000; font-family: var(--font-display); font-weight: 800; font-size: 17px; }
+  .brand .wd { font-family: var(--font-display); font-weight: 700; letter-spacing: 0.2em; font-size: 18px; color: #f4f4f5; }
+  .navlinks { display: flex; gap: 28px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.18em; color: #a1a1aa; }
+  .navlinks a:hover { color: var(--amber-text); }
+  .enter { border: 1px solid rgba(245,179,1,0.6); background: rgba(245,179,1,0.1); padding: 9px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--amber-text); transition: all var(--dur) var(--ease-out); }
+  .enter:hover { background: var(--amber); color: #000; }
+
+  /* hero */
+  header.hero { position: relative; z-index: 10; padding: 56px 0 80px; }
+  .tagpill { display: inline-flex; align-items: center; gap: 8px; border: 1px solid rgba(113,113,122,0.5); background: rgba(0,0,0,0.3); padding: 5px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.25em; color: #a1a1aa; margin-bottom: 24px; }
+  .liveball { display: inline-block; height: 6px; width: 6px; border-radius: 50%; background: #34d399; animation: wl-pulse 2s ease-in-out infinite; }
+  h1.hl { font-family: var(--font-display); font-weight: 700; font-size: 88px; line-height: 0.95; letter-spacing: -0.02em; color: #fafafa; margin: 0; text-transform: uppercase; }
+  h1.hl .amber { color: var(--amber); }
+  h1.hl .blood { color: var(--blood); }
+  .lede { margin-top: 24px; max-width: 540px; font-size: 17px; line-height: 1.6; color: #a1a1aa; }
+  .cta-row { margin-top: 36px; display: flex; flex-wrap: wrap; gap: 16px; align-items: center; }
+  .btn-amber { background: var(--amber); color: #000; padding: 15px 28px; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; transition: background var(--dur) var(--ease-out); }
+  .btn-amber:hover { background: var(--amber-text); }
+  .btn-ghost { border: 1px solid #3f3f46; padding: 15px 28px; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: #d4d4d8; transition: all var(--dur) var(--ease-out); }
+  .btn-ghost:hover { border-color: #71717a; color: #fff; }
+  .link-wp { padding: 15px 4px; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: rgba(251,191,36,0.9); }
+  .link-wp:hover { text-decoration: underline; text-underline-offset: 4px; }
+
+  /* status readout */
+  .readout { margin-top: 56px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; border: 1px solid #27272a; background: #27272a; font-family: var(--font-mono); }
+  .readout .cell { padding: 14px 16px; background: var(--panel-void); }
+  .readout .k { font-size: 10px; text-transform: uppercase; letter-spacing: 0.18em; color: #71717a; }
+  .readout .v { margin-top: 5px; font-size: 18px; font-weight: 700; color: var(--amber-text); }
+
+  /* hazard divider */
+  .hazdiv { position: relative; z-index: 10; height: 6px; opacity: 0.5; }
+
+  /* sections */
+  section.sec { position: relative; z-index: 10; padding: 72px 0; }
+  .seclabel { display: flex; align-items: center; gap: 16px; }
+  .seclabel .n { display: grid; place-items: center; height: 28px; width: 28px; border: 1px solid rgba(245,179,1,0.5); font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--amber); }
+  .seclabel h2 { font-family: var(--font-display); font-weight: 600; font-size: 30px; letter-spacing: -0.01em; color: #f4f4f5; margin: 0; }
+  .seclabel .rule { height: 1px; flex: 1; background: #27272a; }
+
+  /* loop */
+  .loop { margin-top: 32px; display: flex; flex-wrap: wrap; gap: 8px; align-items: stretch; font-family: var(--font-mono); }
+  .loopstep { display: flex; align-items: center; gap: 8px; }
+  .loopbox { border: 1px solid #27272a; background: #0f131c; padding: 12px 16px; text-align: center; }
+  .loopbox .i { font-size: 10px; color: #52525b; }
+  .loopbox .s { font-size: 13px; font-weight: 700; letter-spacing: 0.04em; color: #e4e4e7; }
+  .loop .arr { color: rgba(245,179,1,0.7); }
+  .loopnote { margin-top: 24px; max-width: 620px; font-size: 13px; line-height: 1.6; color: #71717a; }
+
+  /* doctrine */
+  .pillars { margin-top: 32px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: #27272a; }
+  .pillar { padding: 28px; background: var(--panel-void); }
+  .pillar .no { font-family: var(--font-display); font-weight: 700; font-size: 48px; color: #27272a; }
+  .pillar .accent { margin-top: 12px; height: 2px; width: 40px; }
+  .pillar h3 { font-family: var(--font-display); font-weight: 600; font-size: 20px; color: #f4f4f5; margin: 16px 0 0; }
+  .pillar p { margin-top: 12px; font-size: 13px; line-height: 1.6; color: #a1a1aa; }
+
+  /* land */
+  .landnote { margin-top: 16px; max-width: 620px; font-size: 13px; color: #71717a; line-height: 1.6; }
+  .terr { margin-top: 32px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: #27272a; font-family: var(--font-mono); }
+  .terr .t { padding: 16px; background: var(--panel-void); }
+  .terr .th { display: flex; align-items: center; justify-content: space-between; }
+  .terr .dot { display: inline-block; height: 12px; width: 12px; }
+  .terr .def { font-size: 10px; text-transform: uppercase; letter-spacing: 0.18em; color: #52525b; }
+  .terr .nm { margin-top: 12px; font-size: 13px; font-weight: 700; color: #e4e4e7; }
+  .terr .stk { margin-top: 4px; color: var(--amber-text); font-size: 13px; }
+  .terr .stk span { font-size: 10px; color: #71717a; }
+
+  /* token */
+  .tokgrid { margin-top: 32px; display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .flowrow { display: flex; align-items: center; gap: 12px; border: 1px solid #27272a; padding: 12px 16px; background: var(--panel-void); margin-bottom: 12px; }
+  .flowrow .bar { display: inline-block; height: 32px; width: 4px; }
+  .flowrow .top { display: flex; align-items: baseline; justify-content: space-between; }
+  .flowrow .lbl { font-size: 13px; font-weight: 700; letter-spacing: 0.04em; color: #e4e4e7; white-space: nowrap; }
+  .flowrow .desc { font-size: 11px; color: #71717a; }
+  .tokbox { border: 1px solid #27272a; padding: 24px; font-family: var(--font-mono); background: var(--panel-void); }
+  .tokbox .h { font-size: 10px; text-transform: uppercase; letter-spacing: 0.18em; color: #71717a; }
+  .tokbox pre { margin: 12px 0 0; font-size: 11px; line-height: 1.6; color: #a1a1aa; white-space: pre; overflow-x: auto; }
+  .tokbox .inv { margin-top: 16px; border-top: 1px solid #27272a; padding-top: 12px; font-size: 11px; color: #34d399; }
+
+  /* final cta */
+  .finalcta { position: relative; z-index: 10; padding: 72px 0; }
+  .ctabox { position: relative; overflow: hidden; border: 1px solid rgba(245,179,1,0.3); background: linear-gradient(135deg, #13100a, #0c1018); padding: 56px 40px; text-align: center; }
+  .ctabox h2 { position: relative; font-family: var(--font-display); font-weight: 700; font-size: 44px; letter-spacing: -0.01em; color: #fafafa; margin: 0; text-transform: uppercase; }
+  .ctabox p { position: relative; margin: 16px auto 0; max-width: 420px; font-size: 13px; color: #a1a1aa; line-height: 1.6; }
+  .ctabox a { position: relative; margin-top: 32px; display: inline-block; }
+
+  footer { position: relative; z-index: 10; border-top: 1px solid #18181b; padding: 32px 0; }
+  footer .inner { display: flex; align-items: center; justify-content: space-between; font-family: var(--font-mono); font-size: 11px; color: #52525b; }
+  footer .inner span:first-child { letter-spacing: 0.18em; }
+
+  @media (max-width: 720px) {
+    h1.hl { font-size: 52px; }
+    .readout, .pillars, .terr, .tokgrid { grid-template-columns: 1fr 1fr; }
+    .navlinks { display: none; }
+  }
+
+  /* Robust entrance: visible end-state is the BASE so content never gets
+     stranded at opacity 0 (print/export/reduced-motion safe). The rise is a
+     pure enhancement layered on top only when motion is allowed. */
+  /* base.css `.wl-rise` starts at opacity:0 and only reaches opacity:1 when its
+     animation finishes — but capture/print/export environments freeze animations
+     at frame 0, stranding content invisible. `!important` author rules override
+     animation keyframes, so force the visible end-state and let the rise be a
+     transform-only flourish layered on top. */
+  .wl-rise { opacity: 1 !important; }
+  @keyframes land-rise { from { transform: translateY(16px); } to { transform: none; } }
+  @media (prefers-reduced-motion: no-preference) {
+    .wl-rise { animation: land-rise 0.7s cubic-bezier(0.16,1,0.3,1) both; }
+  }
+</style>
+</head>
+<body class="wl-grain">
+  <div class="atmos">
+    <div class="hex wl-hexgrid"></div>
+    <div class="glow wl-glow"></div>
+    <div class="vig"></div>
+  </div>
+  <div class="wl-scanline"></div>
+
+  <nav class="bar wrap">
+    <div class="brand"><span class="mk">W</span><span class="wd">WARLANDS</span></div>
+    <div class="navlinks">
+      <a href="#loop">The Loop</a>
+      <a href="#pillars">Doctrine</a>
+      <a href="#land">Land</a>
+      <a href="#token">$WAR</a>
+      <a href="#">Whitepaper</a>
+    </div>
+    <a href="#" class="enter">Enter War Room</a>
+  </nav>
+
+  <header class="hero wrap">
+    <div class="tagpill wl-rise"><span class="liveball"></span>Persistent world · always running</div>
+    <h1 class="hl">
+      <span class="wl-rise" style="display:block">STAKE THE LAND.</span>
+      <span class="wl-rise amber" style="display:block;animation-delay:.1s">FORGE AN EMPIRE.</span>
+      <span class="wl-rise" style="display:block;animation-delay:.2s">WAGE <span class="blood">WAR</span>.</span>
+    </h1>
+    <p class="lede wl-rise" style="animation-delay:.32s">A persistent Web3 strategy MMO on one shared hex world. Stake the native token to claim finite land, build industrial-military supply chains, trade a player-driven economy, and conquer your neighbors — alone or in an Allegiance.</p>
+    <div class="cta-row wl-rise" style="animation-delay:.42s">
+      <a href="#" class="btn-amber">Deploy to the Front →</a>
+      <a href="#loop" class="btn-ghost">How it works</a>
+      <a href="#" class="link-wp">Whitepaper ↗</a>
+    </div>
+    <div class="readout wl-rise" style="animation-delay:.52s">
+      <div class="cell"><div class="k">World</div><div class="v">ONLINE</div></div>
+      <div class="cell"><div class="k">Land Plots</div><div class="v">~250,000</div></div>
+      <div class="cell"><div class="k">Token</div><div class="v">$WAR</div></div>
+      <div class="cell"><div class="k">Season</div><div class="v">30 DAYS</div></div>
+    </div>
+  </header>
+
+  <div class="hazdiv wl-hazard"></div>
+
+  <section id="loop" class="sec wrap">
+    <div class="seclabel"><span class="n">A</span><h2>The Core Loop</h2><span class="rule"></span></div>
+    <div class="loop" id="loopmount"></div>
+    <p class="loopnote">Easy to understand, brutal to master. Learnable in ten minutes; the supply-chain arbitrage, combat counters, and Allegiance politics take years.</p>
+  </section>
+
+  <section id="pillars" class="sec wrap" style="padding-top:24px">
+    <div class="seclabel"><span class="n">B</span><h2>Doctrine</h2><span class="rule"></span></div>
+    <div class="pillars" id="pillarmount"></div>
+  </section>
+
+  <section id="land" class="sec wrap">
+    <div class="seclabel"><span class="n">C</span><h2>Finite Land · Real Scarcity</h2><span class="rule"></span></div>
+    <p class="landnote">Nine terrain types, each with its own yields, defenses, and stake. Higher tiers earn more and bleed more. Stake is locked — never spent, never lootable.</p>
+    <div class="terr" id="terrmount"></div>
+  </section>
+
+  <section id="token" class="sec wrap">
+    <div class="seclabel"><span class="n">D</span><h2>$WAR · Not a Reward Printer</h2><span class="rule"></span></div>
+    <div class="tokgrid">
+      <div>
+        <p style="font-size:13px;line-height:1.6;color:#a1a1aa;margin-top:0">Fixed supply. No minting for rewards. Every sink — staking, fees, upkeep, speed-ups, war — flows through a single router and splits three ways. A hard, on-chain invariant guarantees payouts can never exceed what sinks collected.</p>
+        <div style="margin-top:24px">
+          <div class="flowrow"><span class="bar" style="background:var(--blood)"></span><div style="flex:1"><div class="top"><span class="lbl">BURN</span><span style="color:var(--blood);font-size:13px">≥ 20%</span></div><div class="desc">permanently removed · structural deflation</div></div></div>
+          <div class="flowrow"><span class="bar" style="background:var(--amber)"></span><div style="flex:1"><div class="top"><span class="lbl">SEASON POOL</span><span style="color:var(--amber);font-size:13px">~40%</span></div><div class="desc">ranked player rewards (sink-funded)</div></div></div>
+          <div class="flowrow"><span class="bar" style="background:var(--teal)"></span><div style="flex:1"><div class="top"><span class="lbl">REGION TAX</span><span style="color:var(--teal);font-size:13px">~20%</span></div><div class="desc">income for territory-holding Allegiances</div></div></div>
+        </div>
+      </div>
+      <div class="tokbox">
+        <div class="h">Token flow</div>
+        <pre>PLAYERS
+  │ fees · upkeep · speed-ups
+  ▼
+SINK ROUTER ──► BURN  (supply ↓)
+  │
+  ├──► SEASON POOL ──► ranked payouts
+  │
+  └──► REGION TAX ──► Allegiance treasuries
+                          │
+                          └► re-spent (sinks) ↺</pre>
+        <div class="inv">Σ rewards ≤ Σ sinks − burns · enforced in contract</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="finalcta wrap">
+    <div class="ctabox">
+      <div class="wl-hexgrid" style="position:absolute;inset:0;opacity:0.3"></div>
+      <h2>THE WORLD IS ALREADY AT WAR.</h2>
+      <p>No matches. No lobbies. One live map, always running. Claim your ground before someone else stakes it.</p>
+      <a href="#" class="btn-amber">Enter the War Room →</a>
+    </div>
+  </section>
+
+  <footer>
+    <div class="inner wrap">
+      <span>WARLANDS · AAA WEB3 STRATEGY MMO</span>
+      <span>Prototype build · 2026</span>
+    </div>
+  </footer>
+
+  <script>
+    const LOOP = ["STAKE","CLAIM","BUILD","FARM","MANUFACTURE","RAID","ALLY","EARN"];
+    document.getElementById("loopmount").innerHTML = LOOP.map((s,i)=>
+      `<div class="loopstep"><div class="loopbox"><div class="i">${String(i+1).padStart(2,'0')}</div><div class="s">${s}</div></div>${i<LOOP.length-1?'<span class="arr">→</span>':''}</div>`
+    ).join("");
+
+    const PILLARS = [
+      {no:"01",title:"Land is staked, not bought",body:"Lock $WAR to secure a plot — never spent, always returnable. Conquest transfers the right to the land, never your principal. Skin in the game without loot in the game.",accent:"var(--amber)"},
+      {no:"02",title:"Economy before war",body:"No army without a supply chain. No plot makes everything well. Specialization and trade are structurally forced — then war disrupts what the economy built.",accent:"var(--teal)"},
+      {no:"03",title:"War funded by sinks, not emissions",body:"Every reward $WAR is first collected from a real sink. The protocol can never pay out more than it took in. No infinite emissions. No death spiral.",accent:"var(--blood)"},
+    ];
+    document.getElementById("pillarmount").innerHTML = PILLARS.map(p=>
+      `<div class="pillar"><div class="no">${p.no}</div><div class="accent" style="background:${p.accent}"></div><h3>${p.title}</h3><p>${p.body}</p></div>`
+    ).join("");
+
+    const TERR = [
+      ["Basic Plot",10000,"#7c8a4f","1"],["Forest Plot",12500,"#2f5d3a","1.1"],["River Plot",15000,"#2c6f8c","1"],
+      ["Mountain Plot",20000,"#6b6f78","1.3"],["Oil Desert Plot",25000,"#c9a14a","0.9"],["Coastal Trade Plot",30000,"#3f9aa6","1"],
+      ["Industrial Plot",40000,"#8a5a3c","1"],["Technology Ruins Plot",50000,"#5b4b8a","1"],["Warzone Plot",60000,"#9c2b2b","0.9"],
+    ];
+    document.getElementById("terrmount").innerHTML = TERR.map(([n,s,c,d])=>
+      `<div class="t"><div class="th"><span class="dot" style="background:${c}"></span><span class="def">DEF ×${d}</span></div><div class="nm">${n}</div><div class="stk">${s.toLocaleString()} <span>$WAR</span></div></div>`
+    ).join("");
+  </script>
+</body>
+</html>
