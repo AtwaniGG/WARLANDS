@@ -4,12 +4,17 @@ import { useWorldSocket } from "@/lib/useWorldSocket";
 import { PLOT_TYPES } from "@/game/plotTypes";
 import { axialToPixel } from "@/game/world";
 import { BUILDINGS, isBuildingAllowedOnTerrain, type BuildingId } from "@/game/buildings";
+import { RESOURCES, type ResourceId } from "@/game/resources";
+import { upgradeCost } from "@/game/formulas";
 
 const SERVER_URL = process.env.NEXT_PUBLIC_GAME_SERVER_URL ?? "ws://localhost:8080";
 const SIZE = 16;
 
-// Buildings offered in the slice UI (extractors + storage); filtered by terrain.
-const OFFER: BuildingId[] = ["farm", "well", "lumberCamp", "quarry", "ironMine", "oilDerrick", "warehouse"];
+// Buildings offered in the slice UI; filtered by terrain.
+const OFFER: BuildingId[] = [
+  "farm", "well", "lumberCamp", "quarry", "ironMine", "mineralMine", "oilDerrick", "dataExcavator",
+  "refinery", "foundry", "armsFactory", "heavyWorks", "electronicsLab", "warehouse",
+];
 
 export default function WorldPage() {
   const { state, playerId, connected, error, send } = useWorldSocket(SERVER_URL);
@@ -17,9 +22,7 @@ export default function WorldPage() {
 
   if (!state) {
     return (
-      <main style={{ padding: 24, fontFamily: "monospace", color: "#e8e8e8", background: "#0d0f14", minHeight: "100vh" }}>
-        {connected ? "Loading world…" : `Connecting to ${SERVER_URL}…`}
-      </main>
+      <main style={page}>{connected ? "Loading world…" : `Connecting to ${SERVER_URL}…`}</main>
     );
   }
 
@@ -29,10 +32,11 @@ export default function WorldPage() {
   const mine = Object.values(state.plots).filter((p) => p.owner === playerId).length;
 
   return (
-    <main style={{ padding: 16, fontFamily: "monospace", color: "#e8e8e8", background: "#0d0f14", minHeight: "100vh" }}>
+    <main style={page}>
       <h1 style={{ margin: "0 0 8px", fontSize: 20 }}>WARLANDS · Live World</h1>
       <div style={{ fontSize: 13, opacity: 0.85 }}>
-        {connected ? "🟢 connected" : "🔴 offline"} · tick {state.tick} · players {Object.keys(state.players).length} ·{" "}
+        {connected ? "🟢 connected" : "🔴 offline"} · tick {state.tick} · players{" "}
+        {Object.keys(state.players).length} · burned {Math.round(state.burned ?? 0).toLocaleString()} ·{" "}
         you: {me ? `${Math.round(me.war).toLocaleString()} $WAR · ${mine} plots` : "—"}
       </div>
       {error && <div style={{ color: "#ff6b6b", fontSize: 12, marginTop: 4 }}>⚠ {error}</div>}
@@ -61,56 +65,86 @@ export default function WorldPage() {
       </svg>
 
       {selHex && (
-        <div style={{ marginTop: 12, fontSize: 13 }}>
+        <div style={{ marginTop: 12, fontSize: 13, maxWidth: 540 }}>
           <div style={{ marginBottom: 6 }}>
             Selected <b>{sel}</b> · {PLOT_TYPES[selHex.terrain].name} · stake{" "}
             {PLOT_TYPES[selHex.terrain].stake.toLocaleString()} $WAR
           </div>
 
           {!selPlot && (
-            <button
-              onClick={() => {
-                const [q, r] = sel!.split(",").map(Number);
-                send({ type: "stake", q, r });
-              }}
-              style={btn}
-            >
+            <button onClick={() => { const [q, r] = sel!.split(",").map(Number); send({ type: "stake", q, r }); }} style={btn}>
               Stake this plot
             </button>
           )}
 
           {selPlot?.owner === playerId && (
             <div>
-              <div style={{ marginBottom: 6, opacity: 0.85 }}>
-                Buildings: {selPlot.buildings.map((b) => BUILDINGS[b.id].name).join(", ")}
-              </div>
               <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 8 }}>
                 {Object.entries(selPlot.resources)
-                  .filter(([, v]) => (v ?? 0) > 0)
-                  .map(([k, v]) => `${k} ${Math.round(v ?? 0)}`)
-                  .join(" · ") || "no resources yet"}
+                  .filter(([, v]) => (v ?? 0) > 0.5)
+                  .map(([k, v]) => `${RESOURCES[k as ResourceId]?.icon ?? ""}${Math.round(v ?? 0)}`)
+                  .join("  ") || "no resources yet"}
               </div>
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+
+              {/* per-building: level, upgrade, factory product select */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 10 }}>
+                {selPlot.buildings.map((b, i) => {
+                  const def = BUILDINGS[b.id];
+                  const cost = upgradeCost(def.baseCost || 200, b.level + 1);
+                  const maxed = b.level >= def.maxLevel;
+                  return (
+                    <div key={i} style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                      <span style={{ minWidth: 150 }}>{def.icon} {def.name} L{b.level}</span>
+                      {b.id !== "camp" || def.maxLevel > 1 ? (
+                        <button onClick={() => send({ type: "upgrade", key: sel!, index: i })} style={btnSm} disabled={maxed}>
+                          {maxed ? "max" : `↑ L${b.level + 1} (${cost.toLocaleString()})`}
+                        </button>
+                      ) : null}
+                      {def.kind === "factory" && def.makes && (
+                        <select
+                          value={b.activeProduct ?? def.makes[0]}
+                          onChange={(e) => send({ type: "setProduct", key: sel!, index: i, product: e.target.value as ResourceId })}
+                          style={select}
+                        >
+                          {def.makes.map((p) => (
+                            <option key={p} value={p}>{RESOURCES[p].name}</option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* build new */}
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
                 {OFFER.filter((id) => isBuildingAllowedOnTerrain(BUILDINGS[id], PLOT_TYPES[selPlot.terrain].produces)).map((id) => (
-                  <button key={id} onClick={() => send({ type: "build", key: sel!, buildingId: id })} style={btn}>
-                    Build {BUILDINGS[id].name} ({BUILDINGS[id].baseCost} $WAR)
+                  <button key={id} onClick={() => send({ type: "build", key: sel!, buildingId: id })} style={btnSm}>
+                    + {BUILDINGS[id].name} ({BUILDINGS[id].baseCost})
                   </button>
                 ))}
               </div>
+
+              <button onClick={() => { send({ type: "unstake", key: sel! }); setSel(null); }} style={btnDanger}>
+                Unstake (3% fee)
+              </button>
             </div>
           )}
 
-          {enemyOwned(selPlot, playerId) && <div style={{ color: "#ff8a80" }}>Held by another commander.</div>}
+          {selPlot && selPlot.owner !== playerId && <div style={{ color: "#ff8a80" }}>Held by another commander.</div>}
         </div>
       )}
     </main>
   );
 }
 
-function enemyOwned(plot: { owner: string } | null | undefined, playerId: string | null): boolean {
-  return !!plot && plot.owner !== playerId;
-}
-
+const page: React.CSSProperties = {
+  padding: 16,
+  fontFamily: "monospace",
+  color: "#e8e8e8",
+  background: "#0d0f14",
+  minHeight: "100vh",
+};
 const btn: React.CSSProperties = {
   background: "#1f2a44",
   color: "#e8e8e8",
@@ -120,4 +154,15 @@ const btn: React.CSSProperties = {
   fontFamily: "monospace",
   fontSize: 12,
   cursor: "pointer",
+};
+const btnSm: React.CSSProperties = { ...btn, padding: "3px 7px", fontSize: 11 };
+const btnDanger: React.CSSProperties = { ...btn, background: "#3a1d1d", border: "1px solid #6b2f2f" };
+const select: React.CSSProperties = {
+  background: "#1f2a44",
+  color: "#e8e8e8",
+  border: "1px solid #2f3e63",
+  borderRadius: 6,
+  padding: "2px 4px",
+  fontFamily: "monospace",
+  fontSize: 11,
 };

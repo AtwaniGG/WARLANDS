@@ -10,7 +10,7 @@ export function createWorld(seed: number): WorldState {
   const { radius, hexes } = generateWorld(WORLD_RADIUS);
   const hexRecord: WorldState["hexes"] = {};
   for (const [k, h] of hexes) hexRecord[k] = h;
-  return { seed, radius, tick: 0, hexes: hexRecord, plots: {}, players: {} };
+  return { seed, radius, tick: 0, hexes: hexRecord, plots: {}, players: {}, burned: 0 };
 }
 
 export function addPlayer(state: WorldState, id: string): WorldState {

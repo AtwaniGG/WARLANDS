@@ -1,11 +1,13 @@
 import type { TerrainId } from "@/game/plotTypes";
 import type { BuildingId } from "@/game/buildings";
-import type { ResourceBag } from "@/game/resources";
+import type { ResourceBag, ResourceId } from "@/game/resources";
 import type { Hex } from "@/game/world";
 
 export interface PlacedBuilding {
   id: BuildingId;
   level: number;
+  /** for factories: which product this factory is currently making */
+  activeProduct?: ResourceId;
 }
 
 export interface SimPlayer {
@@ -32,11 +34,16 @@ export interface WorldState {
   hexes: Record<string, Hex>; // serializable (was Map)
   plots: Record<string, SimPlot>; // keyed by "q,r"
   players: Record<string, SimPlayer>;
+  /** total $WAR removed via sinks (early-unstake fees, etc.) — GDD §13 */
+  burned: number;
 }
 
 export type Command =
   | { type: "stake"; q: number; r: number }
-  | { type: "build"; key: string; buildingId: BuildingId };
+  | { type: "build"; key: string; buildingId: BuildingId }
+  | { type: "upgrade"; key: string; index: number }
+  | { type: "setProduct"; key: string; index: number; product: ResourceId }
+  | { type: "unstake"; key: string };
 
 export interface CommandResult {
   state: WorldState;

@@ -40,4 +40,35 @@ describe("applyTick", () => {
     w = { ...w, plots: { "0,0": { ...w.plots["0,0"], resources: { food: 1500, water: 1500 } } } };
     expect(applyTick(w).plots["0,0"].resources.food!).toBeLessThanOrEqual(1500);
   });
+
+  it("runs a factory: consumes recipe inputs and outputs the product", () => {
+    let w = addPlayer(createWorld(1), "p1");
+    // refinery makes fuel (recipe: oil 2, water 1). Give plenty of inputs.
+    const plot: SimPlot = {
+      q: 0, r: 0, terrain: "industrial", owner: "p1", claimIndex: 1, stakeLocked: 40000,
+      buildings: [
+        { id: "camp", level: 1 },
+        { id: "refinery", level: 1, activeProduct: "fuel" },
+      ],
+      resources: { oil: 100, water: 100, food: 100 },
+    };
+    w = { ...w, plots: { "0,0": plot } };
+    const after = applyTick(w).plots["0,0"].resources;
+    expect(after.fuel ?? 0).toBeGreaterThan(0);
+    expect(after.oil!).toBeLessThan(100); // oil consumed
+  });
+
+  it("a factory makes nothing when inputs are missing", () => {
+    let w = addPlayer(createWorld(1), "p1");
+    const plot: SimPlot = {
+      q: 0, r: 0, terrain: "industrial", owner: "p1", claimIndex: 1, stakeLocked: 40000,
+      buildings: [
+        { id: "camp", level: 1 },
+        { id: "refinery", level: 1, activeProduct: "fuel" },
+      ],
+      resources: { water: 100, food: 100 }, // no oil
+    };
+    w = { ...w, plots: { "0,0": plot } };
+    expect(applyTick(w).plots["0,0"].resources.fuel ?? 0).toBe(0);
+  });
 });
