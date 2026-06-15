@@ -65,9 +65,10 @@ client → validate → apply → broadcast → persist (Postgres JSONB snapshot
 Authoritative today: **stake/build**, **economy** (extractors + factories, upgrade, unstake with
 burn sink), **military** (unit training + seeded **PvP raids/sieges** with loot & defense damage),
 a **shared player marketplace** (P2P order book, buyer→seller `$WAR` transfer, fee/listing sinks),
-and **allegiances** (shared treasury, member contributions, treasury-funded buildings that buff
-every member's plots — research +12% production, fortress +15% defense, tradeHub −25% market fee).
-That's the **full single-player feature set, now server-authoritative multiplayer**. The `/world`
+and **allegiances + governance** (shared treasury, member contributions, treasury-funded buildings
+that buff every member's plots — research +12% production, fortress +15% defense, tradeHub −25%
+market fee — plus propose→vote→auto-resolve building governance). That's the **full single-player
+feature set, now server-authoritative multiplayer**. The `/world`
 route renders it live; `/play` stays single-player. Anonymous per-socket identity for now.
 See [docs/superpowers/specs/2026-06-15-server-authoritative-sim-design.md](docs/superpowers/specs/2026-06-15-server-authoritative-sim-design.md).
 
@@ -98,7 +99,7 @@ Drizzle ORM + Neon Postgres · Foundry/Solidity. Targets an EVM L2 (Base / Arbit
 ## Not yet built
 
 The full single-player feature set is now server-authoritative multiplayer (`/world`). Remaining
-for a real launch: **on-chain deployment** (contracts in `contracts/` are tested but not on a
-testnet/mainnet — needs a funded deployer wallet) + the **Merkle reward pipeline**, allegiance
-**proposal/vote governance** (founder-builds today), **sector sharding** for scale, **wallet-based
-identity + anti-cheat signatures** (anonymous ids today), and **contract audit hardening**.
+for a real launch all hinge on the chain: **on-chain deployment** (contracts in `contracts/` are
+tested but not on a testnet/mainnet — needs a funded deployer wallet) + the **Merkle reward
+pipeline**, then **wallet-based identity + anti-cheat signatures** (anonymous ids today), **sector
+sharding** for scale, and **contract audit hardening**.
