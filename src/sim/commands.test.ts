@@ -256,3 +256,71 @@ describe("market (shared order book)", () => {
     expect(error).toMatch(/no sell liquidity/i);
   });
 });
+
+describe("allegiances", () => {
+  it("found creates an allegiance, seeds the treasury, and burns half the cost", () => {
+    const w = addPlayer(createWorld(1), "p1");
+    const { state, error } = applyCommand(w, "p1", { type: "found", name: "Iron Pact" });
+    expect(error).toBeUndefined();
+    const id = state.players.p1.allegianceId!;
+    expect(id).toBeTruthy();
+    const a = state.allegiances[id];
+    expect(a.name).toBe("Iron Pact");
+    expect(a.founder).toBe("p1");
+    expect(a.members).toEqual(["p1"]);
+    expect(a.treasuryWar).toBe(2500);
+    expect(a.buildings).toContain("hq");
+    expect(state.players.p1.war).toBe(200_000 - 5000);
+    expect(state.burned).toBe(2500);
+  });
+
+  it("rejects founding while already in an allegiance", () => {
+    let w = addPlayer(createWorld(1), "p1");
+    w = applyCommand(w, "p1", { type: "found", name: "A" }).state;
+    const { error } = applyCommand(w, "p1", { type: "found", name: "B" });
+    expect(error).toMatch(/leave your current/i);
+  });
+
+  it("a second player joins", () => {
+    let w = addPlayer(addPlayer(createWorld(1), "p1"), "p2");
+    w = applyCommand(w, "p1", { type: "found", name: "Pact" }).state;
+    const id = w.players.p1.allegianceId!;
+    const { state, error } = applyCommand(w, "p2", { type: "joinAllegiance", id });
+    expect(error).toBeUndefined();
+    expect(state.players.p2.allegianceId).toBe(id);
+    expect(state.allegiances[id].members).toContain("p2");
+  });
+
+  it("contribute moves $WAR to the treasury and raises contribution", () => {
+    let w = addPlayer(createWorld(1), "p1");
+    w = applyCommand(w, "p1", { type: "found", name: "Pact" }).state;
+    const id = w.players.p1.allegianceId!;
+    const { state } = applyCommand(w, "p1", { type: "contribute", amount: 1000 });
+    expect(state.allegiances[id].treasuryWar).toBe(2500 + 1000);
+    expect(state.allegiances[id].contributions.p1).toBe(2500 + 1000);
+    expect(state.players.p1.war).toBe(200_000 - 5000 - 1000);
+  });
+
+  it("founder builds from the treasury", () => {
+    let w = addPlayer(createWorld(1), "p1");
+    w = applyCommand(w, "p1", { type: "found", name: "Pact" }).state;
+    const id = w.players.p1.allegianceId!;
+    w = applyCommand(w, "p1", { type: "contribute", amount: 12000 }).state; // research costs 12000
+    const { state, error } = applyCommand(w, "p1", { type: "allegianceBuild", buildingId: "research" });
+    expect(error).toBeUndefined();
+    expect(state.allegiances[id].buildings).toContain("research");
+    expect(state.allegiances[id].treasuryWar).toBe(2500 + 12000 - 12000);
+  });
+
+  it("leaving reassigns the founder; last one out disbands", () => {
+    let w = addPlayer(addPlayer(createWorld(1), "p1"), "p2");
+    w = applyCommand(w, "p1", { type: "found", name: "Pact" }).state;
+    const id = w.players.p1.allegianceId!;
+    w = applyCommand(w, "p2", { type: "joinAllegiance", id }).state;
+    let s = applyCommand(w, "p1", { type: "leaveAllegiance" }).state;
+    expect(s.players.p1.allegianceId).toBeNull();
+    expect(s.allegiances[id].founder).toBe("p2");
+    s = applyCommand(s, "p2", { type: "leaveAllegiance" }).state;
+    expect(s.allegiances[id]).toBeUndefined(); // disbanded
+  });
+});

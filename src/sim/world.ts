@@ -15,7 +15,18 @@ export function createWorld(seed: number): WorldState {
   const { radius, hexes } = generateWorld(WORLD_RADIUS);
   const hexRecord: WorldState["hexes"] = {};
   for (const [k, h] of hexes) hexRecord[k] = h;
-  return { seed, radius, tick: 0, hexes: hexRecord, plots: {}, players: {}, burned: 0, market: freshMarket() };
+  return {
+    seed,
+    radius,
+    tick: 0,
+    hexes: hexRecord,
+    plots: {},
+    players: {},
+    burned: 0,
+    market: freshMarket(),
+    allegiances: {},
+    nextAllegianceId: 1,
+  };
 }
 
 export function addPlayer(state: WorldState, id: string): WorldState {
@@ -56,7 +67,14 @@ export function normalizeWorld(state: WorldState): WorldState {
         nextOrderId: state.market.nextOrderId ?? 1,
       }
     : freshMarket();
-  return { ...state, burned: state.burned ?? 0, plots, market };
+  return {
+    ...state,
+    burned: state.burned ?? 0,
+    plots,
+    market,
+    allegiances: state.allegiances ?? {},
+    nextAllegianceId: state.nextAllegianceId ?? 1,
+  };
 }
 
 export { hexKey };

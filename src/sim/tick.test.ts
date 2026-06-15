@@ -34,6 +34,20 @@ describe("applyTick", () => {
     // farm baseOutput 6, terrainMult 1, level 1, workforce 1, DR(1)=1 => +6; upkeep small
     expect(after.plots["0,0"].resources.food).toBeGreaterThan(100);
   });
+
+  it("applies an allegiance research buff to production", () => {
+    const base = worldWithFarm();
+    const baseFood = applyTick(base).plots["0,0"].resources.food!;
+    const buffed: WorldState = {
+      ...base,
+      allegiances: {
+        "a-1": { id: "a-1", name: "R", founder: "p1", members: ["p1"], treasuryWar: 0, contributions: {}, buildings: ["hq", "research"] },
+      },
+      players: { ...base.players, p1: { ...base.players.p1, allegianceId: "a-1" } },
+    };
+    const buffedFood = applyTick(buffed).plots["0,0"].resources.food!;
+    expect(buffedFood).toBeGreaterThan(baseFood);
+  });
   it("is deterministic", () => {
     const w = worldWithFarm();
     expect(applyTick(w)).toEqual(applyTick(w));

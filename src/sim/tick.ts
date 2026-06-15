@@ -6,6 +6,7 @@ import { driftPrices } from "@/game/market";
 import type { Army } from "@/game/units";
 import type { SimPlot, TrainOrder, WorldState } from "./types";
 import { storageCap } from "./world";
+import { allegianceBuffs } from "./allegiance";
 
 function addRes(bag: ResourceBag, id: ResourceId, amount: number, cap: number): void {
   bag[id] = Math.min(cap, (bag[id] ?? 0) + amount);
@@ -17,10 +18,11 @@ function spendResources(bag: ResourceBag, cost: Partial<Record<ResourceId, numbe
   for (const [k, v] of Object.entries(cost)) bag[k as ResourceId] = (bag[k as ResourceId] ?? 0) - (v ?? 0);
 }
 
-function tickPlot(plot: SimPlot, tick: number): SimPlot {
+function tickPlot(plot: SimPlot, tick: number, prodBuff: number, defBuff: number): SimPlot {
   const terrain = PLOT_TYPES[plot.terrain];
   const cap = storageCap(plot);
   const dr = diminishingReturns(plot.claimIndex);
+  const workforceMult = Math.max(0.1, 1 + prodBuff); // allegiance research buff
   const resources = { ...plot.resources };
   for (const b of plot.buildings) {
     const def = BUILDINGS[b.id];
@@ -31,7 +33,7 @@ function tickPlot(plot: SimPlot, tick: number): SimPlot {
         base: def.baseOutput,
         terrainMult: terrain.yields[def.extracts] ?? 1,
         level: b.level,
-        workforceMult: 1,
+        workforceMult,
         plotIndex: plot.claimIndex,
       });
       addRes(resources, def.extracts, out, cap);
@@ -41,7 +43,7 @@ function tickPlot(plot: SimPlot, tick: number): SimPlot {
     if (def.kind === "factory" && b.activeProduct) {
       const product = b.activeProduct;
       const recipe = RESOURCES[product].recipe ?? {};
-      const rate = (def.baseOutput ?? 1) * levelMult(b.level) * (terrain.id === "industrial" ? 1.25 : 1) * dr;
+      const rate = (def.baseOutput ?? 1) * levelMult(b.level) * (terrain.id === "industrial" ? 1.25 : 1) * dr * workforceMult;
       const batches = Math.floor(rate);
       const frac = rate - batches;
       for (let i = 0; i < batches; i++) {
@@ -69,17 +71,27 @@ function tickPlot(plot: SimPlot, tick: number): SimPlot {
   resources.food = Math.max(0, (resources.food ?? 0) - upkeep);
   resources.water = Math.max(0, (resources.water ?? 0) - upkeep);
 
-  // Defense regen / starvation decay (§5.3, §16.2)
+  // Defense regen / starvation decay (§5.3, §16.2); allegiance fortress raises the cap
+  const maxDefense = 1 + defBuff;
   let defensePct = plot.defensePct ?? 1;
   if ((resources.food ?? 0) <= 0 || (resources.water ?? 0) <= 0) defensePct = Math.max(0.3, defensePct - 0.01);
-  else if (defensePct < 1) defensePct = Math.min(1, defensePct + 0.005);
+  else if (defensePct < maxDefense) defensePct = Math.min(maxDefense, defensePct + 0.005);
 
   return { ...plot, resources, army, trainQueue, defensePct };
 }
 
 export function applyTick(state: WorldState): WorldState {
+  // precompute each player's allegiance buffs once per tick
+  const buffByPlayer: Record<string, { production: number; defense: number }> = {};
+  for (const pid of Object.keys(state.players)) {
+    const b = allegianceBuffs(state, pid);
+    buffByPlayer[pid] = { production: b.production, defense: b.defense };
+  }
   const plots: WorldState["plots"] = {};
-  for (const [key, plot] of Object.entries(state.plots)) plots[key] = tickPlot(plot, state.tick);
+  for (const [key, plot] of Object.entries(state.plots)) {
+    const buff = buffByPlayer[plot.owner] ?? { production: 0, defense: 0 };
+    plots[key] = tickPlot(plot, state.tick, buff.production, buff.defense);
+  }
   // Market life: reference prices drift each tick (book persists).
   const market = { ...state.market, refPrices: driftPrices(state.market.refPrices, state.tick + 1) };
   return { ...state, tick: state.tick + 1, plots, market };

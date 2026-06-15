@@ -7,6 +7,7 @@ import { BUILDINGS, isBuildingAllowedOnTerrain, type BuildingId } from "@/game/b
 import { RESOURCES, type ResourceId } from "@/game/resources";
 import { UNITS, UNIT_IDS, armySize, type Army } from "@/game/units";
 import { upgradeCost } from "@/game/formulas";
+import { ALLEGIANCE_BUILDINGS, type AllegianceBuildingId } from "@/game/allegiance";
 
 const SERVER_URL = process.env.NEXT_PUBLIC_GAME_SERVER_URL ?? "ws://localhost:8080";
 const SIZE = 16;
@@ -206,6 +207,69 @@ export default function WorldPage() {
             })}
           </div>
         )}
+      </div>
+
+      {/* ---- ALLEGIANCES ---- */}
+      <div style={{ marginTop: 16, maxWidth: 560 }}>
+        <div style={{ fontSize: 13, marginBottom: 4 }}>🤝 Allegiances</div>
+        {(() => {
+          const myAllyId = me?.allegianceId ?? null;
+          const myAlly = myAllyId ? state.allegiances[myAllyId] : null;
+          if (myAlly) {
+            const isFounder = myAlly.founder === playerId;
+            const owned = new Set(myAlly.buildings);
+            return (
+              <div style={{ fontSize: 12 }}>
+                <div style={{ marginBottom: 4 }}>
+                  <b>{myAlly.name}</b> · {myAlly.members.length} members · treasury {Math.round(myAlly.treasuryWar).toLocaleString()} $WAR ·
+                  your contribution {Math.round(myAlly.contributions[playerId!] ?? 0).toLocaleString()}
+                </div>
+                <div style={{ marginBottom: 6, opacity: 0.85 }}>
+                  buildings: {myAlly.buildings.map((b) => `${ALLEGIANCE_BUILDINGS[b].icon}${ALLEGIANCE_BUILDINGS[b].name}`).join(", ")}
+                </div>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 6 }}>
+                  {[1000, 5000].map((amt) => (
+                    <button key={amt} style={btnSm} onClick={() => send({ type: "contribute", amount: amt })}>Contribute {amt.toLocaleString()}</button>
+                  ))}
+                  <button style={btnDanger} onClick={() => send({ type: "leaveAllegiance" })}>Leave</button>
+                </div>
+                {isFounder && (
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    {(["fortress", "research", "tradeHub", "radar", "factory", "shield"] as AllegianceBuildingId[])
+                      .filter((b) => !owned.has(b))
+                      .map((b) => (
+                        <button key={b} style={btnSm} disabled={myAlly.treasuryWar < ALLEGIANCE_BUILDINGS[b].cost}
+                          title={ALLEGIANCE_BUILDINGS[b].benefit}
+                          onClick={() => send({ type: "allegianceBuild", buildingId: b })}>
+                          + {ALLEGIANCE_BUILDINGS[b].icon}{ALLEGIANCE_BUILDINGS[b].name} ({ALLEGIANCE_BUILDINGS[b].cost.toLocaleString()})
+                        </button>
+                      ))}
+                  </div>
+                )}
+              </div>
+            );
+          }
+          // not in an allegiance: found or join
+          const others = Object.values(state.allegiances);
+          return (
+            <div style={{ fontSize: 12 }}>
+              <button style={btn} disabled={!me || me.war < 5000}
+                onClick={() => { const name = window.prompt("Allegiance name?"); if (name) send({ type: "found", name }); }}>
+                Found an allegiance (5,000 $WAR)
+              </button>
+              {others.length > 0 && (
+                <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 3 }}>
+                  {others.map((a) => (
+                    <div key={a.id} style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      <span style={{ minWidth: 180 }}>{a.name} · {a.members.length} members · {a.buildings.length} bldgs</span>
+                      <button style={btnSm} onClick={() => send({ type: "joinAllegiance", id: a.id })}>Join</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </div>
 
       {/* ---- BATTLE REPORT ---- */}

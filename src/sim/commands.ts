@@ -5,9 +5,11 @@ import { upgradeCost } from "@/game/formulas";
 import { UNITS, UNIT_IDS, armySize, type Army } from "@/game/units";
 import { resolveBattle, type BattleIntent } from "@/game/combat";
 import { MARKET_FEE, LISTING_FEE, round2 } from "@/game/market";
+import { ALLEGIANCE_BUILDINGS, type AllegianceBuildingId } from "@/game/allegiance";
 import { storageCap } from "./world";
+import { allegianceBuffs, CREATE_ALLEGIANCE_COST } from "./allegiance";
 import type { ResourceBag, ResourceId } from "@/game/resources";
-import type { Command, CommandResult, MarketOrder, PlacedBuilding, SimPlayer, SimPlot, WorldState } from "./types";
+import type { Allegiance, Command, CommandResult, MarketOrder, PlacedBuilding, SimPlayer, SimPlot, WorldState } from "./types";
 
 function hasResources(bag: ResourceBag, cost: Partial<Record<ResourceId, number>>): boolean {
   return Object.entries(cost).every(([k, v]) => (bag[k as ResourceId] ?? 0) >= (v ?? 0));
@@ -281,7 +283,8 @@ function buy(state: WorldState, playerId: string, item: ResourceId, qty: number,
   const filled = Math.min(qty, space) - remaining;
   if (filled <= 0) return fail(state, "No sell liquidity for that item.");
 
-  const fee = Math.ceil(cost * MARKET_FEE);
+  const feeDiscount = allegianceBuffs(state, playerId).marketFee; // tradeHub buff
+  const fee = Math.ceil(cost * MARKET_FEE * (1 - feeDiscount));
   const total = Math.ceil(cost) + fee;
   if (player.war < total) return fail(state, `Need ${total.toLocaleString()} $WAR (incl. ${fee} fee).`);
 
@@ -326,6 +329,120 @@ function cancel(state: WorldState, playerId: string, orderId: string, toKey: str
   };
 }
 
+// ---------- Allegiances (GDD §10-11) ----------
+
+function found(state: WorldState, playerId: string, name: string): CommandResult {
+  const player = state.players[playerId];
+  if (!player) return fail(state, "Unknown player.");
+  if (player.allegianceId) return fail(state, "Leave your current allegiance first.");
+  const clean = name.trim().slice(0, 32);
+  if (!clean) return fail(state, "Name required.");
+  if (player.war < CREATE_ALLEGIANCE_COST) return fail(state, `Need ${CREATE_ALLEGIANCE_COST.toLocaleString()} $WAR to found an allegiance.`);
+  const id = `a-${state.nextAllegianceId}`;
+  const seed = Math.floor(CREATE_ALLEGIANCE_COST / 2); // half seeds the treasury, half is a sink
+  const ally: Allegiance = {
+    id,
+    name: clean,
+    founder: playerId,
+    members: [playerId],
+    treasuryWar: seed,
+    contributions: { [playerId]: seed },
+    buildings: ["hq"],
+  };
+  return {
+    state: {
+      ...state,
+      players: { ...state.players, [playerId]: { ...player, war: player.war - CREATE_ALLEGIANCE_COST, allegianceId: id } },
+      allegiances: { ...state.allegiances, [id]: ally },
+      nextAllegianceId: state.nextAllegianceId + 1,
+      burned: (state.burned ?? 0) + (CREATE_ALLEGIANCE_COST - seed),
+    },
+  };
+}
+
+function joinAllegiance(state: WorldState, playerId: string, id: string): CommandResult {
+  const player = state.players[playerId];
+  if (!player) return fail(state, "Unknown player.");
+  if (player.allegianceId) return fail(state, "Leave your current allegiance first.");
+  const ally = state.allegiances[id];
+  if (!ally) return fail(state, "No such allegiance.");
+  const updated: Allegiance = { ...ally, members: [...ally.members, playerId], contributions: { ...ally.contributions, [playerId]: 0 } };
+  return {
+    state: {
+      ...state,
+      players: { ...state.players, [playerId]: { ...player, allegianceId: id } },
+      allegiances: { ...state.allegiances, [id]: updated },
+    },
+  };
+}
+
+function leaveAllegiance(state: WorldState, playerId: string): CommandResult {
+  const player = state.players[playerId];
+  if (!player) return fail(state, "Unknown player.");
+  const id = player.allegianceId;
+  if (!id || !state.allegiances[id]) return fail(state, "You're not in an allegiance.");
+  const ally = state.allegiances[id];
+  const members = ally.members.filter((m) => m !== playerId);
+  const contributions = { ...ally.contributions };
+  delete contributions[playerId];
+  const allegiances = { ...state.allegiances };
+  if (members.length === 0) {
+    delete allegiances[id]; // last one out disbands it
+  } else {
+    allegiances[id] = { ...ally, members, contributions, founder: ally.founder === playerId ? members[0] : ally.founder };
+  }
+  return {
+    state: {
+      ...state,
+      players: { ...state.players, [playerId]: { ...player, allegianceId: null } },
+      allegiances,
+    },
+  };
+}
+
+function contribute(state: WorldState, playerId: string, amount: number): CommandResult {
+  const player = state.players[playerId];
+  if (!player) return fail(state, "Unknown player.");
+  const id = player.allegianceId;
+  if (!id || !state.allegiances[id]) return fail(state, "You're not in an allegiance.");
+  if (amount <= 0) return fail(state, "Invalid amount.");
+  if (player.war < amount) return fail(state, "Not enough $WAR.");
+  const ally = state.allegiances[id];
+  const updated: Allegiance = {
+    ...ally,
+    treasuryWar: ally.treasuryWar + amount,
+    contributions: { ...ally.contributions, [playerId]: (ally.contributions[playerId] ?? 0) + amount },
+  };
+  return {
+    state: {
+      ...state,
+      players: { ...state.players, [playerId]: { ...player, war: player.war - amount } },
+      allegiances: { ...state.allegiances, [id]: updated },
+    },
+  };
+}
+
+function allegianceBuild(state: WorldState, playerId: string, buildingId: AllegianceBuildingId): CommandResult {
+  const player = state.players[playerId];
+  if (!player) return fail(state, "Unknown player.");
+  const id = player.allegianceId;
+  if (!id || !state.allegiances[id]) return fail(state, "You're not in an allegiance.");
+  const ally = state.allegiances[id];
+  if (ally.founder !== playerId) return fail(state, "Only the founder can build (for now).");
+  const def = ALLEGIANCE_BUILDINGS[buildingId];
+  if (!def) return fail(state, "No such building.");
+  if (ally.buildings.includes(buildingId)) return fail(state, `${def.name} already built.`);
+  if (ally.treasuryWar < def.cost) return fail(state, `Treasury needs ${def.cost.toLocaleString()} $WAR for ${def.name}.`);
+  const updated: Allegiance = { ...ally, treasuryWar: ally.treasuryWar - def.cost, buildings: [...ally.buildings, buildingId] };
+  return {
+    state: {
+      ...state,
+      allegiances: { ...state.allegiances, [id]: updated },
+      burned: (state.burned ?? 0) + def.cost, // treasury spend leaves circulation
+    },
+  };
+}
+
 export function applyCommand(state: WorldState, playerId: string, cmd: Command): CommandResult {
   switch (cmd.type) {
     case "stake":
@@ -348,6 +465,16 @@ export function applyCommand(state: WorldState, playerId: string, cmd: Command):
       return buy(state, playerId, cmd.item, cmd.qty, cmd.toKey);
     case "cancel":
       return cancel(state, playerId, cmd.orderId, cmd.toKey);
+    case "found":
+      return found(state, playerId, cmd.name);
+    case "joinAllegiance":
+      return joinAllegiance(state, playerId, cmd.id);
+    case "leaveAllegiance":
+      return leaveAllegiance(state, playerId);
+    case "contribute":
+      return contribute(state, playerId, cmd.amount);
+    case "allegianceBuild":
+      return allegianceBuild(state, playerId, cmd.buildingId);
     default:
       return fail(state, "Unknown command.");
   }
