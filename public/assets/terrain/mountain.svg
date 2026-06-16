@@ -1,8 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><clipPath id="hx"><polygon points="50,3 95,26.5 95,73.5 50,97 5,73.5 5,26.5" /></clipPath></defs><g clip-path="url(#hx)">
-      <rect width="100" height="100" fill="#6b6f78"/>
-      <polygon points="50,20 78,72 22,72" fill="#818691"/><polygon points="50,20 78,72 50,72" fill="#565a63"/>
-      <polygon points="30,42 50,76 10,76" fill="#787d87"/><polygon points="30,42 50,76 30,76" fill="#51555e"/>
-      <polygon points="72,40 92,76 52,76" fill="#787d87"/><polygon points="72,40 92,76 72,76" fill="#51555e"/>
-      <polygon points="50,20 59,37 41,37" fill="#b8bcc3"/><polygon points="30,42 37,55 23,55" fill="#a3a8b0"/><polygon points="72,40 79,53 65,53" fill="#a3a8b0"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><clipPath id="hx"><polygon points="50,3 95,26.5 95,73.5 50,97 5,73.5 5,26.5"></polygon></clipPath></defs><g clip-path="url(#hx)">
+      <rect width="100" height="100" fill="#6b6f78"></rect>
+      <polygon points="50,20 78,72 22,72" fill="#818691"></polygon><polygon points="50,20 78,72 50,72" fill="#565a63"></polygon>
+      <polygon points="30,42 50,76 10,76" fill="#787d87"></polygon><polygon points="30,42 50,76 30,76" fill="#51555e"></polygon>
+      <polygon points="72,40 92,76 52,76" fill="#787d87"></polygon><polygon points="72,40 92,76 72,76" fill="#51555e"></polygon>
+      <polygon points="50,20 59,37 41,37" fill="#b8bcc3"></polygon><polygon points="30,42 37,55 23,55" fill="#a3a8b0"></polygon><polygon points="72,40 79,53 65,53" fill="#a3a8b0"></polygon>
     </g>
-    <polygon points="50,3 95,26.5 95,73.5 50,97 5,73.5 5,26.5" fill="none" stroke="#0c0f16" stroke-width="3"/></svg>
+    <polygon points="50,3 95,26.5 95,73.5 50,97 5,73.5 5,26.5" fill="none" stroke="#0c0f16" stroke-width="3"></polygon></svg>

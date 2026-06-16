@@ -1,0 +1,73 @@
+/* ==================================================================
+   WARLANDS — Base-builder tokens
+   Top-down, tile-based village/base layer (MY BASE) on the war-camp
+   surface. Tile sizing, placement-grid overlay, valid/invalid &
+   selection states, faux-iso building depth, and build/raid motion.
+   Mobile-first: --bb-tile defaults ≥44px (touch target). Tweakable.
+   ================================================================== */
+:root {
+  /* ---- Tile & grid geometry ---- */
+  --bb-tile: 46px;          /* one grid cell edge — TWEAK: density */
+  --bb-grid: 20; /* @kind other */
+  --bb-snap: var(--bb-tile);
+
+  /* ---- War-camp ground surfaces (full background stacks) ---- */
+  /* Cracked earth / dirt war-camp — warm dark, mottled, NOT lawn. */
+  --bb-earth:
+    radial-gradient(135% 105% at 50% 28%, #262a31 0%, #1b1e25 46%, #0f1116 100%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='d'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.018 0.022' numOctaves='4' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 0.42  0 0 0 0 0.33  0 0 0 0 0.18  0 0 0 0.9 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23d)' opacity='0.16'/%3E%3C/svg%3E"); /* @kind other */
+  /* Tactical grid — cooler, flatter command-overlay surface. */
+  --bb-tac:
+    radial-gradient(130% 110% at 50% 24%, #141923 0%, #0f131c 55%, #0a0d14 100%); /* @kind other */
+  --bb-ground: var(--bb-earth);   /* active ground — TWEAK swaps this */
+
+  /* ---- Placement-grid overlay (sits above ground) ---- */
+  --bb-grid-line: rgba(230,233,239,0.055);
+  --bb-grid-line-major: rgba(245,179,1,0.10);
+  --bb-grid-overlay:
+    repeating-linear-gradient(0deg,  var(--bb-grid-line) 0 1px, transparent 1px var(--bb-tile)),
+    repeating-linear-gradient(90deg, var(--bb-grid-line) 0 1px, transparent 1px var(--bb-tile));
+
+  /* ---- Placement validity tints ---- */
+  --bb-valid:        rgba(52,211,153,0.20);
+  --bb-valid-line:   var(--success);
+  --bb-invalid:      rgba(220,38,38,0.22);
+  --bb-invalid-line: var(--danger-strong);
+
+  /* ---- Selection ---- */
+  --bb-select-ring: var(--rim-selected);
+  --bb-select-glow: 0 0 0 2px var(--rim-selected), 0 0 18px rgba(255,210,74,0.38);
+  --bb-range-fill:  rgba(245,179,1,0.06);   /* defense radius */
+  --bb-range-line:  rgba(245,179,1,0.30);
+
+  /* ---- Faux-iso building depth ---- */
+  --bb-depth: 6px;          /* extrusion offset — TWEAK: flat(0) … iso(6) */
+  --bb-shadow: 0 5px 9px rgba(0,0,0,0.55);
+  --bb-build-tint: rgba(245,179,1,0.10);    /* under-construction scaffold wash */
+  --bb-damage-tint: rgba(220,38,38,0.14);   /* raided / damaged wash */
+
+  /* ---- Level badge ---- */
+  --bb-badge-bg:   #0c1018;
+  --bb-badge-fg:   var(--amber-text);
+  --bb-badge-ring: rgba(245,179,1,0.55);
+
+  /* ---- Ready-to-collect bubble ---- */
+  --bb-collect-bg: var(--amber);
+  --bb-collect-fg: #0c0a04;
+
+  /* ---- Motion (specs — honour prefers-reduced-motion) ---- */
+  --bb-thunk:      160ms;                 /* @kind other */ /* snap-to-tile settle */
+  --bb-ease-thunk: cubic-bezier(0.34, 1.4, 0.5, 1); /* @kind other */
+  --bb-sweep:      90s;                    /* @kind other */ /* default build-ring sweep */
+  --bb-collect-fly: 600ms;                 /* @kind other */ /* resource fly-to-counter */
+  --bb-star:       420ms;                  /* @kind other */ /* per-star 3-star reveal */
+}
+
+/* ---- Optional consumer utilities (DCs use the vars inline instead) ---- */
+.bb-stage { background: var(--bb-ground); }
+.bb-grid  { background-image: var(--bb-grid-overlay); }
+@keyframes bb-sweep { to { stroke-dashoffset: 0; } }
+@keyframes bb-pulse { 0%,100% { opacity: .55; } 50% { opacity: 1; } }
+@keyframes bb-thunk { 0% { transform: scale(1.18); } 60% { transform: scale(0.96); } 100% { transform: scale(1); } }
+@keyframes bb-fly   { to { transform: translate(var(--fx,0), var(--fy,-120px)) scale(0.4); opacity: 0; } }
+@keyframes bb-star-pop { 0% { transform: scale(0) rotate(-30deg); opacity: 0; } 70% { transform: scale(1.25) rotate(4deg); } 100% { transform: scale(1) rotate(0); opacity: 1; } }

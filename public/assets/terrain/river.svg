@@ -1,7 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><clipPath id="hx"><polygon points="50,3 95,26.5 95,73.5 50,97 5,73.5 5,26.5" /></clipPath></defs><g clip-path="url(#hx)">
-      <rect width="100" height="100" fill="#2c6f8c"/>
-      <path d="M30 4 C 44 24, 30 40, 48 56 C 64 70, 60 84, 72 98" fill="none" stroke="#1d5570" stroke-width="20" stroke-linecap="round"/>
-      <path d="M30 4 C 44 24, 30 40, 48 56 C 64 70, 60 84, 72 98" fill="none" stroke="#3f86a8" stroke-width="9" stroke-linecap="round"/>
-      <g stroke="#79b6cf" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.7"><path d="M40 30 q4 4 -1 8"/><path d="M52 60 q4 4 -1 8"/></g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><clipPath id="hx"><polygon points="50,3 95,26.5 95,73.5 50,97 5,73.5 5,26.5"></polygon></clipPath></defs><g clip-path="url(#hx)">
+      <rect width="100" height="100" fill="#2c6f8c"></rect>
+      <path d="M30 4 C 44 24, 30 40, 48 56 C 64 70, 60 84, 72 98" fill="none" stroke="#1d5570" stroke-width="20" stroke-linecap="round"></path>
+      <path d="M30 4 C 44 24, 30 40, 48 56 C 64 70, 60 84, 72 98" fill="none" stroke="#3f86a8" stroke-width="9" stroke-linecap="round"></path>
+      <g stroke="#79b6cf" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.7"><path d="M40 30 q4 4 -1 8"></path><path d="M52 60 q4 4 -1 8"></path></g>
     </g>
-    <polygon points="50,3 95,26.5 95,73.5 50,97 5,73.5 5,26.5" fill="none" stroke="#0c0f16" stroke-width="3"/></svg>
+    <polygon points="50,3 95,26.5 95,73.5 50,97 5,73.5 5,26.5" fill="none" stroke="#0c0f16" stroke-width="3"></polygon></svg>

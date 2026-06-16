@@ -1,0 +1,111 @@
+<!-- @dsCard group="Brand" viewport="1240x1640" name="Base Builder — Art & Tile States" subtitle="Top-down building roster, level progression, walls & the placement/selection/build/damage state system" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>WARLANDS — Base Builder Art & States</title>
+<link rel="stylesheet" href="../../styles.css" />
+<style>
+  html,body{margin:0;background:var(--panel-void);color:var(--text-hi);font-family:var(--font-ui)}
+  .wrap{max-width:1240px;margin:0 auto;padding:40px}
+  h2{font:700 13px var(--font-display);letter-spacing:0.18em;text-transform:uppercase;color:var(--text-hi);margin:0 0 4px}
+  .rule{height:1px;background:linear-gradient(90deg,var(--border-strong),transparent);margin:14px 0 22px}
+  .sub{font:500 12px var(--font-ui);color:var(--text-faint)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:14px}
+  .cell{display:flex;flex-direction:column;align-items:center;gap:8px}
+  .tile{position:relative;width:108px;height:108px;border-radius:10px;border:1px solid var(--hairline);background:radial-gradient(circle at 50% 32%,#262a31,#0f1116);display:flex;align-items:center;justify-content:center;background-image:var(--bb-grid-overlay),radial-gradient(circle at 50% 32%,#262a31,#0f1116)}
+  .tile img{width:88px;height:88px;filter:drop-shadow(0 5px 9px rgba(0,0,0,0.55))}
+  .nm{font:600 10px var(--font-display);letter-spacing:0.08em;text-transform:uppercase;color:var(--text-lo)}
+  .nm small{display:block;font:500 9px var(--font-mono);color:var(--text-faint);letter-spacing:0;text-transform:none;margin-top:2px}
+  .badge{position:absolute;top:-7px;left:-7px;min-width:18px;height:18px;padding:0 4px;display:flex;align-items:center;justify-content:center;background:var(--bb-badge-bg);border:1.5px solid var(--bb-badge-ring);border-radius:5px;font:700 11px var(--font-mono);color:var(--bb-badge-fg)}
+  section{margin-bottom:42px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header style="margin-bottom:30px">
+    <div style="display:flex;align-items:center;gap:9px"><span style="width:9px;height:9px;background:var(--amber);transform:rotate(45deg)"></span><span style="font:600 11px var(--font-display);letter-spacing:0.22em;text-transform:uppercase;color:var(--amber-text)">WARLANDS · Base Builder</span></div>
+    <h1 style="font:700 30px var(--font-display);letter-spacing:-0.01em;text-transform:uppercase;margin:8px 0 0">Building Art &amp; Tile States</h1>
+    <p class="sub" style="max-width:640px;margin-top:8px;line-height:1.6">Top-down, faux-iso building art at viewBox 100×100 — gunmetal masses, amber energy, teal elixir, blood weaponry. Each building reads instantly at grid scale. Below: level progression, walls, the ground tilesets, and the reusable placement / selection / construction / damage / ready states.</p>
+  </header>
+
+  <section>
+    <h2>Command Center — levels 1 → 5</h2>
+    <div class="sub">The centerpiece. Footprint 4×4. Visibly distinct each level: gold trim, second tier, flags, corner turrets, then the L5 command ring.</div>
+    <div class="rule"></div>
+    <div class="grid" style="grid-template-columns:repeat(5,1fr)">
+      <div class="cell"><div class="tile"><div class="badge">1</div><img src="../../assets/buildings/commandCenter1.svg" /></div><span class="nm">Lvl 1</span></div>
+      <div class="cell"><div class="tile"><div class="badge">2</div><img src="../../assets/buildings/commandCenter2.svg" /></div><span class="nm">Lvl 2</span></div>
+      <div class="cell"><div class="tile"><div class="badge">3</div><img src="../../assets/buildings/commandCenter3.svg" /></div><span class="nm">Lvl 3</span></div>
+      <div class="cell"><div class="tile"><div class="badge">4</div><img src="../../assets/buildings/commandCenter4.svg" /></div><span class="nm">Lvl 4</span></div>
+      <div class="cell"><div class="tile"><div class="badge">5</div><img src="../../assets/buildings/commandCenter5.svg" /></div><span class="nm">Lvl 5</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Building roster</h2>
+    <div class="sub">Resources · Defense · Army · Support — drawn top-down for at-a-glance reading.</div>
+    <div class="rule"></div>
+    <div class="grid">
+      <div class="cell"><div class="tile"><img src="../../assets/buildings/goldMine.svg" /></div><span class="nm">Gold Mine<small>2×2</small></span></div>
+      <div class="cell"><div class="tile"><img src="../../assets/buildings/elixirCollector.svg" /></div><span class="nm">Elixir Coll.<small>2×2</small></span></div>
+      <div class="cell"><div class="tile"><img src="../../assets/buildings/goldStorage.svg" /></div><span class="nm">Gold Vault<small>3×3</small></span></div>
+      <div class="cell"><div class="tile"><img src="../../assets/buildings/elixirStorage.svg" /></div><span class="nm">Elixir Silo<small>3×3</small></span></div>
+      <div class="cell"><div class="tile"><img src="../../assets/buildings/cannon.svg" /></div><span class="nm">Cannon<small>2×2</small></span></div>
+      <div class="cell"><div class="tile"><img src="../../assets/buildings/mortar.svg" /></div><span class="nm">Mortar<small>3×3</small></span></div>
+      <div class="cell"><div class="tile"><img src="../../assets/buildings/airDefense.svg" /></div><span class="nm">Air Defense<small>2×2</small></span></div>
+      <div class="cell"><div class="tile"><img src="../../assets/buildings/barracks.svg" /></div><span class="nm">Barracks<small>3×3</small></span></div>
+      <div class="cell"><div class="tile"><img src="../../assets/buildings/armyCamp.svg" /></div><span class="nm">Army Camp<small>3×3</small></span></div>
+      <div class="cell"><div class="tile"><img src="../../assets/buildings/buildersHut.svg" /></div><span class="nm">Builder's Hut<small>2×2</small></span></div>
+      <div class="cell"><div class="tile"><img src="../../assets/buildings/clanCastle.svg" /></div><span class="nm">Clan Castle<small>3×3</small></span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Walls — 3 levels + corners</h2>
+    <div class="sub">1×1 segments. Tougher materials per level: sandbag → concrete → reinforced steel (amber bolts).</div>
+    <div class="rule"></div>
+    <div class="grid" style="grid-template-columns:repeat(6,1fr)">
+      <div class="cell"><div class="tile"><img src="../../assets/buildings/wall1.svg" /></div><span class="nm">Wall L1</span></div>
+      <div class="cell"><div class="tile"><img src="../../assets/buildings/wall2.svg" /></div><span class="nm">Wall L2</span></div>
+      <div class="cell"><div class="tile"><img src="../../assets/buildings/wall3.svg" /></div><span class="nm">Wall L3</span></div>
+      <div class="cell"><div class="tile"><img src="../../assets/buildings/wallCorner1.svg" /></div><span class="nm">Corner L1</span></div>
+      <div class="cell"><div class="tile"><img src="../../assets/buildings/wallCorner2.svg" /></div><span class="nm">Corner L2</span></div>
+      <div class="cell"><div class="tile"><img src="../../assets/buildings/wallCorner3.svg" /></div><span class="nm">Corner L3</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Ground tilesets</h2>
+    <div class="sub">War-camp surface — never emerald lawn. Cracked earth (default) or the tactical command grid. Both carry the placement-grid overlay.</div>
+    <div class="rule"></div>
+    <div style="display:flex;gap:18px;flex-wrap:wrap">
+      <div class="cell"><div style="width:240px;height:150px;border-radius:12px;border:1px solid var(--hairline);background-image:var(--bb-grid-overlay),var(--bb-earth)"></div><span class="nm">Cracked earth</span></div>
+      <div class="cell"><div style="width:240px;height:150px;border-radius:12px;border:1px solid var(--hairline);background-image:var(--bb-grid-overlay),var(--bb-tac)"></div><span class="nm">Tactical grid</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Tile states</h2>
+    <div class="sub">Reusable overlays applied to any building footprint — defined as tokens (selection glow, validity tints, build ring, damage wash, ready bubble).</div>
+    <div class="rule"></div>
+    <div style="display:flex;gap:14px;flex-wrap:wrap">
+      <div class="cell"><div class="tile" style="box-shadow:var(--bb-select-glow)"><div style="position:absolute;top:-3px;left:-3px;width:13px;height:13px;border-top:2.5px solid var(--bb-select-ring);border-left:2.5px solid var(--bb-select-ring)"></div><div style="position:absolute;top:-3px;right:-3px;width:13px;height:13px;border-top:2.5px solid var(--bb-select-ring);border-right:2.5px solid var(--bb-select-ring)"></div><div style="position:absolute;bottom:-3px;left:-3px;width:13px;height:13px;border-bottom:2.5px solid var(--bb-select-ring);border-left:2.5px solid var(--bb-select-ring)"></div><div style="position:absolute;bottom:-3px;right:-3px;width:13px;height:13px;border-bottom:2.5px solid var(--bb-select-ring);border-right:2.5px solid var(--bb-select-ring)"></div><img src="../../assets/buildings/cannon.svg" /></div><span class="nm">Selected</span></div>
+
+      <div class="cell"><div class="tile" style="background-image:var(--bb-grid-overlay),radial-gradient(circle at 50% 32%,#262a31,#0f1116)"><div style="position:absolute;inset:8px;border-radius:8px;background:var(--bb-valid);box-shadow:inset 0 0 0 2px var(--bb-valid-line)"></div><img src="../../assets/buildings/goldMine.svg" style="opacity:0.7"/></div><span class="nm">Placement · valid</span></div>
+
+      <div class="cell"><div class="tile"><div style="position:absolute;inset:8px;border-radius:8px;background:var(--bb-invalid);box-shadow:inset 0 0 0 2px var(--bb-invalid-line)"></div><img src="../../assets/buildings/goldMine.svg" style="opacity:0.6"/></div><span class="nm">Placement · blocked</span></div>
+
+      <div class="cell"><div class="tile"><div style="position:absolute;inset:8px;border:1.5px dashed var(--amber);border-radius:8px;background:var(--bb-build-tint)"></div><img src="../../assets/buildings/barracks.svg" style="opacity:0.4"/><svg viewBox="0 0 44 44" style="position:absolute;width:54px;height:54px"><circle cx="22" cy="22" r="18" fill="rgba(12,16,24,0.78)"/><circle cx="22" cy="22" r="18" fill="none" stroke="rgba(245,179,1,0.22)" stroke-width="3.5"/><circle cx="22" cy="22" r="18" fill="none" stroke="var(--amber)" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="113" stroke-dashoffset="40" transform="rotate(-90 22 22)"/></svg></div><span class="nm">Under construction</span></div>
+
+      <div class="cell"><div class="tile"><img src="../../assets/buildings/cannon.svg" style="opacity:0.5"/><div style="position:absolute;inset:14px;border-radius:6px;background:var(--bb-damage-tint)"></div></div><span class="nm">Damaged / raided</span></div>
+
+      <div class="cell"><div class="tile"><img src="../../assets/buildings/goldMine.svg" /><div style="position:absolute;left:50%;top:6px;transform:translateX(-50%);display:flex;align-items:center;gap:3px;padding:3px 7px 3px 4px;border-radius:999px;background:var(--bb-collect-bg);color:var(--bb-collect-fg);box-shadow:var(--glow-amber)"><span style="width:11px;height:11px;background:#0c0a04;transform:rotate(45deg)"></span><span style="font:700 11px var(--font-mono)">+540</span></div></div><span class="nm">Ready to collect</span></div>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>
