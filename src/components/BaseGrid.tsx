@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent as RPointerEvent, type WheelEvent as RWheelEvent } from "react";
 import { BUILDINGS, GRID_W, GRID_H, footprintTiles, type BattleFrame, type CocBase, type CocBuildingId, type CocUnitId } from "@/sim/coc";
+import { BaseGround } from "@/components/BaseGround";
 
 /** One grid cell, in stage pixels (zoom multiplies this). */
 export const TILE = 30;
@@ -186,9 +187,14 @@ export function BaseGrid({ base, tick, readOnly, selected, placing, wallMode, mo
     >
       <div className="wl-scanline" style={{ opacity: 0.5 }} />
       <div style={{ position: "absolute", left: 0, top: 0, width: stageW, height: stageH, transform: `translate(${view.x}px,${view.y}px) scale(${view.scale})`, transformOrigin: "0 0" }}>
-        {/* ground + placement grid */}
+        {/* layered war-camp ground: cracked earth → battlefield decor → tactical grid → vignette → fortified perimeter */}
         <div style={{ position: "absolute", inset: 0, background: "var(--bb-earth)" }} />
-        <div style={{ position: "absolute", inset: 0, backgroundImage: gridLines, backgroundSize: `${TILE}px ${TILE}px` }} />
+        <BaseGround seed={base.location} w={stageW} h={stageH} />
+        <div style={{ position: "absolute", inset: 0, backgroundImage: minorGrid }} />
+        <div style={{ position: "absolute", inset: 0, backgroundImage: majorGrid }} />
+        <div style={{ position: "absolute", inset: 0, background: vignette, pointerEvents: "none" }} />
+        <div style={{ position: "absolute", inset: 0, border: "2px solid rgba(245,179,1,0.16)", boxShadow: "inset 0 0 34px rgba(245,179,1,0.05), inset 0 0 0 1px rgba(0,0,0,0.45)", pointerEvents: "none" }} />
+        {(["tl", "tr", "bl", "br"] as const).map((c) => <span key={`pc${c}`} style={plotCorner(c)} />)}
 
         {/* walls */}
         {Object.entries(base.walls).map(([key, level]) => {
@@ -292,7 +298,19 @@ const wrap: CSSProperties = {
   userSelect: "none",
   WebkitUserSelect: "none",
 };
-const gridLines = "repeating-linear-gradient(0deg, var(--bb-grid-line) 0 1px, transparent 1px var(--bb-tile,30px)), repeating-linear-gradient(90deg, var(--bb-grid-line) 0 1px, transparent 1px var(--bb-tile,30px))";
+// Tactical grid aligned to the real tile size: faint per-tile lines + amber lines every 5 tiles.
+const minorGrid = `repeating-linear-gradient(0deg, var(--bb-grid-line) 0 1px, transparent 1px ${TILE}px), repeating-linear-gradient(90deg, var(--bb-grid-line) 0 1px, transparent 1px ${TILE}px)`;
+const majorGrid = `repeating-linear-gradient(0deg, var(--bb-grid-line-major) 0 1.5px, transparent 1.5px ${TILE * 5}px), repeating-linear-gradient(90deg, var(--bb-grid-line-major) 0 1.5px, transparent 1.5px ${TILE * 5}px)`;
+const vignette = "radial-gradient(125% 120% at 50% 42%, transparent 52%, rgba(4,6,10,0.55) 100%)";
+function plotCorner(c: "tl" | "tr" | "bl" | "br"): CSSProperties {
+  const col = "rgba(245,179,1,0.55)";
+  const v = `3px solid ${col}`;
+  const base: CSSProperties = { position: "absolute", width: 20, height: 20, pointerEvents: "none", zIndex: 4 };
+  if (c === "tl") return { ...base, top: 5, left: 5, borderTop: v, borderLeft: v };
+  if (c === "tr") return { ...base, top: 5, right: 5, borderTop: v, borderRight: v };
+  if (c === "bl") return { ...base, bottom: 5, left: 5, borderBottom: v, borderLeft: v };
+  return { ...base, bottom: 5, right: 5, borderBottom: v, borderRight: v };
+}
 const dot: CSSProperties = { position: "absolute", width: 8, height: 8, borderRadius: "50%", boxShadow: "0 0 0 1px #0a0d14, 0 1px 2px rgba(0,0,0,0.7)", pointerEvents: "none", zIndex: 8 };
 const badge: CSSProperties = { position: "absolute", top: -7, left: -7, minWidth: 16, height: 16, padding: "0 3px", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bb-badge-bg)", border: "1.5px solid var(--bb-badge-ring)", borderRadius: 5, font: "700 10px var(--font-mono)", color: "var(--bb-badge-fg)", boxShadow: "0 1px 3px rgba(0,0,0,0.6)", pointerEvents: "none" };
 const collectBubble: CSSProperties = { position: "absolute", left: "50%", top: -14, transform: "translateX(-50%)", display: "flex", alignItems: "center", gap: 3, padding: "2px 7px", borderRadius: 999, background: "var(--bb-collect-bg)", color: "var(--bb-collect-fg)", font: "700 10px var(--font-mono)", boxShadow: "0 3px 9px rgba(0,0,0,0.55)", pointerEvents: "none", whiteSpace: "nowrap" };
