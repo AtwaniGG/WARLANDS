@@ -38,11 +38,13 @@ describe("server", () => {
     expect(a.first.type).toBe("welcome");
     expect(typeof a.first.playerId).toBe("string");
 
-    const want = waitFor(b.ws, (m) => m.type === "state" && m.state.bases[a.first.playerId]?.ownedHexes.length === 7);
+    const want = waitFor(b.ws, (m) => m.type === "state" && m.state.bases[a.first.playerId]?.location === "0,0");
     a.ws.send(JSON.stringify({ type: "command", cmd: { type: "claimBase", q: 0, r: 0 } }));
     const got = await want;
 
-    expect(got.state.bases[a.first.playerId].ownedHexes.length).toBe(7);
+    const base = got.state.bases[a.first.playerId];
+    expect(base.location).toBe("0,0");
+    expect(base.buildings["8,8"]).toEqual({ id: "commandCenter", level: 1 });
     a.ws.close();
     b.ws.close();
   });

@@ -8,7 +8,7 @@
  * Defaults are sized for ~60–90 min of CPU on a laptop.
  */
 import { describe, it, expect } from "vitest";
-import { createWorld, addPlayer, housingCap, housingUsed } from "./world";
+import { createWorld, addPlayer, builderCount, fitsInGrid, housingCap, housingUsed, inGrid, parseTile } from "./world";
 import { applyCommand } from "./commands";
 import { applyTick } from "./tick";
 import { resolveRaid } from "./battle";
@@ -34,10 +34,13 @@ function mulberry32(seed: number): () => number {
 function pick<T>(rnd: () => number, arr: T[]): T {
   return arr[Math.floor(rnd() * arr.length)];
 }
+function randomTile(rnd: () => number): string {
+  return `${Math.floor(rnd() * 20)},${Math.floor(rnd() * 20)}`;
+}
 
 const BUILDABLE: CocBuildingId[] = [
   "goldCollector", "elixirCollector", "goldStorage", "elixirStorage",
-  "cannon", "mortar", "airDefense", "barracks", "armyCamp",
+  "cannon", "mortar", "airDefense", "barracks", "armyCamp", "builderHut", "clanCastle",
 ];
 
 function checkInvariants(w: CocWorld): void {
@@ -47,19 +50,22 @@ function checkInvariants(w: CocWorld): void {
   for (const [owner, b] of Object.entries(w.bases)) {
     if (!(b.gold >= 0) || !Number.isFinite(b.gold)) throw new Error(`bad gold ${b.gold}`);
     if (!(b.elixir >= 0) || !Number.isFinite(b.elixir)) throw new Error(`bad elixir ${b.elixir}`);
-    if (b.jobs.length > b.builders) throw new Error("builders over-committed");
+    if (b.jobs.length > builderCount(b)) throw new Error("builders over-committed");
     if (housingUsed(b) > housingCap(b)) throw new Error("army over housing");
-    if (b.ownedHexes.length < 1) throw new Error("empty cluster");
-    for (const h of b.ownedHexes) if (w.claimedHexes[h] !== owner) throw new Error("ownership desync");
-    for (const [hx, bld] of Object.entries(b.buildings)) {
-      if (!b.ownedHexes.includes(hx)) throw new Error("building off-cluster");
+    if (w.claimedHexes[b.location] !== owner) throw new Error("ownership desync");
+    for (const [tk, bld] of Object.entries(b.buildings)) {
+      if (!fitsInGrid(tk, bld.id)) throw new Error("building off-grid");
       if (bld.level < 0 || bld.level > maxLevelOf(bld.id)) throw new Error("bad building level");
     }
     for (const job of b.jobs) {
-      if (!b.buildings[job.hexKey]) throw new Error("job without building");
+      if (!b.buildings[job.tileKey]) throw new Error("job without building");
       if (job.toLevel > maxLevelOf(job.buildingId)) throw new Error("job over max level");
     }
-    for (const lvl of Object.values(b.walls)) if (lvl < 1 || lvl > WALL.levels.length) throw new Error("bad wall level");
+    for (const [tk, lvl] of Object.entries(b.walls)) {
+      const { x, y } = parseTile(tk);
+      if (!inGrid(x, y)) throw new Error("wall off-grid");
+      if (lvl < 1 || lvl > WALL.levels.length) throw new Error("bad wall level");
+    }
     for (const u of UNIT_IDS) if ((b.army[u] ?? 0) < 0) throw new Error("negative army");
   }
   for (const [cid, clan] of Object.entries(w.clans)) {
@@ -73,16 +79,15 @@ function randomCommand(rnd: () => number, w: CocWorld): CocCommand {
   const owners = Object.keys(w.bases);
   const r = rnd();
   if (r < 0.10) { const [q, c] = pick(rnd, hexes).split(",").map(Number); return { type: "claimBase", q, r: c }; }
-  if (r < 0.30) return { type: "placeBuilding", hexKey: pick(rnd, hexes), buildingId: pick(rnd, BUILDABLE) };
-  if (r < 0.40) return { type: "upgradeBuilding", hexKey: pick(rnd, hexes) };
+  if (r < 0.30) return { type: "placeBuilding", tileKey: randomTile(rnd), buildingId: pick(rnd, BUILDABLE) };
+  if (r < 0.40) return { type: "upgradeBuilding", tileKey: randomTile(rnd) };
   if (r < 0.48) return { type: "collect" };
-  if (r < 0.55) { const [q, c] = pick(rnd, hexes).split(",").map(Number); return { type: "expandCluster", q, r: c }; }
-  if (r < 0.62) return { type: "placeWall", aKey: pick(rnd, hexes), bKey: pick(rnd, hexes) };
-  if (r < 0.67) return { type: "upgradeWall", edgeKey: `${pick(rnd, hexes)}|${pick(rnd, hexes)}` };
+  if (r < 0.55) return { type: "moveBuilding", fromTile: randomTile(rnd), toTile: randomTile(rnd) };
+  if (r < 0.62) return { type: "placeWall", tileKey: randomTile(rnd) };
+  if (r < 0.67) return { type: "upgradeWall", tileKey: randomTile(rnd) };
   if (r < 0.77) return { type: "trainTroop", unit: pick(rnd, UNIT_IDS) as CocUnitId };
   if (r < 0.86) return { type: "raid", targetOwner: owners.length ? pick(rnd, owners) : "p1", army: { grunt: Math.floor(rnd() * 30), juggernaut: Math.floor(rnd() * 4), gunship: Math.floor(rnd() * 8) } };
-  if (r < 0.90) return { type: "finishNow", hexKey: pick(rnd, hexes) };
-  if (r < 0.93) return { type: "buyBuilder" };
+  if (r < 0.90) return { type: "finishNow", tileKey: randomTile(rnd) };
   if (r < 0.96) return { type: "extendShield", hours: Math.floor(rnd() * 26) };
   if (r < 0.98) return { type: "createClan", name: `C${Math.floor(rnd() * 9999)}` };
   if (r < 0.99) return { type: "joinClan", clanId: pick(rnd, ["clan1", "clan2", "clan3", "clan4"]) };
@@ -144,17 +149,17 @@ describe.skipIf(!RUN)("CoC STRESS (long-running)", () => {
 });
 
 function randomDefender(rnd: () => number): CocBase {
-  const hexes = ["0,0", "1,0", "1,-1", "0,-1", "-1,0", "-1,1", "0,1", "2,0", "2,-1"];
+  const tiles = ["0,0", "4,0", "8,0", "0,4", "4,4", "8,4", "0,8", "12,0", "12,4"];
   const ids: CocBuildingId[] = ["commandCenter", "goldCollector", "elixirCollector", "goldStorage", "elixirStorage", "cannon", "mortar", "airDefense", "barracks", "armyCamp"];
-  const buildings: Record<string, { id: CocBuildingId; level: number }> = { "0,0": { id: "commandCenter", level: 1 + Math.floor(rnd() * 5) } };
+  const buildings: Record<string, { id: CocBuildingId; level: number }> = { "8,8": { id: "commandCenter", level: 1 + Math.floor(rnd() * 5) } };
   const n = 1 + Math.floor(rnd() * 8);
-  for (let i = 1; i <= n; i++) buildings[hexes[i]] = { id: pick(rnd, ids.slice(1)), level: 1 + Math.floor(rnd() * 3) };
+  for (let i = 0; i < n; i++) buildings[tiles[i]] = { id: pick(rnd, ids.slice(1)), level: 1 + Math.floor(rnd() * 3) };
   const walls: Record<string, number> = {};
-  if (rnd() < 0.7) walls["0,0|1,0"] = 1 + Math.floor(rnd() * 3);
-  if (rnd() < 0.5) walls["0,0|0,1"] = 1 + Math.floor(rnd() * 3);
+  if (rnd() < 0.7) walls["1,1"] = 1 + Math.floor(rnd() * 3);
+  if (rnd() < 0.5) walls["2,2"] = 1 + Math.floor(rnd() * 3);
   return {
-    owner: "d", centerKey: "0,0", ownedHexes: hexes.slice(0, n + 1), buildings, walls,
+    owner: "d", location: "0,0", buildings, walls,
     gold: Math.floor(rnd() * 20000), elixir: Math.floor(rnd() * 20000),
-    builders: 2, jobs: [], army: {}, trainQueue: [], shieldUntil: 0, trophies: 0,
+    jobs: [], army: {}, trainQueue: [], shieldUntil: 0, trophies: 0,
   };
 }

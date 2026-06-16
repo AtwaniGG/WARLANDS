@@ -11,11 +11,13 @@ export type CocBuildingId =
   | "mortar"
   | "airDefense"
   | "barracks"
-  | "armyCamp";
+  | "armyCamp"
+  | "builderHut"
+  | "clanCastle";
 
 export type CocUnitId = "grunt" | "marksman" | "breacher" | "juggernaut" | "gunship";
 
-/** A building placed on a hex. level 0 = under construction (not yet operational). */
+/** A building placed on the village grid, anchored at a tile key "x,y". level 0 = under construction. */
 export interface PlacedBuilding {
   id: CocBuildingId;
   level: number;
@@ -24,7 +26,8 @@ export interface PlacedBuilding {
 }
 
 export interface BuildJob {
-  hexKey: string;
+  /** anchor tile "x,y" of the building this job belongs to */
+  tileKey: string;
   buildingId: CocBuildingId;
   kind: "build" | "upgrade";
   toLevel: number;
@@ -40,14 +43,14 @@ export type Army = Partial<Record<CocUnitId, number>>;
 
 export interface CocBase {
   owner: string;
-  centerKey: string;
-  ownedHexes: string[];
-  buildings: Record<string, PlacedBuilding>; // hexKey -> building
-  /** wall segments on edges between owned hexes; keyed by edgeKey -> level */
+  /** world hexKey "q,r" where this village sits on the WORLD map */
+  location: string;
+  /** anchor tile "x,y" -> building (footprint read from config) */
+  buildings: Record<string, PlacedBuilding>;
+  /** wall tiles: tile "x,y" -> wall level (each wall is 1×1) */
   walls: Record<string, number>;
   gold: number;
   elixir: number;
-  builders: number;
   jobs: BuildJob[];
   /** trained troops ready to attack with */
   army: Army;
@@ -77,7 +80,7 @@ export interface CocWorld {
   tick: number;
   hexes: Record<string, Hex>;
   bases: Record<string, CocBase>; // keyed by owner playerId
-  claimedHexes: Record<string, string>; // hexKey -> owner
+  claimedHexes: Record<string, string>; // hexKey -> owner (one village per owner)
   players: Record<string, CocPlayer>;
   clans: Record<string, Clan>;
   nextClanId: number;
@@ -85,16 +88,15 @@ export interface CocWorld {
 
 export type CocCommand =
   | { type: "claimBase"; q: number; r: number }
-  | { type: "placeBuilding"; hexKey: string; buildingId: CocBuildingId }
-  | { type: "upgradeBuilding"; hexKey: string }
+  | { type: "placeBuilding"; tileKey: string; buildingId: CocBuildingId }
+  | { type: "upgradeBuilding"; tileKey: string }
+  | { type: "moveBuilding"; fromTile: string; toTile: string }
   | { type: "collect" }
-  | { type: "expandCluster"; q: number; r: number }
-  | { type: "placeWall"; aKey: string; bKey: string }
-  | { type: "upgradeWall"; edgeKey: string }
+  | { type: "placeWall"; tileKey: string }
+  | { type: "upgradeWall"; tileKey: string }
   | { type: "trainTroop"; unit: CocUnitId }
   | { type: "raid"; targetOwner: string; army: Army }
-  | { type: "finishNow"; hexKey: string }
-  | { type: "buyBuilder" }
+  | { type: "finishNow"; tileKey: string }
   | { type: "extendShield"; hours: number }
   | { type: "createClan"; name: string }
   | { type: "joinClan"; clanId: string }

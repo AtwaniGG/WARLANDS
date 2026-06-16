@@ -20,7 +20,7 @@ function tickBase(base: CocBase, nextTick: number): CocBase {
   const jobs: BuildJob[] = [];
   for (const job of base.jobs) {
     if (nextTick >= job.finishesAtTick) {
-      const b = buildings[job.hexKey];
+      const b = buildings[job.tileKey];
       if (b) b.level = job.toLevel;
     } else {
       jobs.push(job);

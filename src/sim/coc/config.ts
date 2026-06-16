@@ -6,6 +6,10 @@ export const STARTING_ELIXIR = 500;
 export const STARTING_BUILDERS = 2;
 export const BASE_STORAGE_CAP = 1000;
 
+/** The MY BASE village is a fixed square grid; tiles are keyed "x,y" with 0 ≤ x,y < GRID. */
+export const GRID_W = 20;
+export const GRID_H = 20;
+
 export type DefenseTarget = "ground" | "air" | "any";
 
 export interface BuildingLevel {
@@ -27,17 +31,20 @@ export interface BuildingLevel {
 export interface BuildingDef {
   id: CocBuildingId;
   name: string;
-  category: "hq" | "collector" | "storage" | "defense" | "army";
+  category: "hq" | "collector" | "storage" | "defense" | "army" | "builder" | "clan";
   produces?: CocResource;
   stores?: CocResource;
+  /** Tile footprint on the village grid (w×h), anchored at the top-left tile. */
+  footprint: { w: number; h: number };
   levels: BuildingLevel[]; // index 0 => level 1
 }
 
 export const BUILDINGS: Record<CocBuildingId, BuildingDef> = {
   commandCenter: {
     id: "commandCenter",
-    name: "Command Center",
+    name: "Town Hall",
     category: "hq",
+    footprint: { w: 4, h: 4 },
     levels: [
       { cost: {}, buildTimeSec: 0 },
       { cost: { gold: 1000 }, buildTimeSec: 60 },
@@ -48,9 +55,10 @@ export const BUILDINGS: Record<CocBuildingId, BuildingDef> = {
   },
   goldCollector: {
     id: "goldCollector",
-    name: "Gold Collector",
+    name: "Gold Mine",
     category: "collector",
     produces: "gold",
+    footprint: { w: 3, h: 3 },
     levels: [
       { cost: { elixir: 150 }, buildTimeSec: 30, producePerTick: 2, bufferCap: 500 },
       { cost: { elixir: 600 }, buildTimeSec: 120, producePerTick: 4, bufferCap: 1000 },
@@ -62,6 +70,7 @@ export const BUILDINGS: Record<CocBuildingId, BuildingDef> = {
     name: "Elixir Collector",
     category: "collector",
     produces: "elixir",
+    footprint: { w: 3, h: 3 },
     levels: [
       { cost: { gold: 150 }, buildTimeSec: 30, producePerTick: 2, bufferCap: 500 },
       { cost: { gold: 600 }, buildTimeSec: 120, producePerTick: 4, bufferCap: 1000 },
@@ -73,6 +82,7 @@ export const BUILDINGS: Record<CocBuildingId, BuildingDef> = {
     name: "Gold Storage",
     category: "storage",
     stores: "gold",
+    footprint: { w: 3, h: 3 },
     levels: [
       { cost: { elixir: 300 }, buildTimeSec: 60, storageCap: 2000 },
       { cost: { elixir: 1200 }, buildTimeSec: 300, storageCap: 5000 },
@@ -84,6 +94,7 @@ export const BUILDINGS: Record<CocBuildingId, BuildingDef> = {
     name: "Elixir Storage",
     category: "storage",
     stores: "elixir",
+    footprint: { w: 3, h: 3 },
     levels: [
       { cost: { gold: 300 }, buildTimeSec: 60, storageCap: 2000 },
       { cost: { gold: 1200 }, buildTimeSec: 300, storageCap: 5000 },
@@ -94,6 +105,7 @@ export const BUILDINGS: Record<CocBuildingId, BuildingDef> = {
     id: "cannon",
     name: "Cannon",
     category: "defense",
+    footprint: { w: 3, h: 3 },
     levels: [
       { cost: { gold: 200 }, buildTimeSec: 60, hp: 420, dps: 12, range: 3, targets: "ground" },
       { cost: { gold: 800 }, buildTimeSec: 300, hp: 600, dps: 18, range: 3, targets: "ground" },
@@ -104,6 +116,7 @@ export const BUILDINGS: Record<CocBuildingId, BuildingDef> = {
     id: "mortar",
     name: "Mortar",
     category: "defense",
+    footprint: { w: 3, h: 3 },
     levels: [
       { cost: { gold: 500 }, buildTimeSec: 300, hp: 360, dps: 8, range: 4, targets: "ground", splash: true },
       { cost: { gold: 1500 }, buildTimeSec: 900, hp: 520, dps: 12, range: 4, targets: "ground", splash: true },
@@ -114,6 +127,7 @@ export const BUILDINGS: Record<CocBuildingId, BuildingDef> = {
     id: "airDefense",
     name: "Air Defense",
     category: "defense",
+    footprint: { w: 3, h: 3 },
     levels: [
       { cost: { gold: 700 }, buildTimeSec: 300, hp: 540, dps: 22, range: 4, targets: "air" },
       { cost: { gold: 2000 }, buildTimeSec: 900, hp: 760, dps: 32, range: 4, targets: "air" },
@@ -124,6 +138,7 @@ export const BUILDINGS: Record<CocBuildingId, BuildingDef> = {
     id: "barracks",
     name: "Barracks",
     category: "army",
+    footprint: { w: 3, h: 3 },
     levels: [
       { cost: { elixir: 250 }, buildTimeSec: 60, hp: 300 },
       { cost: { elixir: 1000 }, buildTimeSec: 300, hp: 450 },
@@ -134,11 +149,28 @@ export const BUILDINGS: Record<CocBuildingId, BuildingDef> = {
     id: "armyCamp",
     name: "Army Camp",
     category: "army",
+    footprint: { w: 4, h: 4 },
     levels: [
       { cost: { elixir: 200 }, buildTimeSec: 60, hp: 250, housing: 20 },
       { cost: { elixir: 800 }, buildTimeSec: 300, hp: 350, housing: 40 },
       { cost: { elixir: 2500 }, buildTimeSec: 1200, hp: 500, housing: 70 },
     ],
+  },
+  builderHut: {
+    id: "builderHut",
+    name: "Builder's Hut",
+    category: "builder",
+    footprint: { w: 2, h: 2 },
+    // Placed instantly for $WAR (see commands); the building IS a builder.
+    levels: [{ cost: {}, buildTimeSec: 0, hp: 250 }],
+  },
+  clanCastle: {
+    id: "clanCastle",
+    name: "Clan Castle",
+    category: "clan",
+    footprint: { w: 3, h: 3 },
+    // Inert in GV0 (reinforcements deferred); placeable + lootable HP only.
+    levels: [{ cost: { elixir: 1000 }, buildTimeSec: 300, hp: 500 }],
   },
 };
 
@@ -187,12 +219,12 @@ export const WAR_RAID_REWARD_PER_STAR = 50;
 export function finishCost(remainingSecs: number): number {
   return Math.max(WAR_MIN_FINISH, Math.ceil(remainingSecs * WAR_FINISH_PER_SEC));
 }
-/** $WAR to buy the next builder, given the current builder count. */
+/** $WAR to buy the next builder (place a Builder's Hut), given the current builder count. */
 export function builderCost(currentBuilders: number): number {
   return WAR_BUILDER_BASE * (currentBuilders - 1);
 }
 
-/** Walls live on hex edges, not hexes: instant, gold-only, no builder. */
+/** Walls are 1×1 tiles: instant, gold-only, no builder. */
 export interface WallLevel {
   cost: Partial<Record<CocResource, number>>;
   hp: number;
@@ -215,14 +247,15 @@ export interface CcCap {
   maxLevel: number;
 }
 export interface CcTier {
-  maxHexes: number;
+  /** Max number of wall tiles allowed at this Command Center level. */
+  maxWalls: number;
   caps: Partial<Record<CocBuildingId, CcCap>>;
 }
 
 /** index 0 => Command Center level 1. */
 export const CC_PROGRESSION: CcTier[] = [
   {
-    maxHexes: 7,
+    maxWalls: 12,
     caps: {
       goldCollector: { maxCount: 1, maxLevel: 1 },
       elixirCollector: { maxCount: 1, maxLevel: 1 },
@@ -234,7 +267,7 @@ export const CC_PROGRESSION: CcTier[] = [
     },
   },
   {
-    maxHexes: 9,
+    maxWalls: 25,
     caps: {
       goldCollector: { maxCount: 2, maxLevel: 2 },
       elixirCollector: { maxCount: 2, maxLevel: 2 },
@@ -247,7 +280,7 @@ export const CC_PROGRESSION: CcTier[] = [
     },
   },
   {
-    maxHexes: 11,
+    maxWalls: 50,
     caps: {
       goldCollector: { maxCount: 2, maxLevel: 3 },
       elixirCollector: { maxCount: 2, maxLevel: 3 },
@@ -258,10 +291,11 @@ export const CC_PROGRESSION: CcTier[] = [
       airDefense: { maxCount: 1, maxLevel: 1 },
       barracks: { maxCount: 1, maxLevel: 3 },
       armyCamp: { maxCount: 2, maxLevel: 3 },
+      clanCastle: { maxCount: 1, maxLevel: 1 },
     },
   },
   {
-    maxHexes: 13,
+    maxWalls: 75,
     caps: {
       goldCollector: { maxCount: 3, maxLevel: 3 },
       elixirCollector: { maxCount: 3, maxLevel: 3 },
@@ -272,10 +306,11 @@ export const CC_PROGRESSION: CcTier[] = [
       airDefense: { maxCount: 1, maxLevel: 2 },
       barracks: { maxCount: 1, maxLevel: 3 },
       armyCamp: { maxCount: 3, maxLevel: 3 },
+      clanCastle: { maxCount: 1, maxLevel: 1 },
     },
   },
   {
-    maxHexes: 19,
+    maxWalls: 100,
     caps: {
       goldCollector: { maxCount: 4, maxLevel: 3 },
       elixirCollector: { maxCount: 4, maxLevel: 3 },
@@ -286,6 +321,7 @@ export const CC_PROGRESSION: CcTier[] = [
       airDefense: { maxCount: 2, maxLevel: 3 },
       barracks: { maxCount: 1, maxLevel: 3 },
       armyCamp: { maxCount: 4, maxLevel: 3 },
+      clanCastle: { maxCount: 1, maxLevel: 1 },
     },
   },
 ];

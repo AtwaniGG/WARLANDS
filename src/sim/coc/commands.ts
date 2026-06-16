@@ -1,10 +1,13 @@
-import { hexKey, hexNeighbors } from "@/game/world";
-import { builderCost, BUILDINGS, ccTier, finishCost, levelDef, maxLevelOf, maxWallLevel, MAX_BUILDERS, SHIELD_MAX_SECS, SHIELD_SECS_PER_PCT, STARTING_BUILDERS, STARTING_ELIXIR, STARTING_GOLD, UNITS, WALL, WAR_RAID_REWARD_PER_STAR, WAR_SHIELD_PER_HOUR } from "./config";
-import { ccLevel, edgeKey, freeBuilders, hasBarracks, housingCap, housingUsed, storageCap } from "./world";
+import { hexKey } from "@/game/world";
+import { builderCost, BUILDINGS, ccTier, finishCost, levelDef, maxLevelOf, maxWallLevel, MAX_BUILDERS, SHIELD_MAX_SECS, SHIELD_SECS_PER_PCT, STARTING_ELIXIR, STARTING_GOLD, UNITS, WALL, WAR_RAID_REWARD_PER_STAR, WAR_SHIELD_PER_HOUR } from "./config";
+import { builderCount, ccLevel, fitsInGrid, footprintTiles, freeBuilders, hasBarracks, housingCap, housingUsed, inGrid, occupiedTiles, parseTile, storageCap } from "./world";
 import { resolveRaid } from "./battle";
 import type { Army, Clan, CocBase, CocBuildingId, CocCommand, CocResource, CocUnitId, CocWorld, CommandResult, PlacedBuilding } from "./types";
 
 const CLAN_MAX_MEMBERS = 10;
+/** Starting village layout on the 20×20 grid: a centered Town Hall flanked by two Builder's Huts. */
+const TH_ANCHOR = "8,8"; // 4×4 → tiles x8–11, y8–11
+const HUT_ANCHORS = ["5,9", "14,9"]; // 2×2 each, clear of the Town Hall
 
 function fail(state: CocWorld, error: string): CommandResult {
   return { state, error };
@@ -14,7 +17,7 @@ function countOf(base: CocBase, id: CocBuildingId): number {
   return Object.values(base.buildings).filter((b) => b.id === id).length;
 }
 function hasJobOn(base: CocBase, key: string): boolean {
-  return base.jobs.some((j) => j.hexKey === key);
+  return base.jobs.some((j) => j.tileKey === key);
 }
 function canAfford(base: CocBase, cost: Partial<Record<CocResource, number>>): boolean {
   return base.gold >= (cost.gold ?? 0) && base.elixir >= (cost.elixir ?? 0);
@@ -22,46 +25,66 @@ function canAfford(base: CocBase, cost: Partial<Record<CocResource, number>>): b
 function spend(base: CocBase, cost: Partial<Record<CocResource, number>>): { gold: number; elixir: number } {
   return { gold: base.gold - (cost.gold ?? 0), elixir: base.elixir - (cost.elixir ?? 0) };
 }
+/** Would a building of `id` anchored at `anchorKey` collide with anything (excluding `exclude`)? */
+function collides(base: CocBase, anchorKey: string, id: CocBuildingId, exclude?: string): boolean {
+  const occ = occupiedTiles(base, exclude);
+  return footprintTiles(anchorKey, id).some((t) => occ.has(t));
+}
 
 function claimBase(state: CocWorld, playerId: string, q: number, r: number): CommandResult {
   if (!state.players[playerId]) return fail(state, "Unknown player.");
   if (state.bases[playerId]) return fail(state, "You already have a base.");
-  const centerKey = hexKey(q, r);
-  if (!state.hexes[centerKey]) return fail(state, "No such hex.");
-  const cluster = [centerKey, ...hexNeighbors(q, r).map((n) => hexKey(n.q, n.r))];
-  for (const k of cluster) {
-    if (!state.hexes[k]) return fail(state, "Base must be fully inside the map.");
-    if (state.claimedHexes[k]) return fail(state, "That land is already claimed.");
-  }
+  const key = hexKey(q, r);
+  if (!state.hexes[key]) return fail(state, "No such hex.");
+  if (state.claimedHexes[key]) return fail(state, "That land is already claimed.");
+  const buildings: Record<string, PlacedBuilding> = {
+    [TH_ANCHOR]: { id: "commandCenter", level: 1 },
+  };
+  for (const h of HUT_ANCHORS) buildings[h] = { id: "builderHut", level: 1 };
   const base: CocBase = {
     owner: playerId,
-    centerKey,
-    ownedHexes: cluster,
-    buildings: { [centerKey]: { id: "commandCenter", level: 1 } },
+    location: key,
+    buildings,
     walls: {},
     gold: STARTING_GOLD,
     elixir: STARTING_ELIXIR,
-    builders: STARTING_BUILDERS,
     jobs: [],
     army: {},
     trainQueue: [],
     shieldUntil: 0,
     trophies: 0,
   };
-  const claimedHexes = { ...state.claimedHexes };
-  for (const k of cluster) claimedHexes[k] = playerId;
-  return { state: { ...state, bases: { ...state.bases, [playerId]: base }, claimedHexes } };
+  return { state: { ...state, bases: { ...state.bases, [playerId]: base }, claimedHexes: { ...state.claimedHexes, [key]: playerId } } };
 }
 
-function placeBuilding(state: CocWorld, playerId: string, key: string, buildingId: CocBuildingId): CommandResult {
+function placeBuilding(state: CocWorld, playerId: string, anchorKey: string, buildingId: CocBuildingId): CommandResult {
   const base = state.bases[playerId];
   if (!base) return fail(state, "You have no base.");
-  if (buildingId === "commandCenter") return fail(state, "The Command Center cannot be placed.");
-  if (!base.ownedHexes.includes(key)) return fail(state, "That hex is not in your base.");
-  if (base.buildings[key]) return fail(state, "That hex is already occupied.");
+  if (buildingId === "commandCenter") return fail(state, "The Town Hall cannot be placed.");
+  if (!fitsInGrid(anchorKey, buildingId)) return fail(state, "That doesn't fit in the village.");
+  if (collides(base, anchorKey, buildingId)) return fail(state, "Those tiles are occupied.");
+
+  // Builder's Hut: instant, paid in $WAR, no builder consumed, capped at MAX_BUILDERS.
+  if (buildingId === "builderHut") {
+    const player = state.players[playerId];
+    if (!player) return fail(state, "Unknown player.");
+    const count = builderCount(base);
+    if (count >= MAX_BUILDERS) return fail(state, "You already have the maximum builders.");
+    const cost = builderCost(count);
+    if (player.war < cost) return fail(state, `Not enough $WAR (need ${cost.toLocaleString()}).`);
+    const newBase: CocBase = { ...base, buildings: { ...base.buildings, [anchorKey]: { id: "builderHut", level: 1 } } };
+    return {
+      state: {
+        ...state,
+        players: { ...state.players, [playerId]: { ...player, war: player.war - cost } },
+        bases: { ...state.bases, [playerId]: newBase },
+      },
+    };
+  }
+
   const cap = ccTier(ccLevel(base)).caps[buildingId];
-  if (!cap) return fail(state, "Locked at this Command Center level.");
-  if (countOf(base, buildingId) >= cap.maxCount) return fail(state, "Build limit reached for this Command Center level.");
+  if (!cap) return fail(state, "Locked at this Town Hall level.");
+  if (countOf(base, buildingId) >= cap.maxCount) return fail(state, "Build limit reached for this Town Hall level.");
   if (freeBuilders(base) <= 0) return fail(state, "No builder is free.");
   const lv = levelDef(buildingId, 1)!;
   if (!canAfford(base, lv.cost)) {
@@ -74,8 +97,8 @@ function placeBuilding(state: CocWorld, playerId: string, key: string, buildingI
     ...base,
     gold,
     elixir,
-    buildings: { ...base.buildings, [key]: building },
-    jobs: [...base.jobs, { hexKey: key, buildingId, kind: "build", toLevel: 1, finishesAtTick: state.tick + lv.buildTimeSec }],
+    buildings: { ...base.buildings, [anchorKey]: building },
+    jobs: [...base.jobs, { tileKey: anchorKey, buildingId, kind: "build", toLevel: 1, finishesAtTick: state.tick + lv.buildTimeSec }],
   };
   return { state: { ...state, bases: { ...state.bases, [playerId]: newBase } } };
 }
@@ -91,7 +114,7 @@ function upgradeBuilding(state: CocWorld, playerId: string, key: string): Comman
   if (nextLevel > maxLevelOf(b.id)) return fail(state, "Already at max level.");
   if (b.id !== "commandCenter") {
     const cap = ccTier(ccLevel(base)).caps[b.id];
-    if (!cap || nextLevel > cap.maxLevel) return fail(state, "Upgrade the Command Center to raise the level cap.");
+    if (!cap || nextLevel > cap.maxLevel) return fail(state, "Upgrade the Town Hall to raise the level cap.");
   }
   if (freeBuilders(base) <= 0) return fail(state, "No builder is free.");
   const lv = levelDef(b.id, nextLevel)!; // cost/time of the target level
@@ -104,9 +127,24 @@ function upgradeBuilding(state: CocWorld, playerId: string, key: string): Comman
     ...base,
     gold,
     elixir,
-    jobs: [...base.jobs, { hexKey: key, buildingId: b.id, kind: "upgrade", toLevel: nextLevel, finishesAtTick: state.tick + lv.buildTimeSec }],
+    jobs: [...base.jobs, { tileKey: key, buildingId: b.id, kind: "upgrade", toLevel: nextLevel, finishesAtTick: state.tick + lv.buildTimeSec }],
   };
   return { state: { ...state, bases: { ...state.bases, [playerId]: newBase } } };
+}
+
+function moveBuilding(state: CocWorld, playerId: string, fromTile: string, toTile: string): CommandResult {
+  const base = state.bases[playerId];
+  if (!base) return fail(state, "You have no base.");
+  const b = base.buildings[fromTile];
+  if (!b) return fail(state, "Nothing to move there.");
+  if (b.level < 1) return fail(state, "Still under construction.");
+  if (hasJobOn(base, fromTile)) return fail(state, "That building is busy.");
+  if (!fitsInGrid(toTile, b.id)) return fail(state, "That doesn't fit in the village.");
+  if (collides(base, toTile, b.id, fromTile)) return fail(state, "Those tiles are occupied.");
+  const buildings = { ...base.buildings };
+  delete buildings[fromTile];
+  buildings[toTile] = b;
+  return { state: { ...state, bases: { ...state.bases, [playerId]: { ...base, buildings } } } };
 }
 
 function collect(state: CocWorld, playerId: string): CommandResult {
@@ -138,52 +176,32 @@ function collect(state: CocWorld, playerId: string): CommandResult {
   return { state: { ...state, bases: { ...state.bases, [playerId]: { ...base, gold, elixir, buildings } } } };
 }
 
-function expandCluster(state: CocWorld, playerId: string, q: number, r: number): CommandResult {
+function placeWall(state: CocWorld, playerId: string, tileKey: string): CommandResult {
   const base = state.bases[playerId];
   if (!base) return fail(state, "You have no base.");
-  const key = hexKey(q, r);
-  if (!state.hexes[key]) return fail(state, "No such hex.");
-  if (state.claimedHexes[key]) return fail(state, "That land is already claimed.");
-  if (base.ownedHexes.length >= ccTier(ccLevel(base)).maxHexes) {
-    return fail(state, "Upgrade the Command Center to expand your territory.");
+  const { x, y } = parseTile(tileKey);
+  if (!inGrid(x, y)) return fail(state, "That tile is outside the village.");
+  if (occupiedTiles(base).has(tileKey)) return fail(state, "That tile is occupied.");
+  if (Object.keys(base.walls).length >= ccTier(ccLevel(base)).maxWalls) {
+    return fail(state, "Wall limit reached — upgrade the Town Hall.");
   }
-  const adjacent = hexNeighbors(q, r).some((n) => base.ownedHexes.includes(hexKey(n.q, n.r)));
-  if (!adjacent) return fail(state, "You can only expand onto land next to your base.");
-  const newBase: CocBase = { ...base, ownedHexes: [...base.ownedHexes, key] };
-  return { state: { ...state, bases: { ...state.bases, [playerId]: newBase }, claimedHexes: { ...state.claimedHexes, [key]: playerId } } };
-}
-
-function placeWall(state: CocWorld, playerId: string, aKey: string, bKey: string): CommandResult {
-  const base = state.bases[playerId];
-  if (!base) return fail(state, "You have no base.");
-  if (aKey === bKey) return fail(state, "A wall spans two hexes.");
-  if (!base.ownedHexes.includes(aKey) || !base.ownedHexes.includes(bKey)) {
-    return fail(state, "Both hexes must be in your base.");
-  }
-  const [aq, ar] = aKey.split(",").map(Number);
-  const adjacent = hexNeighbors(aq, ar).some((n) => hexKey(n.q, n.r) === bKey);
-  if (!adjacent) return fail(state, "Walls go between adjacent hexes.");
-  const ek = edgeKey(aKey, bKey);
-  if (base.walls[ek]) return fail(state, "There is already a wall here.");
   const cost = WALL.levels[0].cost;
   if (!canAfford(base, cost)) return fail(state, "Not enough gold.");
   const { gold, elixir } = spend(base, cost);
-  const newBase: CocBase = { ...base, gold, elixir, walls: { ...base.walls, [ek]: 1 } };
-  return { state: { ...state, bases: { ...state.bases, [playerId]: newBase } } };
+  return { state: { ...state, bases: { ...state.bases, [playerId]: { ...base, gold, elixir, walls: { ...base.walls, [tileKey]: 1 } } } } };
 }
 
-function upgradeWall(state: CocWorld, playerId: string, ek: string): CommandResult {
+function upgradeWall(state: CocWorld, playerId: string, tileKey: string): CommandResult {
   const base = state.bases[playerId];
   if (!base) return fail(state, "You have no base.");
-  const level = base.walls[ek];
+  const level = base.walls[tileKey];
   if (!level) return fail(state, "No wall there.");
   const nextLevel = level + 1;
-  if (nextLevel > maxWallLevel(ccLevel(base))) return fail(state, "Upgrade the Command Center to raise the wall cap.");
+  if (nextLevel > maxWallLevel(ccLevel(base))) return fail(state, "Upgrade the Town Hall to raise the wall cap.");
   const cost = WALL.levels[nextLevel - 1].cost;
   if (!canAfford(base, cost)) return fail(state, "Not enough gold.");
   const { gold, elixir } = spend(base, cost);
-  const newBase: CocBase = { ...base, gold, elixir, walls: { ...base.walls, [ek]: nextLevel } };
-  return { state: { ...state, bases: { ...state.bases, [playerId]: newBase } } };
+  return { state: { ...state, bases: { ...state.bases, [playerId]: { ...base, gold, elixir, walls: { ...base.walls, [tileKey]: nextLevel } } } } };
 }
 
 function trainTroop(state: CocWorld, playerId: string, unit: CocUnitId): CommandResult {
@@ -280,7 +298,7 @@ function finishNow(state: CocWorld, playerId: string, key: string): CommandResul
   const base = state.bases[playerId];
   const player = state.players[playerId];
   if (!base || !player) return fail(state, "You have no base.");
-  const job = base.jobs.find((j) => j.hexKey === key);
+  const job = base.jobs.find((j) => j.tileKey === key);
   if (!job) return fail(state, "Nothing is building there.");
   const cost = finishCost(Math.max(0, job.finishesAtTick - state.tick));
   if (player.war < cost) return fail(state, `Not enough $WAR (need ${cost.toLocaleString()}).`);
@@ -292,22 +310,6 @@ function finishNow(state: CocWorld, playerId: string, key: string): CommandResul
       ...state,
       players: { ...state.players, [playerId]: { ...player, war: player.war - cost } },
       bases: { ...state.bases, [playerId]: newBase },
-    },
-  };
-}
-
-function buyBuilder(state: CocWorld, playerId: string): CommandResult {
-  const base = state.bases[playerId];
-  const player = state.players[playerId];
-  if (!base || !player) return fail(state, "You have no base.");
-  if (base.builders >= MAX_BUILDERS) return fail(state, "You already have the maximum builders.");
-  const cost = builderCost(base.builders);
-  if (player.war < cost) return fail(state, `Not enough $WAR (need ${cost.toLocaleString()}).`);
-  return {
-    state: {
-      ...state,
-      players: { ...state.players, [playerId]: { ...player, war: player.war - cost } },
-      bases: { ...state.bases, [playerId]: { ...base, builders: base.builders + 1 } },
     },
   };
 }
@@ -421,25 +423,23 @@ export function applyCommand(state: CocWorld, playerId: string, cmd: CocCommand)
     case "claimBase":
       return claimBase(state, playerId, cmd.q, cmd.r);
     case "placeBuilding":
-      return placeBuilding(state, playerId, cmd.hexKey, cmd.buildingId);
+      return placeBuilding(state, playerId, cmd.tileKey, cmd.buildingId);
     case "upgradeBuilding":
-      return upgradeBuilding(state, playerId, cmd.hexKey);
+      return upgradeBuilding(state, playerId, cmd.tileKey);
+    case "moveBuilding":
+      return moveBuilding(state, playerId, cmd.fromTile, cmd.toTile);
     case "collect":
       return collect(state, playerId);
-    case "expandCluster":
-      return expandCluster(state, playerId, cmd.q, cmd.r);
     case "placeWall":
-      return placeWall(state, playerId, cmd.aKey, cmd.bKey);
+      return placeWall(state, playerId, cmd.tileKey);
     case "upgradeWall":
-      return upgradeWall(state, playerId, cmd.edgeKey);
+      return upgradeWall(state, playerId, cmd.tileKey);
     case "trainTroop":
       return trainTroop(state, playerId, cmd.unit);
     case "raid":
       return raid(state, playerId, cmd.targetOwner, cmd.army);
     case "finishNow":
-      return finishNow(state, playerId, cmd.hexKey);
-    case "buyBuilder":
-      return buyBuilder(state, playerId);
+      return finishNow(state, playerId, cmd.tileKey);
     case "extendShield":
       return extendShield(state, playerId, cmd.hours);
     case "createClan":
