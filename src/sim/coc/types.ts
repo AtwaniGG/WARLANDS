@@ -100,6 +100,8 @@ export interface CocWorld {
   players: Record<string, CocPlayer>;
   clans: Record<string, Clan>;
   nextClanId: number;
+  /** defense reports queued for offline players (raided while away) — delivered on connect. */
+  pendingReports?: Record<string, BattleReport[]>;
 }
 
 export type CocCommand =

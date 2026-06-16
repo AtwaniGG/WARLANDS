@@ -366,7 +366,8 @@ export default function WorldPage() {
 
       {report && !raidTarget && (
         <Overlay onClose={clearReport}>
-          <ResultCard report={report} mine={report.attacker === playerId} onClose={clearReport} />
+          <ResultCard report={report} mine={report.attacker === playerId} onClose={clearReport}
+            onRevenge={state.bases[report.attacker] ? () => { const atk = report.attacker; clearReport(); setScreen("world"); setScout(atk); } : undefined} />
         </Overlay>
       )}
 
@@ -619,9 +620,9 @@ function ClanPanel({ state, playerId, send, onClose }: { state: CocWorld; player
   );
 }
 
-function ResultCard({ report, mine, onClose }: { report: BattleReport; mine: boolean; onClose: () => void }) {
+function ResultCard({ report, mine, onClose, onRevenge }: { report: BattleReport; mine: boolean; onClose: () => void; onRevenge?: () => void }) {
   return (
-    <Panel title={mine ? "RAID REPORT" : "UNDER ATTACK"} accent padding="16px" headerRight={<button onClick={onClose} style={closeBtn}>✕</button>}>
+    <Panel title={mine ? "RAID REPORT" : "UNDER ATTACK"} rim={mine ? undefined : "blood"} accent={mine} padding="16px" headerRight={<button onClick={onClose} style={closeBtn}>✕</button>}>
       <div style={{ textAlign: "center" }}>
         <div style={{ fontSize: 40, letterSpacing: 6 }}>{[0, 1, 2].map((i) => <span key={i} style={{ color: i < report.stars ? "var(--amber)" : "var(--disabled)" }}>★</span>)}</div>
         <div className="wl-num" style={{ fontSize: 28, marginTop: 4 }}>{Math.round(report.destructionPct * 100)}%</div>
@@ -632,7 +633,10 @@ function ResultCard({ report, mine, onClose }: { report: BattleReport; mine: boo
         <Stat label="🧪 LOOT" value={num(report.loot.elixir)} accent="violet" align="stack" />
         <Stat label="🏆" value={`${report.trophies >= 0 ? "+" : ""}${report.trophies}`} accent={report.trophies >= 0 ? "emerald" : "blood"} align="stack" />
       </div>
-      <div style={{ marginTop: 14 }}><Button variant="primary" full onClick={onClose}>RETURN HOME</Button></div>
+      <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+        {!mine && onRevenge && <Button variant="danger" full icon="⚔️" onClick={onRevenge}>REVENGE</Button>}
+        <Button variant="primary" full onClick={onClose}>RETURN HOME</Button>
+      </div>
     </Panel>
   );
 }

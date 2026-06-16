@@ -33,11 +33,26 @@ export function startServer(opts: Options = {}): ServerHandle {
     for (const ws of sockets.keys()) if (ws.readyState === ws.OPEN) ws.send(msg);
   }
 
+  // Deliver queued defense reports (raided-while-away) to connected players, then clear them.
+  function flushReports(): void {
+    const pending = state.pendingReports;
+    if (!pending) return;
+    for (const [ws, pid] of sockets) {
+      const rs = pending[pid];
+      if (!rs || rs.length === 0 || ws.readyState !== ws.OPEN) continue;
+      for (const r of rs) ws.send(JSON.stringify({ type: "report", report: r }));
+      const next = { ...state.pendingReports };
+      delete next[pid];
+      state = { ...state, pendingReports: next };
+    }
+  }
+
   wss.on("connection", (ws) => {
     const playerId = randomUUID();
     state = addPlayer(state, playerId);
     sockets.set(ws, playerId);
     ws.send(JSON.stringify({ type: "welcome", playerId, state }));
+    flushReports();
     broadcast();
 
     ws.on("message", (raw) => {
@@ -66,6 +81,7 @@ export function startServer(opts: Options = {}): ServerHandle {
     tickMs > 0
       ? setInterval(async () => {
           state = applyTick(state);
+          flushReports();
           broadcast();
           if (persistEvery > 0 && ++ticks % persistEvery === 0) await saveSnapshot(state).catch(() => {});
         }, tickMs)

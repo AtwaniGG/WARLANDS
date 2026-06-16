@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { applyTick } from "./tick";
 import { createWorld } from "./world";
+import { makeBotBase } from "./bots";
 import type { CocBase, CocWorld } from "./types";
 
 const baseWith = (over: Partial<CocBase>): CocBase => ({
@@ -61,5 +62,31 @@ describe("applyTick", () => {
       jobs: [{ tileKey: "0,0", buildingId: "goldCollector", kind: "build", toLevel: 1, finishesAtTick: 5 }],
     }));
     expect(applyTick(w).bases.p1.jobs.length).toBe(1);
+  });
+
+  it("AI raid waves loot an out-of-shield live player and queue a defense report (real stakes)", () => {
+    let w = createWorld(5);
+    w = {
+      ...w,
+      players: { bot0: { id: "bot0", war: 0, joinedTick: 0, isBot: true }, p1: { id: "p1", war: 0, joinedTick: 0 } },
+      bases: {
+        bot0: makeBotBase("bot0", "1,0", 2, () => 0.5),
+        p1: baseWith({ location: "0,0", gold: 5000, elixir: 5000, buildings: { "8,8": { id: "commandCenter", level: 1 } } }),
+      },
+      claimedHexes: { "1,0": "bot0", "0,0": "p1" },
+      tick: 0,
+    };
+    for (let i = 0; i < 1200; i++) w = applyTick(w); // spans several raid waves
+    expect(w.bases.p1.gold).toBeLessThan(5000); // looted at least once
+    expect((w.pendingReports?.p1 ?? []).length).toBeGreaterThan(0);
+    expect(w.bases.p1.shieldUntil).toBeGreaterThan(0); // shielded after being raided
+    expect(w.bases.bot0.gold).toBe(makeBotBase("bot0", "1,0", 2, () => 0.5).gold); // bots are static targets
+  });
+
+  it("no AI raids fire in a bot-free world (deterministic sim untouched)", () => {
+    let w = worldWith(baseWith({ gold: 5000 }));
+    for (let i = 0; i < 600; i++) w = applyTick(w);
+    expect(w.bases.p1.gold).toBe(5000);
+    expect(w.pendingReports?.p1 ?? []).toEqual([]);
   });
 });
