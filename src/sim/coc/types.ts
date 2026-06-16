@@ -79,6 +79,8 @@ export interface CocPlayer {
   war: number;
   joinedTick: number;
   clanId?: string | null;
+  /** AI-controlled village seeded to populate the world (always a valid raid target). */
+  isBot?: boolean;
 }
 
 export interface Clan {

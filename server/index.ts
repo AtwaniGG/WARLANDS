@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { WebSocketServer, WebSocket } from "ws";
 import { createWorld, addPlayer, normalizeWorld } from "@/sim/coc/world";
+import { ensureBots } from "@/sim/coc/bots";
 import { applyCommand } from "@/sim/coc/commands";
 import { applyTick } from "@/sim/coc/tick";
 import type { CocWorld, CocCommand } from "@/sim/coc/types";
@@ -92,9 +93,11 @@ if (process.env.VITEST !== "true") {
   (async () => {
     await initDb().catch(() => {});
     const restored = await loadLatest().catch(() => null);
-    const srv = startServer(restored ? { initial: normalizeWorld(restored) } : {});
+    const seed = Number(process.env.WORLD_SEED ?? 1);
+    const world = ensureBots(restored ? normalizeWorld(restored) : createWorld(seed)); // always keep the world populated with AI villages
+    const srv = startServer({ initial: world });
     await srv.ready;
     if (restored) console.log(`Restored world @ tick ${restored.tick}`);
-    console.log(`WARLANDS server on :${srv.port}`);
+    console.log(`WARLANDS server on :${srv.port} (${Object.values(world.players).filter((p) => p.isBot).length} bots)`);
   })();
 }

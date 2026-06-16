@@ -4,6 +4,8 @@ import type { CocBase, CocBuildingId, CocPlayer, CocResource, CocWorld } from ".
 
 export const WORLD_RADIUS = 9;
 
+/** A pristine, empty world. Bots are seeded at the server boundary (see `ensureBots`), not here,
+ *  so the sim/tests stay deterministic against a known-empty world. */
 export function createWorld(seed: number): CocWorld {
   const { radius, hexes } = generateWorld(WORLD_RADIUS);
   const hexRecord: CocWorld["hexes"] = {};

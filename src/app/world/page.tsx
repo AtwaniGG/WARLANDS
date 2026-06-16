@@ -143,6 +143,16 @@ export default function WorldPage() {
     setRaidTarget(null); setDeployList([]); setCapturedDef(null); setFrames(null); setLaunching(false);
     awaitingRaid.current = false;
   }
+  /** Matchmaking: jump to a raidable village near your trophy count (bot or player). */
+  function findTarget() {
+    if (!myBase || !playerId || !state) return;
+    const cands = Object.entries(state.bases)
+      .filter(([owner, b]) => owner !== playerId && b.shieldUntil <= state.tick)
+      .sort((a, b) => Math.abs(a[1].trophies - myBase.trophies) - Math.abs(b[1].trophies - myBase.trophies));
+    if (cands.length === 0) return;
+    const pick = cands[Math.floor(Math.random() * Math.min(5, cands.length))];
+    setScreen("world"); setScout(pick[0]); buzz(8);
+  }
 
   return (
     <main style={page}>
@@ -194,8 +204,11 @@ export default function WorldPage() {
       {/* ===================== WORLD ===================== */}
       {view === "world" && (
         <>
-          <div style={{ marginTop: 8, fontSize: 11, color: "var(--text-muted)" }}>
-            {myBase ? "Tap your village to manage it · tap an enemy village to scout." : "Tap an unclaimed hex to found your village."}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+            {myBase && <Button size="sm" variant="primary" icon="🎯" onClick={findTarget}>FIND TARGET</Button>}
+            <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
+              {myBase ? "Tap an enemy village to scout & raid · tap yours to manage it." : "Tap an unclaimed hex to found your village."}
+            </span>
           </div>
           <div style={mapWrap}>
             <div className="wl-hexgrid" style={{ position: "absolute", inset: 0, opacity: 0.5, pointerEvents: "none" }} />
