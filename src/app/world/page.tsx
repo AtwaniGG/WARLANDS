@@ -524,7 +524,7 @@ function costStr(cost: Partial<Record<CocResource, number>>): string {
 }
 
 const page: CSSProperties = { minHeight: "100dvh", background: "var(--bg-app)", color: "var(--text-primary)", padding: "max(16px, env(safe-area-inset-top)) 16px 96px", fontFamily: "var(--font-ui)" };
-const mapWrap: CSSProperties = { position: "relative", marginTop: 12, width: "100%", maxWidth: 560, aspectRatio: "1 / 1", background: "var(--surface-sunken)", borderRadius: "var(--radius-lg)", border: "1px solid var(--hairline)", overflow: "hidden", touchAction: "none" };
+const mapWrap: CSSProperties = { position: "relative", marginTop: 12, width: "100%", maxWidth: 560, height: "clamp(320px, 56vh, 560px)", background: "var(--surface-sunken)", borderRadius: "var(--radius-lg)", border: "1px solid var(--hairline)", overflow: "hidden", touchAction: "none" };
 const rowBtn: CSSProperties = { justifyContent: "space-between", textAlign: "left", fontWeight: 500 };
 const closeBtn: CSSProperties = { background: "transparent", color: "var(--text-secondary)", border: 0, cursor: "pointer", fontSize: 14, lineHeight: 1 };
 const overlay: CSSProperties = { position: "fixed", inset: 0, zIndex: 60, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 };

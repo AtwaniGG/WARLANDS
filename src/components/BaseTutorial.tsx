@@ -1,5 +1,5 @@
 "use client";
-import { useState, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { Panel } from "@/components/ui";
 import { BUILDINGS, type CocBase } from "@/sim/coc";
 
@@ -14,14 +14,25 @@ function currentStep(base: CocBase | null): { n: number; total: number; title: s
   return null;
 }
 
-/** Onboarding coachmark — derives the next objective from base state; collapsible. */
+/**
+ * Onboarding coachmark. Shows the full card while you still need to CLAIM (no base);
+ * once you have a base it auto-collapses to a compact "NEXT: …" chip so it never
+ * covers the map — tap the chip to re-expand the full tip for the current objective.
+ */
 export function BaseTutorial({ base }: { base: CocBase | null }) {
-  const [open, setOpen] = useState(true);
+  const [expanded, setExpanded] = useState(true);
+  const hasBase = !!base;
+  // Collapse to the chip the moment a base exists; nothing to guide on the map until then.
+  useEffect(() => { setExpanded(!hasBase); }, [hasBase]);
+
   const s = currentStep(base);
   if (!s) return null;
-  if (!open) {
+
+  if (!expanded) {
     return (
-      <button onClick={() => setOpen(true)} style={fab} aria-label="Show orders">❔ ORDERS</button>
+      <button onClick={() => setExpanded(true)} style={chip} aria-label="Show next objective">
+        ❔ NEXT · {s.title}
+      </button>
     );
   }
   return (
@@ -30,7 +41,7 @@ export function BaseTutorial({ base }: { base: CocBase | null }) {
         rim="amber"
         label={`ORDERS · ${s.n}/${s.total}`}
         padding="10px 12px"
-        headerRight={<button onClick={() => setOpen(false)} aria-label="Dismiss" style={x}>✕</button>}
+        headerRight={<button onClick={() => setExpanded(false)} aria-label="Collapse" style={x}>✕</button>}
       >
         <div className="wl-title" style={{ fontSize: 14, marginBottom: 4 }}>{s.title}</div>
         <div style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.4 }}>{s.tip}</div>
@@ -41,4 +52,4 @@ export function BaseTutorial({ base }: { base: CocBase | null }) {
 
 const wrap: CSSProperties = { position: "fixed", left: 12, right: 12, bottom: "max(12px, env(safe-area-inset-bottom))", maxWidth: 560, margin: "0 auto", zIndex: 50 };
 const x: CSSProperties = { background: "transparent", border: 0, color: "var(--text-secondary)", cursor: "pointer", fontSize: 13 };
-const fab: CSSProperties = { position: "fixed", right: 14, bottom: "max(14px, env(safe-area-inset-bottom))", zIndex: 50, background: "var(--cta-bg)", color: "var(--cta-fg)", border: 0, borderRadius: "var(--radius-pill)", padding: "8px 14px", fontFamily: "var(--font-display)", fontWeight: 700, letterSpacing: "0.08em", fontSize: 12, cursor: "pointer", boxShadow: "var(--shadow-2)" };
+const chip: CSSProperties = { position: "fixed", right: 12, bottom: "max(12px, env(safe-area-inset-bottom))", zIndex: 50, maxWidth: "calc(100vw - 24px)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", background: "var(--cta-bg)", color: "var(--cta-fg)", border: 0, borderRadius: "var(--radius-pill)", padding: "8px 14px", fontFamily: "var(--font-display)", fontWeight: 700, letterSpacing: "0.06em", fontSize: 12, cursor: "pointer", boxShadow: "var(--shadow-2)" };
