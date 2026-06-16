@@ -5,6 +5,9 @@ import { axialToPixel } from "@/game/world";
 import { Badge, Button, Panel, ProgressBar, Stat } from "@/components/ui";
 import { BaseTutorial } from "@/components/BaseTutorial";
 import { BaseGrid, buildingArt, UNIT_COLOR } from "@/components/BaseGrid";
+import { useCountUp } from "@/components/useCountUp";
+
+const buzz = (p: number | number[]) => { try { (navigator as Navigator & { vibrate?: (p: number | number[]) => boolean }).vibrate?.(p); } catch { /* unsupported */ } };
 import {
   BUILDINGS, LOOT_PCT, MAX_BUILDERS, TRAPS, TRAP_IDS, UNITS, UNIT_IDS, WALL,
   builderCost, builderCount, ccLevel, ccTier, fitsInGrid, finishCost, freeBuilders, garrisonCap, garrisonUsed, housingCap, housingUsed, levelDef, maxLevelOf, maxWallLevel, occupiedTiles, resolveRaid, storageCap,
@@ -68,6 +71,7 @@ export default function WorldPage() {
     const reduce = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     setFrames(f);
     setFrameIdx(reduce ? Math.max(0, f.length - 1) : 0);
+    buzz(report.stars > 0 ? [25, 45, 25] : 12);
   }, [report, capturedDef, deployList]);
 
   // Advance playback frames, then reveal the result card.
@@ -80,6 +84,12 @@ export default function WorldPage() {
     const id = setTimeout(() => setFrameIdx((i) => i + 1), 80);
     return () => clearTimeout(id);
   }, [frames, frameIdx]);
+
+  // smooth HUD counters (never jitter while ticking)
+  const goldC = useCountUp(state && playerId ? state.bases[playerId]?.gold ?? 0 : 0);
+  const elixirC = useCountUp(state && playerId ? state.bases[playerId]?.elixir ?? 0 : 0);
+  const warC = useCountUp(state && playerId ? state.players[playerId]?.war ?? 0 : 0);
+  const trophyC = useCountUp(state && playerId ? state.bases[playerId]?.trophies ?? 0 : 0, 400);
 
   if (!state) {
     return (
@@ -98,6 +108,7 @@ export default function WorldPage() {
 
   function onTile(key: string) {
     if (!myBase) return;
+    buzz(8);
     if (placing) { send({ type: "placeBuilding", tileKey: key, buildingId: placing }); setPlacing(null); setMode("view"); return; }
     if (placingTrap) { send({ type: "placeTrap", tileKey: key, trapId: placingTrap }); return; }
     if (mode === "wall") { send({ type: "placeWall", tileKey: key }); return; }
@@ -152,12 +163,12 @@ export default function WorldPage() {
       {/* ===================== HUD ===================== */}
       {myBase ? (
         <Panel label="HEADQUARTERS" accent padding="10px 14px" style={{ marginTop: 10 }}
-          headerRight={<Button size="sm" variant="primary" icon="📥" onClick={() => send({ type: "collect" })}>COLLECT</Button>}>
+          headerRight={<Button size="sm" variant="primary" icon="📥" onClick={() => { send({ type: "collect" }); buzz(12); }}>COLLECT</Button>}>
           <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center" }}>
-            <Stat label="🪙 GOLD" value={`${num(myBase.gold)} / ${num(storageCap(myBase, "gold"))}`} accent="amber" />
-            <Stat label="🧪 ELIXIR" value={`${num(myBase.elixir)} / ${num(storageCap(myBase, "elixir"))}`} accent="violet" />
-            <Stat label="💎 $WAR" value={num(me?.war ?? 0)} accent="amber" />
-            <Stat label="🏆 TROPHIES" value={`${myBase.trophies}`} accent="amber" />
+            <Stat label="🪙 GOLD" value={`${num(goldC)} / ${num(storageCap(myBase, "gold"))}`} accent="amber" />
+            <Stat label="🧪 ELIXIR" value={`${num(elixirC)} / ${num(storageCap(myBase, "elixir"))}`} accent="violet" />
+            <Stat label="💎 $WAR" value={num(warC)} accent="amber" />
+            <Stat label="🏆 TROPHIES" value={`${Math.round(trophyC)}`} accent="amber" />
             <Stat label="TOWN HALL" value={`L${ccLevel(myBase)}`} accent="sky" />
             <Stat label="BUILDERS" value={`${freeBuilders(myBase)}/${builderCount(myBase)}`} accent={freeBuilders(myBase) > 0 ? "emerald" : "neutral"} />
             <Stat label="ARMY" value={`${housingUsed(myBase)}/${housingCap(myBase)}`} accent="blood" />

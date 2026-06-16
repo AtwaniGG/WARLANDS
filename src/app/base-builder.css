@@ -71,3 +71,19 @@
 @keyframes bb-thunk { 0% { transform: scale(1.18); } 60% { transform: scale(0.96); } 100% { transform: scale(1); } }
 @keyframes bb-fly   { to { transform: translate(var(--fx,0), var(--fy,-120px)) scale(0.4); opacity: 0; } }
 @keyframes bb-star-pop { 0% { transform: scale(0) rotate(-30deg); opacity: 0; } 70% { transform: scale(1.25) rotate(4deg); } 100% { transform: scale(1) rotate(0); opacity: 1; } }
+
+/* ---- combat / economy "juice" (Phase 1, CSS-only) ---- */
+@keyframes bb-shake { 0%,100% { transform: translate(0,0); } 20% { transform: translate(-1.5px,1px); } 40% { transform: translate(1.5px,-1px); } 60% { transform: translate(-1px,-1.5px); } 80% { transform: translate(1px,1.5px); } }
+@keyframes bb-collapse { 0% { transform: scale(1) rotate(0); opacity: 1; } 100% { transform: scale(0.7) rotate(-6deg) translateY(4px); opacity: 0.4; } }
+@keyframes bb-smoke { 0% { transform: translateY(0) scale(0.5); opacity: 0.5; } 100% { transform: translateY(-26px) scale(1.7); opacity: 0; } }
+@keyframes bb-spark { 0% { transform: scale(0.3); opacity: 1; } 100% { transform: scale(1.8); opacity: 0; } }
+@keyframes bb-float { 0% { transform: translateY(0) scale(0.85); opacity: 0; } 18% { opacity: 1; transform: translateY(-6px) scale(1); } 100% { transform: translateY(-32px) scale(1); opacity: 0; } }
+@keyframes bb-detonate { 0% { transform: scale(0.2); opacity: 1; } 100% { transform: scale(2.8); opacity: 0; } }
+
+.bb-shake { animation: bb-shake var(--bb-thunk,160ms) linear; }
+.bb-collapse { animation: bb-collapse 380ms var(--ease-out,ease-out) forwards; }
+.bb-place { animation: bb-thunk var(--bb-thunk,160ms) var(--bb-ease-thunk,ease-out); }
+.fx-smoke { animation: bb-smoke 700ms ease-out forwards; }
+.fx-spark { animation: bb-spark 280ms ease-out forwards; }
+.fx-float { animation: bb-float 950ms ease-out forwards; }
+.fx-detonate { animation: bb-detonate 360ms ease-out forwards; }

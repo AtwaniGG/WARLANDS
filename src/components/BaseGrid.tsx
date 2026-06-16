@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent as RPointerEvent, type WheelEvent as RWheelEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as RPointerEvent, type WheelEvent as RWheelEvent } from "react";
 import { BUILDINGS, GRID_W, GRID_H, footprintTiles, type BattleFrame, type CocBase, type CocBuildingId, type CocUnitId } from "@/sim/coc";
 import { BaseGround } from "@/components/BaseGround";
 
@@ -175,6 +175,100 @@ export function BaseGrid({ base, tick, readOnly, selected, placing, wallMode, mo
   const frameStruct = frame ? new Map(frame.structures.map((s) => [s.key, s])) : null;
   const isOpenTile = (key: string) => anchorAtTile(key) === null && !base.walls[key];
 
+  // px center of a building's footprint (for tracers / hit fx)
+  const structCenter = useCallback((key: string): [number, number] | null => {
+    const b = base.buildings[key];
+    if (!b) return null;
+    const [x, y] = key.split(",").map(Number);
+    const { w, h } = BUILDINGS[b.id].footprint;
+    return [(x + w / 2) * TILE, (y + h / 2) * TILE];
+  }, [base.buildings]);
+
+  // ---- combat juice: spawn transient effects from frame-to-frame deltas ----
+  type Fx = { id: number; kind: "spark" | "smoke" | "poof" | "dmg" | "detonate"; x: number; y: number; val?: number; color?: string };
+  const [fx, setFx] = useState<Fx[]>([]);
+  const prevFrame = useRef<BattleFrame | null>(null);
+  const fxId = useRef(0);
+  useEffect(() => {
+    if (!frame) { prevFrame.current = null; if (fx.length) setFx([]); return; }
+    const prev = prevFrame.current;
+    prevFrame.current = frame;
+    if (!prev) return;
+    const add: Fx[] = [];
+    const push = (kind: Fx["kind"], x: number, y: number, val?: number, color?: string) => add.push({ id: fxId.current++, kind, x, y, val, color });
+    const prevS = new Map(prev.structures.map((s) => [s.key, s.hp]));
+    for (const s of frame.structures) {
+      const p = prevS.get(s.key);
+      if (p == null || s.hp >= p) continue;
+      const c = structCenter(s.key);
+      if (!c) continue;
+      push("spark", c[0], c[1]);
+      push("dmg", c[0], c[1], Math.round(p - s.hp));
+      if (s.hp <= 0 && p > 0) push("smoke", c[0], c[1]);
+    }
+    const prevW = new Map(prev.walls.map((w) => [w.key, w.hp]));
+    for (const w of frame.walls) {
+      const p = prevW.get(w.key);
+      if (p != null && p > 0 && w.hp <= 0) { const [x, y] = w.key.split(",").map(Number); push("smoke", (x + 0.5) * TILE, (y + 0.5) * TILE); }
+    }
+    for (let i = 0; i < frame.troops.length; i++) {
+      const c = frame.troops[i], pp = prev.troops[i];
+      if (pp && pp.alive && !c.alive) push("poof", (c.x + 0.5) * TILE, (c.y + 0.5) * TILE, undefined, UNIT_COLOR[c.unit]);
+    }
+    const prevT = new Map(prev.traps.map((t) => [t.key, t.armed]));
+    for (const t of frame.traps) {
+      const p = prevT.get(t.key);
+      if (p && !t.armed) { const [x, y] = t.key.split(",").map(Number); push("detonate", (x + 0.5) * TILE, (y + 0.5) * TILE); }
+    }
+    if (add.length) {
+      setFx((f) => [...f, ...add]);
+      const ids = new Set(add.map((a) => a.id));
+      setTimeout(() => setFx((f) => f.filter((it) => !ids.has(it.id))), 1000);
+    }
+  }, [frame]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // defenses firing: a tracer from each live defense to its nearest in-range attacker (current frame)
+  const tracers = useMemo(() => {
+    if (!frame) return [] as { x1: number; y1: number; x2: number; y2: number }[];
+    const lines: { x1: number; y1: number; x2: number; y2: number }[] = [];
+    const atk = frame.troops.filter((t) => t.alive && t.side === "atk");
+    for (const s of frame.structures) {
+      if (s.hp <= 0) continue;
+      const b = base.buildings[s.key];
+      if (!b) continue;
+      const def = BUILDINGS[b.id];
+      const stat = def.levels[Math.max(0, b.level - 1)];
+      if (def.category !== "defense" || !stat?.range) continue;
+      const c = structCenter(s.key);
+      if (!c) continue;
+      const [sx, sy] = c;
+      let best: typeof atk[number] | null = null, bd = Infinity;
+      for (const t of atk) {
+        if (def.levels[0] && stat.targets === "air" && !["gunship"].includes(t.unit)) continue;
+        const tx = (t.x + 0.5) * TILE, ty = (t.y + 0.5) * TILE;
+        const d = Math.hypot(tx - sx, ty - sy);
+        if (d <= (stat.range + 1.5) * TILE && d < bd) { best = t; bd = d; }
+      }
+      if (best) lines.push({ x1: sx, y1: sy, x2: (best.x + 0.5) * TILE, y2: (best.y + 0.5) * TILE });
+    }
+    return lines;
+  }, [frame, base.buildings, structCenter]);
+
+  // live destruction % + star pips during playback
+  const battleStatus = useMemo(() => {
+    if (!frame || frame.structures.length === 0) return null;
+    const total = frame.structures.length;
+    const destroyed = frame.structures.filter((s) => s.hp <= 0).length;
+    const pct = destroyed / total;
+    const thKey = Object.entries(base.buildings).find(([, b]) => b.id === "commandCenter")?.[0];
+    const ccDead = thKey ? (frame.structures.find((s) => s.key === thKey)?.hp ?? 1) <= 0 : false;
+    let stars = 0;
+    if (pct >= 0.5) stars++;
+    if (ccDead) stars++;
+    if (destroyed >= total) stars++;
+    return { pct, stars };
+  }, [frame, base.buildings]);
+
   return (
     <div
       ref={wrapRef}
@@ -186,6 +280,17 @@ export function BaseGrid({ base, tick, readOnly, selected, placing, wallMode, mo
       onWheel={onWheel}
     >
       <div className="wl-scanline" style={{ opacity: 0.5 }} />
+      {battleStatus && (
+        <div style={{ position: "absolute", top: 8, left: 8, right: 8, zIndex: 20, display: "flex", alignItems: "center", gap: 8, pointerEvents: "none" }}>
+          <div style={{ display: "flex", gap: 2 }}>
+            {[0, 1, 2].map((i) => <span key={i} style={{ fontSize: 18, lineHeight: 1, color: i < battleStatus.stars ? "var(--amber)" : "rgba(255,255,255,0.18)", textShadow: "0 1px 2px #000" }}>★</span>)}
+          </div>
+          <div style={{ flex: 1, height: 6, borderRadius: 3, background: "rgba(0,0,0,0.55)", overflow: "hidden", border: "1px solid rgba(0,0,0,0.6)" }}>
+            <div style={{ height: "100%", width: `${Math.round(battleStatus.pct * 100)}%`, background: "var(--blood)", transition: "width 120ms linear" }} />
+          </div>
+          <span className="wl-num" style={{ fontSize: 11, color: "var(--text-primary)", minWidth: 34, textAlign: "right", textShadow: "0 1px 2px #000" }}>{Math.round(battleStatus.pct * 100)}%</span>
+        </div>
+      )}
       <div style={{ position: "absolute", left: 0, top: 0, width: stageW, height: stageH, transform: `translate(${view.x}px,${view.y}px) scale(${view.scale})`, transformOrigin: "0 0" }}>
         {/* layered war-camp ground: cracked earth → battlefield decor → tactical grid → vignette → fortified perimeter */}
         <div style={{ position: "absolute", inset: 0, background: "var(--bb-earth)" }} />
@@ -231,8 +336,10 @@ export function BaseGrid({ base, tick, readOnly, selected, placing, wallMode, mo
               {range != null && (
                 <div style={{ position: "absolute", left: "50%", top: "50%", width: range * 2 * TILE, height: range * 2 * TILE, transform: "translate(-50%,-50%)", borderRadius: "50%", border: "1px dashed var(--bb-range-line)", background: "var(--bb-range-fill)", pointerEvents: "none" }} />
               )}
+              <div style={{ position: "absolute", left: "14%", right: "14%", bottom: "3%", height: Math.max(6, h * TILE * 0.16), borderRadius: "50%", background: "radial-gradient(ellipse at center, rgba(0,0,0,0.6), transparent 72%)", pointerEvents: "none" }} />
               <img src={buildingArt(b.id, b.level)} alt={def.name} draggable={false}
-                style={{ width: "100%", height: "100%", display: "block", filter: destroyed ? "grayscale(1) brightness(0.5)" : "drop-shadow(var(--bb-shadow))", opacity: destroyed ? 0.5 : moveFrom === anchor ? 0.5 : 1 }} />
+                className={destroyed ? "bb-collapse" : undefined}
+                style={{ width: "100%", height: "100%", display: "block", transition: "transform 120ms var(--ease-out)", transform: isSel && !destroyed ? "translateY(-2px)" : undefined, filter: destroyed ? "grayscale(1) brightness(0.5)" : isSel ? "drop-shadow(0 0 6px rgba(255,210,74,0.55)) drop-shadow(var(--bb-shadow))" : "drop-shadow(var(--bb-shadow))", opacity: !destroyed && moveFrom === anchor ? 0.5 : 1 }} />
               {fs && !destroyed && fs.hp < fs.max && (
                 <div style={{ position: "absolute", left: "8%", right: "8%", top: -6, height: 4, borderRadius: 2, background: "#0a0d14", overflow: "hidden", pointerEvents: "none" }}>
                   <div style={{ height: "100%", width: `${(fs.hp / fs.max) * 100}%`, background: "var(--success)" }} />
@@ -266,10 +373,26 @@ export function BaseGrid({ base, tick, readOnly, selected, placing, wallMode, mo
           <span key={`dm${i}`} style={{ ...dot, left: m.x * TILE + TILE / 2 - 4, top: m.y * TILE + TILE / 2 - 4, background: UNIT_COLOR[m.unit] }} />
         ))}
 
+        {/* defenses firing — tracer lines to their nearest target */}
+        {tracers.length > 0 && (
+          <svg width={stageW} height={stageH} style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 9 }} aria-hidden>
+            {tracers.map((l, i) => <line key={i} x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2} stroke="rgba(245,179,1,0.75)" strokeWidth="1.3" strokeLinecap="round" />)}
+          </svg>
+        )}
+
         {/* live battle troops (playback): attackers solid, defenders ringed red */}
         {frame?.troops.filter((t) => t.alive).map((t, i) => (
           <span key={`bt${i}`} style={{ ...dot, left: t.x * TILE + TILE / 2 - 4, top: t.y * TILE + TILE / 2 - 4, background: UNIT_COLOR[t.unit], border: t.side === "def" ? "2px solid var(--blood-text)" : undefined }} />
         ))}
+
+        {/* transient combat effects (sparks, smoke, death poofs, damage numbers, trap detonations) */}
+        {fx.map((f) => {
+          if (f.kind === "dmg") return <span key={f.id} className="fx-float" style={{ position: "absolute", left: f.x, top: f.y, transform: "translate(-50%,-50%)", font: "700 11px var(--font-mono)", color: "var(--blood-text)", textShadow: "0 1px 2px #000", pointerEvents: "none", zIndex: 12 }}>-{f.val}</span>;
+          if (f.kind === "smoke") return <span key={f.id} className="fx-smoke" style={{ position: "absolute", left: f.x - 9, top: f.y - 9, width: 18, height: 18, borderRadius: "50%", background: "radial-gradient(circle, rgba(82,82,90,0.85), transparent 70%)", pointerEvents: "none", zIndex: 10 }} />;
+          if (f.kind === "poof") return <span key={f.id} className="fx-spark" style={{ position: "absolute", left: f.x - 6, top: f.y - 6, width: 12, height: 12, borderRadius: "50%", background: `radial-gradient(circle, ${f.color ?? "#aaa"}, transparent 70%)`, pointerEvents: "none", zIndex: 10 }} />;
+          if (f.kind === "detonate") return <span key={f.id} className="fx-detonate" style={{ position: "absolute", left: f.x - 11, top: f.y - 11, width: 22, height: 22, borderRadius: "50%", background: "radial-gradient(circle, #fff, #ff5a3c 45%, transparent 72%)", pointerEvents: "none", zIndex: 12 }} />;
+          return <span key={f.id} className="fx-spark" style={{ position: "absolute", left: f.x - 7, top: f.y - 7, width: 14, height: 14, borderRadius: "50%", background: "radial-gradient(circle, #fff6cf, #f5b301 50%, transparent 72%)", pointerEvents: "none", zIndex: 11 }} />;
+        })}
 
         {/* placement / wall / move / deploy / trap ghost */}
         {ghost && (placing || tilePlacing || moveFrom) && (() => {
