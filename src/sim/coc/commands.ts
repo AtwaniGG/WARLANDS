@@ -2,7 +2,7 @@ import { hexKey } from "@/game/world";
 import { builderCost, BUILDINGS, ccTier, finishCost, levelDef, maxLevelOf, maxWallLevel, MAX_BUILDERS, SHIELD_MAX_SECS, SHIELD_SECS_PER_PCT, STARTING_ELIXIR, STARTING_GOLD, UNITS, WALL, WAR_RAID_REWARD_PER_STAR, WAR_SHIELD_PER_HOUR } from "./config";
 import { builderCount, ccLevel, fitsInGrid, footprintTiles, freeBuilders, hasBarracks, housingCap, housingUsed, inGrid, occupiedTiles, parseTile, storageCap } from "./world";
 import { resolveRaid } from "./battle";
-import type { Army, Clan, CocBase, CocBuildingId, CocCommand, CocResource, CocUnitId, CocWorld, CommandResult, PlacedBuilding } from "./types";
+import type { Army, Clan, CocBase, CocBuildingId, CocCommand, CocResource, CocUnitId, CocWorld, CommandResult, Deployment, PlacedBuilding } from "./types";
 
 const CLAN_MAX_MEMBERS = 10;
 /** Starting village layout on the 20×20 grid: a centered Town Hall flanked by two Builder's Huts. */
@@ -228,31 +228,33 @@ function fnv1a(s: string): number {
   return h >>> 0;
 }
 
-function raid(state: CocWorld, playerId: string, targetOwner: string, army: Army): CommandResult {
+function raid(state: CocWorld, playerId: string, targetOwner: string, deploy: Deployment[]): CommandResult {
   const attacker = state.bases[playerId];
   if (!attacker) return fail(state, "You have no base.");
   if (targetOwner === playerId) return fail(state, "You cannot raid your own base.");
   const defender = state.bases[targetOwner];
   if (!defender) return fail(state, "No such base.");
   if (defender.shieldUntil > state.tick) return fail(state, "That base is shielded.");
+  if (!Array.isArray(deploy) || deploy.length === 0) return fail(state, "Select an army to deploy.");
 
-  let total = 0;
-  for (const [u, n] of Object.entries(army)) {
-    if (!n) continue;
-    if (n < 0) return fail(state, "Invalid army.");
-    total += n;
-    if ((attacker.army[u as CocUnitId] ?? 0) < n) return fail(state, "You don't have those troops.");
+  // tally per-unit counts and verify the attacker owns them
+  const counts: Partial<Record<CocUnitId, number>> = {};
+  for (const d of deploy) {
+    if (!UNITS[d.unit]) return fail(state, "Unknown unit.");
+    counts[d.unit] = (counts[d.unit] ?? 0) + 1;
   }
-  if (total <= 0) return fail(state, "Select an army to deploy.");
+  for (const [u, n] of Object.entries(counts)) {
+    if ((attacker.army[u as CocUnitId] ?? 0) < (n ?? 0)) return fail(state, "You don't have those troops.");
+  }
 
   const seed = ((state.tick + 1) * 2654435761 + fnv1a(playerId) + fnv1a(targetOwner)) >>> 0;
-  const result = resolveRaid(army, defender, seed);
+  const result = resolveRaid(deploy, defender, seed);
 
   const lootGold = Math.min(defender.gold, result.loot.gold);
   const lootElixir = Math.min(defender.elixir, result.loot.elixir);
 
   const newAttackerArmy: Army = { ...attacker.army };
-  for (const [u, n] of Object.entries(army)) {
+  for (const [u, n] of Object.entries(counts)) {
     if (n) newAttackerArmy[u as CocUnitId] = (newAttackerArmy[u as CocUnitId] ?? 0) - n;
   }
   const newAttacker: CocBase = {
@@ -289,7 +291,8 @@ function raid(state: CocWorld, playerId: string, targetOwner: string, army: Army
       destructionPct: result.destructionPct,
       loot: { gold: lootGold, elixir: lootElixir },
       trophies: result.trophies,
-      armyUsed: army,
+      deploy,
+      seed,
     },
   };
 }
@@ -437,7 +440,7 @@ export function applyCommand(state: CocWorld, playerId: string, cmd: CocCommand)
     case "trainTroop":
       return trainTroop(state, playerId, cmd.unit);
     case "raid":
-      return raid(state, playerId, cmd.targetOwner, cmd.army);
+      return raid(state, playerId, cmd.targetOwner, cmd.deploy);
     case "finishNow":
       return finishNow(state, playerId, cmd.tileKey);
     case "extendShield":

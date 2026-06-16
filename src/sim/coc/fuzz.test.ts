@@ -89,7 +89,12 @@ function randomCommand(rnd: () => number, w: CocWorld, pid: string): CocCommand 
   if (r < 0.62) return { type: "placeWall", tileKey: randomTile(rnd) };
   if (r < 0.67) return { type: "upgradeWall", tileKey: randomTile(rnd) };
   if (r < 0.77) return { type: "trainTroop", unit: pick(rnd, UNIT_IDS) as CocUnitId };
-  if (r < 0.86) return { type: "raid", targetOwner: owners.length ? pick(rnd, owners) : pid, army: { grunt: Math.floor(rnd() * 20), gunship: Math.floor(rnd() * 5) } };
+  if (r < 0.86) {
+    const deploy = [];
+    const n = Math.floor(rnd() * 12);
+    for (let i = 0; i < n; i++) deploy.push({ unit: pick(rnd, UNIT_IDS) as CocUnitId, x: Math.floor(rnd() * 20), y: Math.floor(rnd() * 20) });
+    return { type: "raid", targetOwner: owners.length ? pick(rnd, owners) : pid, deploy };
+  }
   if (r < 0.90) return { type: "finishNow", tileKey: randomTile(rnd) };
   if (r < 0.96) return { type: "extendShield", hours: Math.floor(rnd() * 26) };
   if (r < 0.98) return { type: "createClan", name: `Clan${Math.floor(rnd() * 1000)}` };

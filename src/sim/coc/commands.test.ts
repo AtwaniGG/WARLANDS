@@ -257,14 +257,22 @@ function twoBases(): CocWorld {
   return s;
 }
 
+function dep(unit: "grunt" | "marksman" | "breacher" | "juggernaut" | "gunship", n: number): import("./types").Deployment[] {
+  const out: import("./types").Deployment[] = [];
+  for (let i = 0; i < n; i++) out.push({ unit, x: i % 5, y: Math.floor(i / 5) });
+  return out;
+}
+
 describe("raid", () => {
   it("raids a neighbour: loots, awards stars, consumes the army, shields the defender", () => {
     let s = twoBases();
     s = { ...s, bases: { ...s.bases, p1: { ...s.bases.p1, gold: 500, army: { grunt: 80 } } } };
-    const r = applyCommand(s, "p1", { type: "raid", targetOwner: "p2", army: { grunt: 80 } });
+    const r = applyCommand(s, "p1", { type: "raid", targetOwner: "p2", deploy: dep("grunt", 80) });
     expect(r.error).toBeUndefined();
     expect(r.report).toBeDefined();
     expect(r.report!.stars).toBe(3); // p2 base is undefended (Town Hall + huts)
+    expect(r.report!.seed).toBeGreaterThan(0);
+    expect(r.report!.deploy.length).toBe(80);
     expect(r.state.bases.p1.army.grunt).toBe(0); // army consumed
     expect(r.state.bases.p1.gold).toBe(500 + Math.floor(500 * 0.2)); // looted 20% of p2's 500
     expect(r.state.bases.p2.gold).toBe(400);
@@ -273,26 +281,32 @@ describe("raid", () => {
   it("rejects raiding your own base", () => {
     let s = twoBases();
     s = { ...s, bases: { ...s.bases, p1: { ...s.bases.p1, army: { grunt: 10 } } } };
-    const r = applyCommand(s, "p1", { type: "raid", targetOwner: "p1", army: { grunt: 10 } });
+    const r = applyCommand(s, "p1", { type: "raid", targetOwner: "p1", deploy: dep("grunt", 10) });
     expect(r.error).toMatch(/your own/i);
   });
   it("rejects raiding a shielded base", () => {
     let s = twoBases();
     s = { ...s, bases: { ...s.bases, p1: { ...s.bases.p1, army: { grunt: 10 } }, p2: { ...s.bases.p2, shieldUntil: 9999 } } };
-    const r = applyCommand(s, "p1", { type: "raid", targetOwner: "p2", army: { grunt: 10 } });
+    const r = applyCommand(s, "p1", { type: "raid", targetOwner: "p2", deploy: dep("grunt", 10) });
     expect(r.error).toMatch(/shield/i);
+  });
+  it("rejects an empty deploy", () => {
+    let s = twoBases();
+    s = { ...s, bases: { ...s.bases, p1: { ...s.bases.p1, army: { grunt: 10 } } } };
+    const r = applyCommand(s, "p1", { type: "raid", targetOwner: "p2", deploy: [] });
+    expect(r.error).toMatch(/deploy/i);
   });
   it("rejects deploying troops you don't have", () => {
     let s = twoBases();
     s = { ...s, bases: { ...s.bases, p1: { ...s.bases.p1, army: { grunt: 5 } } } };
-    const r = applyCommand(s, "p1", { type: "raid", targetOwner: "p2", army: { grunt: 50 } });
+    const r = applyCommand(s, "p1", { type: "raid", targetOwner: "p2", deploy: dep("grunt", 50) });
     expect(r.error).toMatch(/don't have/i);
   });
   it("awards $WAR to the attacker scaled by stars", () => {
     let s = twoBases();
     s = { ...s, bases: { ...s.bases, p1: { ...s.bases.p1, army: { grunt: 80 } } } };
     const before = s.players.p1.war;
-    const r = applyCommand(s, "p1", { type: "raid", targetOwner: "p2", army: { grunt: 80 } });
+    const r = applyCommand(s, "p1", { type: "raid", targetOwner: "p2", deploy: dep("grunt", 80) });
     expect(r.report!.stars).toBe(3);
     expect(r.state.players.p1.war).toBe(before + 3 * 50);
   });

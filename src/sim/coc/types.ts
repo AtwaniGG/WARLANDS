@@ -41,6 +41,13 @@ export interface TrainOrder {
 
 export type Army = Partial<Record<CocUnitId, number>>;
 
+/** A single troop placed on the defender's grid at the start of a raid. */
+export interface Deployment {
+  unit: CocUnitId;
+  x: number;
+  y: number;
+}
+
 export interface CocBase {
   owner: string;
   /** world hexKey "q,r" where this village sits on the WORLD map */
@@ -95,7 +102,7 @@ export type CocCommand =
   | { type: "placeWall"; tileKey: string }
   | { type: "upgradeWall"; tileKey: string }
   | { type: "trainTroop"; unit: CocUnitId }
-  | { type: "raid"; targetOwner: string; army: Army }
+  | { type: "raid"; targetOwner: string; deploy: Deployment[] }
   | { type: "finishNow"; tileKey: string }
   | { type: "extendShield"; hours: number }
   | { type: "createClan"; name: string }
@@ -112,7 +119,8 @@ export interface BattleReport {
   destructionPct: number;
   loot: { gold: number; elixir: number };
   trophies: number; // delta for the attacker (defender gets the negative)
-  armyUsed: Army;
+  deploy: Deployment[]; // troop placements used — lets the attacker client replay the battle
+  seed: number; // battle seed — replay is deterministic from (deploy, defender snapshot, seed)
 }
 
 export interface CommandResult {
