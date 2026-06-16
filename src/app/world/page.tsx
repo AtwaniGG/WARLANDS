@@ -1,14 +1,14 @@
 "use client";
-import { useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useBaseSocket } from "@/lib/useBaseSocket";
 import { axialToPixel } from "@/game/world";
 import { Badge, Button, Panel, ProgressBar, Stat } from "@/components/ui";
 import { BaseTutorial } from "@/components/BaseTutorial";
-import { BaseGrid, buildingArt } from "@/components/BaseGrid";
+import { BaseGrid, buildingArt, UNIT_COLOR } from "@/components/BaseGrid";
 import {
   BUILDINGS, LOOT_PCT, MAX_BUILDERS, UNITS, UNIT_IDS, WALL,
-  builderCost, builderCount, ccLevel, ccTier, fitsInGrid, finishCost, freeBuilders, housingCap, housingUsed, levelDef, maxLevelOf, maxWallLevel, occupiedTiles, storageCap,
-  type Army, type BattleReport, type CocBase, type CocBuildingId, type CocResource, type CocUnitId, type CocWorld, type PlacedBuilding,
+  builderCost, builderCount, ccLevel, ccTier, fitsInGrid, finishCost, freeBuilders, housingCap, housingUsed, levelDef, maxLevelOf, maxWallLevel, occupiedTiles, resolveRaid, storageCap,
+  type Army, type BattleFrame, type BattleReport, type CocBase, type CocBuildingId, type CocResource, type CocUnitId, type CocWorld, type Deployment, type PlacedBuilding,
 } from "@/sim/coc";
 
 const SERVER_URL = process.env.NEXT_PUBLIC_GAME_SERVER_URL ?? "ws://localhost:8080";
@@ -48,6 +48,37 @@ export default function WorldPage() {
   const [armyOpen, setArmyOpen] = useState(false);
   const [clanOpen, setClanOpen] = useState(false);
   const [scout, setScout] = useState<string | null>(null);
+  // ---- raid (deploy + playback) ----
+  const [raidTarget, setRaidTarget] = useState<string | null>(null);
+  const [deployList, setDeployList] = useState<Deployment[]>([]);
+  const [deployUnit, setDeployUnit] = useState<CocUnitId | null>(null);
+  const [capturedDef, setCapturedDef] = useState<CocBase | null>(null);
+  const [frames, setFrames] = useState<BattleFrame[] | null>(null);
+  const [frameIdx, setFrameIdx] = useState(0);
+  const [launching, setLaunching] = useState(false);
+  const awaitingRaid = useRef(false);
+
+  // When the raid report arrives, replay it deterministically from the captured snapshot.
+  useEffect(() => {
+    if (!report || !awaitingRaid.current || !capturedDef) return;
+    awaitingRaid.current = false;
+    setLaunching(false);
+    const f = resolveRaid(deployList, capturedDef, report.seed, { frames: true }).frames ?? [];
+    const reduce = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    setFrames(f);
+    setFrameIdx(reduce ? Math.max(0, f.length - 1) : 0);
+  }, [report, capturedDef, deployList]);
+
+  // Advance playback frames, then reveal the result card.
+  useEffect(() => {
+    if (!frames) return;
+    if (frameIdx >= frames.length - 1) {
+      const done = setTimeout(() => { setFrames(null); setRaidTarget(null); setDeployList([]); setCapturedDef(null); }, 900);
+      return () => clearTimeout(done);
+    }
+    const id = setTimeout(() => setFrameIdx((i) => i + 1), 80);
+    return () => clearTimeout(id);
+  }, [frames, frameIdx]);
 
   if (!state) {
     return (
@@ -69,6 +100,35 @@ export default function WorldPage() {
     if (placing) { send({ type: "placeBuilding", tileKey: key, buildingId: placing }); setPlacing(null); setMode("view"); return; }
     if (mode === "wall") { send({ type: "placeWall", tileKey: key }); return; }
     if (moveFrom) { send({ type: "moveBuilding", fromTile: moveFrom, toTile: key }); setMoveFrom(null); return; }
+  }
+
+  function startAttack(owner: string) {
+    if (!myBase) return;
+    setScout(null);
+    setRaidTarget(owner);
+    setDeployList([]);
+    setDeployUnit(UNIT_IDS.find((u) => (myBase.army[u] ?? 0) > 0) ?? null);
+    setCapturedDef(null); setFrames(null); setFrameIdx(0); setLaunching(false);
+  }
+  function placeTroop(key: string) {
+    if (!myBase || !raidTarget || !deployUnit || launching) return;
+    const def = state!.bases[raidTarget];
+    if (!def || occupiedTiles(def).has(key)) return; // open ground only
+    const placed = deployList.filter((d) => d.unit === deployUnit).length;
+    if (placed >= (myBase.army[deployUnit] ?? 0)) return; // out of this unit
+    const [x, y] = key.split(",").map(Number);
+    setDeployList((l) => [...l, { unit: deployUnit, x, y }]);
+  }
+  function launchRaid() {
+    if (!raidTarget || deployList.length === 0 || launching) return;
+    setCapturedDef(state!.bases[raidTarget] ?? null);
+    awaitingRaid.current = true;
+    setLaunching(true);
+    send({ type: "raid", targetOwner: raidTarget, deploy: deployList });
+  }
+  function cancelAttack() {
+    setRaidTarget(null); setDeployList([]); setCapturedDef(null); setFrames(null); setLaunching(false);
+    awaitingRaid.current = false;
   }
 
   return (
@@ -218,12 +278,63 @@ export default function WorldPage() {
           <ClanPanel state={state} playerId={playerId} send={send} onClose={() => setClanOpen(false)} />
         </Overlay>
       )}
-      {scout && state.bases[scout] && (
+      {scout && state.bases[scout] && myBase && (
         <Overlay onClose={() => setScout(null)}>
-          <ScoutCard target={state.bases[scout]} tick={state.tick} onClose={() => setScout(null)} />
+          <ScoutCard target={state.bases[scout]} tick={state.tick}
+            canAttack={armyTotal(myBase.army) > 0 && state.bases[scout].shieldUntil <= state.tick}
+            onAttack={() => scout && startAttack(scout)} onClose={() => setScout(null)} />
         </Overlay>
       )}
-      {report && (
+
+      {/* Deploy + battle playback */}
+      {raidTarget && state.bases[raidTarget] && myBase && (
+        <div style={overlay}>
+          <div style={{ width: "100%", maxWidth: 560, maxHeight: "94vh", overflowY: "auto" }}>
+            <Panel title={frames ? "RAID IN PROGRESS" : "DEPLOY YOUR ARMY"} rim="blood" padding="12px 14px"
+              headerRight={!frames && !launching ? <button onClick={cancelAttack} style={closeBtn}>✕</button> : null}>
+              <BaseGrid
+                base={frames ? capturedDef! : state.bases[raidTarget]}
+                tick={state.tick}
+                readOnly={!!frames}
+                deployMode={!frames && !launching}
+                deployMarkers={frames ? undefined : deployList}
+                frame={frames ? frames[frameIdx] : null}
+                onTile={placeTroop}
+              />
+              {!frames ? (
+                <>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 }}>
+                    {UNIT_IDS.filter((u) => (myBase.army[u] ?? 0) > 0).map((u) => {
+                      const left = (myBase.army[u] ?? 0) - deployList.filter((d) => d.unit === u).length;
+                      return (
+                        <button key={u} onClick={() => setDeployUnit(u)} disabled={left <= 0}
+                          style={{ ...unitChip, outline: deployUnit === u ? "2px solid var(--rim-selected)" : "none", opacity: left <= 0 ? 0.4 : 1 }}>
+                          <span style={{ width: 10, height: 10, borderRadius: "50%", background: UNIT_COLOR[u], display: "inline-block" }} />
+                          {UNITS[u].name} <span className="wl-num" style={{ color: "var(--text-secondary)" }}>×{left}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 8 }}>
+                    {armyTotal(myBase.army) === 0 ? "No troops — train an army first." : `Select a unit, then tap open ground. ${deployList.length} deployed.`}
+                  </div>
+                  <div style={{ marginTop: 10 }}>
+                    <Button variant="danger" full icon="⚔️" disabled={deployList.length === 0 || launching} onClick={launchRaid}>
+                      {launching ? "RAIDING…" : deployList.length === 0 ? "DEPLOY TROOPS" : `ATTACK WITH ${deployList.length}`}
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <div style={{ marginTop: 10 }}>
+                  <Button variant="outline" full onClick={() => setFrameIdx((frames?.length ?? 1) - 1)}>SKIP ▶▶</Button>
+                </div>
+              )}
+            </Panel>
+          </div>
+        </div>
+      )}
+
+      {report && !raidTarget && (
         <Overlay onClose={clearReport}>
           <ResultCard report={report} mine={report.attacker === playerId} onClose={clearReport} />
         </Overlay>
@@ -361,7 +472,7 @@ function ArmyPanel({ base, onTrain, onClose }: { base: CocBase; onTrain: (u: Coc
   );
 }
 
-function ScoutCard({ target, tick, onClose }: { target: CocBase; tick: number; onClose: () => void }) {
+function ScoutCard({ target, tick, canAttack, onAttack, onClose }: { target: CocBase; tick: number; canAttack: boolean; onAttack: () => void; onClose: () => void }) {
   const shielded = target.shieldUntil > tick;
   return (
     <Panel title="SCOUT REPORT" rim="blood" padding="14px" headerRight={<button onClick={onClose} style={closeBtn}>✕</button>}>
@@ -374,8 +485,9 @@ function ScoutCard({ target, tick, onClose }: { target: CocBase; tick: number; o
         <BaseGrid base={target} tick={tick} readOnly />
       </div>
       <div style={{ marginTop: 12 }}>
-        <Button variant="danger" full icon="⚔️" disabled>RAID — RETURNS IN GV1</Button>
-        <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 6, textAlign: "center" }}>Live grid raids land in the next update.</div>
+        <Button variant="danger" full icon="⚔️" disabled={!canAttack} onClick={onAttack}>
+          {shielded ? "TARGET SHIELDED" : canAttack ? "ATTACK" : "TRAIN AN ARMY FIRST"}
+        </Button>
       </div>
     </Panel>
   );
@@ -478,4 +590,5 @@ const trayCard: CSSProperties = { display: "flex", alignItems: "center", gap: 10
 const closeBtn: CSSProperties = { background: "transparent", color: "var(--text-secondary)", border: 0, cursor: "pointer", fontSize: 14, lineHeight: 1 };
 const overlay: CSSProperties = { position: "fixed", inset: 0, zIndex: 60, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 };
 const sheet: CSSProperties = { position: "fixed", left: 8, right: 8, bottom: "max(8px, env(safe-area-inset-bottom))", maxWidth: 560, margin: "0 auto", zIndex: 55, maxHeight: "46vh", overflowY: "auto" };
+const unitChip: CSSProperties = { display: "inline-flex", alignItems: "center", gap: 6, background: "var(--surface-raised)", border: "1px solid var(--hairline)", borderRadius: "var(--radius-sm)", padding: "6px 10px", color: "var(--text-primary)", fontSize: 12, cursor: "pointer" };
 const input: CSSProperties = { flex: 1, background: "var(--surface-sunken)", border: "1px solid var(--hairline)", borderRadius: "var(--radius-sm)", color: "var(--text-primary)", padding: "8px 10px", fontSize: 13, fontFamily: "var(--font-ui)" };

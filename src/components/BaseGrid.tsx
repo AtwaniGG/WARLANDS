@@ -1,9 +1,13 @@
 "use client";
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent as RPointerEvent, type WheelEvent as RWheelEvent } from "react";
-import { BUILDINGS, GRID_W, GRID_H, footprintTiles, type CocBase, type CocBuildingId } from "@/sim/coc";
+import { BUILDINGS, GRID_W, GRID_H, footprintTiles, type BattleFrame, type CocBase, type CocBuildingId, type CocUnitId } from "@/sim/coc";
 
 /** One grid cell, in stage pixels (zoom multiplies this). */
 export const TILE = 30;
+
+export const UNIT_COLOR: Record<CocUnitId, string> = {
+  grunt: "#e6e9ef", marksman: "#4a90d9", breacher: "#f5b301", juggernaut: "#9c2b2b", gunship: "#8b5cf6",
+};
 
 /** Resolve a building (+level for the Town Hall) to its vendored faux-iso SVG. */
 export function buildingArt(id: CocBuildingId, level: number): string {
@@ -43,15 +47,21 @@ export interface BaseGridProps {
   canPlace?: (anchorKey: string, id: CocBuildingId) => boolean;
   /** tap on a building anchor (view/select); null when the tap missed all buildings */
   onSelectBuilding?: (anchor: string | null) => void;
-  /** tap on a tile (used by build / wall / move-destination flows) */
+  /** tap on a tile (used by build / wall / move-destination / deploy flows) */
   onTile?: (tileKey: string) => void;
+  /** deploy phase: tapping an open tile drops a troop */
+  deployMode?: boolean;
+  /** placed troop markers shown during the deploy phase */
+  deployMarkers?: { unit: CocUnitId; x: number; y: number }[];
+  /** battle playback: render troops + structure damage from this frame */
+  frame?: BattleFrame | null;
 }
 
 function num(n: number): string {
   return Math.floor(n).toLocaleString();
 }
 
-export function BaseGrid({ base, tick, readOnly, selected, placing, wallMode, moveFrom, canPlace, onSelectBuilding, onTile }: BaseGridProps) {
+export function BaseGrid({ base, tick, readOnly, selected, placing, wallMode, moveFrom, canPlace, onSelectBuilding, onTile, deployMode, deployMarkers, frame }: BaseGridProps) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState({ x: 0, y: 0, scale: 1 });
   const [ghost, setGhost] = useState<string | null>(null);
@@ -107,7 +117,7 @@ export function BaseGrid({ base, tick, readOnly, selected, placing, wallMode, mo
 
   const onPointerMove = (e: RPointerEvent) => {
     if (!pointers.current.has(e.pointerId)) {
-      if ((placing || wallMode || moveFrom) && !readOnly) {
+      if ((placing || wallMode || moveFrom || deployMode) && !readOnly) {
         const t = tileAt(e.clientX, e.clientY);
         setGhost(t ? `${t.tx},${t.ty}` : null);
       }
@@ -137,12 +147,12 @@ export function BaseGrid({ base, tick, readOnly, selected, placing, wallMode, mo
       const t = tileAt(e.clientX, e.clientY);
       if (t) {
         const key = `${t.tx},${t.ty}`;
-        if (!readOnly && (placing || wallMode || moveFrom)) {
+        if (!readOnly && (placing || wallMode || moveFrom || deployMode)) {
           onTile?.(key);
-        } else {
+        } else if (!deployMode) {
           onSelectBuilding?.(anchorAtTile(key));
         }
-      } else if (!placing && !wallMode && !moveFrom) {
+      } else if (!placing && !wallMode && !moveFrom && !deployMode) {
         onSelectBuilding?.(null);
       }
     }
@@ -156,6 +166,8 @@ export function BaseGrid({ base, tick, readOnly, selected, placing, wallMode, mo
   };
 
   const jobByTile = new Map(base.jobs.map((j) => [j.tileKey, j]));
+  const frameStruct = frame ? new Map(frame.structures.map((s) => [s.key, s])) : null;
+  const isOpenTile = (key: string) => anchorAtTile(key) === null && !base.walls[key];
 
   return (
     <div
@@ -193,13 +205,21 @@ export function BaseGrid({ base, tick, readOnly, selected, placing, wallMode, mo
           const constructing = b.level < 1 || !!job;
           const range = def.category === "defense" && isSel ? def.levels[Math.max(0, b.level - 1)]?.range : undefined;
           const buffer = def.category === "collector" && b.level >= 1 ? b.buffer ?? 0 : 0;
+          const fs = frameStruct?.get(anchor) ?? null;
+          const destroyed = fs ? fs.hp <= 0 : false;
           return (
             <div key={anchor} style={{ position: "absolute", left: x * TILE, top: y * TILE, width: w * TILE, height: h * TILE }}>
               {range != null && (
                 <div style={{ position: "absolute", left: "50%", top: "50%", width: range * 2 * TILE, height: range * 2 * TILE, transform: "translate(-50%,-50%)", borderRadius: "50%", border: "1px dashed var(--bb-range-line)", background: "var(--bb-range-fill)", pointerEvents: "none" }} />
               )}
               <img src={buildingArt(b.id, b.level)} alt={def.name} draggable={false}
-                style={{ width: "100%", height: "100%", display: "block", filter: "drop-shadow(var(--bb-shadow))", opacity: moveFrom === anchor ? 0.5 : 1 }} />
+                style={{ width: "100%", height: "100%", display: "block", filter: destroyed ? "grayscale(1) brightness(0.5)" : "drop-shadow(var(--bb-shadow))", opacity: destroyed ? 0.5 : moveFrom === anchor ? 0.5 : 1 }} />
+              {fs && !destroyed && fs.hp < fs.max && (
+                <div style={{ position: "absolute", left: "8%", right: "8%", top: -6, height: 4, borderRadius: 2, background: "#0a0d14", overflow: "hidden", pointerEvents: "none" }}>
+                  <div style={{ height: "100%", width: `${(fs.hp / fs.max) * 100}%`, background: "var(--success)" }} />
+                </div>
+              )}
+              {destroyed && <div style={{ position: "absolute", inset: "10%", borderRadius: 6, background: "var(--bb-damage-tint)", pointerEvents: "none" }} />}
               {constructing && (
                 <>
                   <div style={{ position: "absolute", inset: "6%", border: "1.5px dashed var(--amber)", borderRadius: 6, background: "var(--bb-build-tint)", pointerEvents: "none" }} />
@@ -222,12 +242,22 @@ export function BaseGrid({ base, tick, readOnly, selected, placing, wallMode, mo
           );
         })}
 
-        {/* placement / wall / move ghost */}
-        {ghost && (placing || wallMode || moveFrom) && (() => {
+        {/* deploy markers (pending placements) */}
+        {deployMarkers?.map((m, i) => (
+          <span key={`dm${i}`} style={{ ...dot, left: m.x * TILE + TILE / 2 - 4, top: m.y * TILE + TILE / 2 - 4, background: UNIT_COLOR[m.unit] }} />
+        ))}
+
+        {/* live battle troops (playback) */}
+        {frame?.troops.filter((t) => t.alive).map((t, i) => (
+          <span key={`bt${i}`} style={{ ...dot, left: t.x * TILE + TILE / 2 - 4, top: t.y * TILE + TILE / 2 - 4, background: UNIT_COLOR[t.unit] }} />
+        ))}
+
+        {/* placement / wall / move / deploy ghost */}
+        {ghost && (placing || wallMode || moveFrom || deployMode) && (() => {
           const id: CocBuildingId | null = placing ?? (moveFrom ? base.buildings[moveFrom]?.id ?? null : null);
-          const { w, h } = wallMode ? { w: 1, h: 1 } : id ? BUILDINGS[id].footprint : { w: 1, h: 1 };
+          const { w, h } = deployMode || wallMode ? { w: 1, h: 1 } : id ? BUILDINGS[id].footprint : { w: 1, h: 1 };
           const [gx, gy] = ghost.split(",").map(Number);
-          const valid = wallMode ? !canPlace || canPlace(ghost, "builderHut") : id ? !canPlace || canPlace(ghost, id) : false;
+          const valid = deployMode ? isOpenTile(ghost) : wallMode ? !canPlace || canPlace(ghost, "builderHut") : id ? !canPlace || canPlace(ghost, id) : false;
           return (
             <div style={{ position: "absolute", left: gx * TILE, top: gy * TILE, width: w * TILE, height: h * TILE, background: valid ? "var(--bb-valid)" : "var(--bb-invalid)", border: `2px solid ${valid ? "var(--bb-valid-line)" : "var(--bb-invalid-line)"}`, borderRadius: 4, pointerEvents: "none" }} />
           );
@@ -250,6 +280,7 @@ const wrap: CSSProperties = {
   WebkitUserSelect: "none",
 };
 const gridLines = "repeating-linear-gradient(0deg, var(--bb-grid-line) 0 1px, transparent 1px var(--bb-tile,30px)), repeating-linear-gradient(90deg, var(--bb-grid-line) 0 1px, transparent 1px var(--bb-tile,30px))";
+const dot: CSSProperties = { position: "absolute", width: 8, height: 8, borderRadius: "50%", boxShadow: "0 0 0 1px #0a0d14, 0 1px 2px rgba(0,0,0,0.7)", pointerEvents: "none", zIndex: 8 };
 const badge: CSSProperties = { position: "absolute", top: -7, left: -7, minWidth: 16, height: 16, padding: "0 3px", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bb-badge-bg)", border: "1.5px solid var(--bb-badge-ring)", borderRadius: 5, font: "700 10px var(--font-mono)", color: "var(--bb-badge-fg)", boxShadow: "0 1px 3px rgba(0,0,0,0.6)", pointerEvents: "none" };
 const collectBubble: CSSProperties = { position: "absolute", left: "50%", top: -14, transform: "translateX(-50%)", display: "flex", alignItems: "center", gap: 3, padding: "2px 7px", borderRadius: 999, background: "var(--bb-collect-bg)", color: "var(--bb-collect-fg)", font: "700 10px var(--font-mono)", boxShadow: "0 3px 9px rgba(0,0,0,0.55)", pointerEvents: "none", whiteSpace: "nowrap" };
 function bracket(corner: "tl" | "tr" | "bl" | "br"): CSSProperties {
