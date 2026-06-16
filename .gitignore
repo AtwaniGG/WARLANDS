@@ -47,3 +47,6 @@ solana/keys/
 
 # Claude worktrees / local
 .claude/
+
+# design-system / upload archives
+*.zip
