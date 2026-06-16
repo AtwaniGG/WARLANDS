@@ -4,46 +4,50 @@ import { useBaseSocket } from "@/lib/useBaseSocket";
 import { axialToPixel } from "@/game/world";
 import { Badge, Button, Panel, ProgressBar, Stat } from "@/components/ui";
 import { BaseTutorial } from "@/components/BaseTutorial";
+import { BaseGrid, buildingArt } from "@/components/BaseGrid";
 import {
-  BUILDINGS, LOOT_PCT, MAX_BUILDERS, UNITS, UNIT_IDS, WALL, builderCost, ccTier, finishCost, housingCap, housingUsed, levelDef, maxLevelOf, maxWallLevel,
+  BUILDINGS, LOOT_PCT, MAX_BUILDERS, UNITS, UNIT_IDS, WALL,
+  builderCost, builderCount, ccLevel, ccTier, fitsInGrid, finishCost, freeBuilders, housingCap, housingUsed, levelDef, maxLevelOf, maxWallLevel, occupiedTiles, storageCap,
   type Army, type BattleReport, type CocBase, type CocBuildingId, type CocResource, type CocUnitId, type CocWorld, type PlacedBuilding,
 } from "@/sim/coc";
 
 const SERVER_URL = process.env.NEXT_PUBLIC_GAME_SERVER_URL ?? "ws://localhost:8080";
-const SIZE = 16;
-const ICON: Record<CocBuildingId, string> = {
-  commandCenter: "🏛️", goldCollector: "⛏️", elixirCollector: "🛢️", goldStorage: "🏦", elixirStorage: "🛍️",
-  cannon: "🔫", mortar: "💣", airDefense: "🛰️", barracks: "🏰", armyCamp: "⛺",
-};
+const HEX = 16;
 const UNIT_ICON: Record<CocUnitId, string> = { grunt: "🪖", marksman: "🎯", breacher: "🧨", juggernaut: "🛡️", gunship: "🚁" };
 
-function ccLevelOf(base: CocBase): number { return base.buildings[base.centerKey]?.level ?? 1; }
-function storageCapOf(base: CocBase, res: CocResource): number {
-  let cap = 1000;
-  for (const b of Object.values(base.buildings)) {
-    const def = BUILDINGS[b.id];
-    if (def.stores === res && b.level >= 1) cap += def.levels[b.level - 1]?.storageCap ?? 0;
-  }
-  return cap;
-}
-function terrainFill(t: string): string { return `var(--terrain-${t.toLowerCase()})`; }
 function num(n: number): string { return Math.floor(n).toLocaleString(); }
-function center(key: string): { x: number; y: number } {
-  const [q, r] = key.split(",").map(Number);
-  return axialToPixel(q, r, SIZE);
-}
+function terrainFill(t: string): string { return `var(--terrain-${t.toLowerCase()})`; }
 function armyTotal(a: Army): number { return UNIT_IDS.reduce((s, u) => s + (a[u] ?? 0), 0); }
+function costStr(cost: Partial<Record<CocResource, number>>): string {
+  const parts: string[] = [];
+  if (cost.gold) parts.push(`🪙${cost.gold}`);
+  if (cost.elixir) parts.push(`🧪${cost.elixir}`);
+  return parts.join(" ") || "FREE";
+}
+function canPlaceAt(base: CocBase, anchorKey: string, id: CocBuildingId): boolean {
+  if (!fitsInGrid(anchorKey, id)) return false;
+  const occ = occupiedTiles(base);
+  for (const [x, y] of footprint(anchorKey, id)) if (occ.has(`${x},${y}`)) return false;
+  return true;
+}
+function footprint(anchorKey: string, id: CocBuildingId): [number, number][] {
+  const [x, y] = anchorKey.split(",").map(Number);
+  const { w, h } = BUILDINGS[id].footprint;
+  const out: [number, number][] = [];
+  for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) out.push([x + dx, y + dy]);
+  return out;
+}
 
 export default function WorldPage() {
   const { state, playerId, connected, error, report, send, clearReport } = useBaseSocket(SERVER_URL);
-  const [sel, setSel] = useState<string | null>(null);
-  const [selWall, setSelWall] = useState<string | null>(null);
-  const [wallMode, setWallMode] = useState(false);
-  const [wallFrom, setWallFrom] = useState<string | null>(null);
+  const [screen, setScreen] = useState<"world" | "base">("base");
+  const [mode, setMode] = useState<"view" | "build" | "wall">("view");
+  const [selected, setSelected] = useState<string | null>(null);
+  const [placing, setPlacing] = useState<CocBuildingId | null>(null);
+  const [moveFrom, setMoveFrom] = useState<string | null>(null);
   const [armyOpen, setArmyOpen] = useState(false);
   const [clanOpen, setClanOpen] = useState(false);
-  const [raidTarget, setRaidTarget] = useState<string | null>(null);
-  const [deploy, setDeploy] = useState<Army>({});
+  const [scout, setScout] = useState<string | null>(null);
 
   if (!state) {
     return (
@@ -56,182 +60,169 @@ export default function WorldPage() {
 
   const myBase: CocBase | null = playerId ? state.bases[playerId] ?? null : null;
   const me = playerId ? state.players[playerId] ?? null : null;
-  const tier = myBase ? ccTier(ccLevelOf(myBase)) : null;
-  const freeBuilders = myBase ? myBase.builders - myBase.jobs.length : 0;
-  const jobByHex = new Map(myBase?.jobs.map((j) => [j.hexKey, j]) ?? []);
-  const selBuilding = myBase && sel ? myBase.buildings[sel] : null;
+  const view = myBase ? screen : "world";
 
-  function onHexClick(key: string, q: number, r: number) {
-    if (!myBase) { send({ type: "claimBase", q, r }); return; }
-    const owner = state!.claimedHexes[key];
-    if (owner && owner !== playerId) { setSel(null); setSelWall(null); setRaidTarget(owner); setDeploy({}); return; }
-    if (!myBase.ownedHexes.includes(key)) return;
-    if (wallMode) {
-      if (!wallFrom) { setWallFrom(key); return; }
-      if (wallFrom === key) { setWallFrom(null); return; }
-      send({ type: "placeWall", aKey: wallFrom, bKey: key });
-      setWallFrom(null);
-      return;
-    }
-    setSelWall(null);
-    setSel(key);
+  function resetBaseUi() { setMode("view"); setPlacing(null); setMoveFrom(null); setSelected(null); }
+
+  function onTile(key: string) {
+    if (!myBase) return;
+    if (placing) { send({ type: "placeBuilding", tileKey: key, buildingId: placing }); setPlacing(null); setMode("view"); return; }
+    if (mode === "wall") { send({ type: "placeWall", tileKey: key }); return; }
+    if (moveFrom) { send({ type: "moveBuilding", fromTile: moveFrom, toTile: key }); setMoveFrom(null); return; }
   }
-
-  const buildable: CocBuildingId[] = tier ? (Object.keys(tier.caps) as CocBuildingId[]) : [];
-  const resourceBuildings = buildable.filter((id) => ["collector", "storage"].includes(BUILDINGS[id].category));
-  const defenseBuildings = buildable.filter((id) => BUILDINGS[id].category === "defense");
-  const armyBuildings = buildable.filter((id) => BUILDINGS[id].category === "army");
 
   return (
     <main style={page}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-        <span className="wl-title" style={{ fontSize: 22 }}>LIVE WORLD MAP</span>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        <span className="wl-title" style={{ fontSize: 20 }}>{view === "world" ? "LIVE WORLD MAP" : "MY BASE"}</span>
         <Badge tone={connected ? "emerald" : "blood"} variant="soft">{connected ? "● ONLINE" : "● OFFLINE"}</Badge>
         <span className="wl-num" style={{ fontSize: 11, color: "var(--text-secondary)" }}>TICK {state.tick} · {Object.keys(state.players).length} CMDR</span>
-        {myBase && <Button size="sm" variant="outline" icon="⚔️" onClick={() => setArmyOpen(true)}>ARMY ({armyTotal(myBase.army)})</Button>}
-        {myBase && <Button size="sm" variant="outline" icon="🤝" onClick={() => setClanOpen(true)}>CLAN</Button>}
+        <span style={{ flex: 1 }} />
         {myBase && (
-          <Button size="sm" variant={wallMode ? "primary" : "outline"} icon="🧱"
-            onClick={() => { setWallMode((w) => !w); setWallFrom(null); setSel(null); setSelWall(null); }}>
-            {wallMode ? "WALL MODE: ON" : "WALL MODE"}
-          </Button>
+          <>
+            <Button size="sm" variant={view === "base" ? "primary" : "outline"} icon="🏠" onClick={() => { setScreen("base"); setScout(null); }}>BASE</Button>
+            <Button size="sm" variant={view === "world" ? "primary" : "outline"} icon="🗺️" onClick={() => { setScreen("world"); resetBaseUi(); }}>WORLD</Button>
+          </>
         )}
       </div>
       {error && <div style={{ marginTop: 8 }}><Badge tone="blood" variant="soft" icon="⚠">{error}</Badge></div>}
 
+      {/* ===================== HUD ===================== */}
       {myBase ? (
-        <Panel label="HEADQUARTERS" accent padding="10px 14px" style={{ marginTop: 12 }}
+        <Panel label="HEADQUARTERS" accent padding="10px 14px" style={{ marginTop: 10 }}
           headerRight={<Button size="sm" variant="primary" icon="📥" onClick={() => send({ type: "collect" })}>COLLECT</Button>}>
-          <div style={{ display: "flex", gap: 18, flexWrap: "wrap", alignItems: "center" }}>
-            <Stat label="🪙 GOLD" value={`${num(myBase.gold)} / ${num(storageCapOf(myBase, "gold"))}`} accent="amber" />
-            <Stat label="🧪 ELIXIR" value={`${num(myBase.elixir)} / ${num(storageCapOf(myBase, "elixir"))}`} accent="violet" />
+          <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center" }}>
+            <Stat label="🪙 GOLD" value={`${num(myBase.gold)} / ${num(storageCap(myBase, "gold"))}`} accent="amber" />
+            <Stat label="🧪 ELIXIR" value={`${num(myBase.elixir)} / ${num(storageCap(myBase, "elixir"))}`} accent="violet" />
             <Stat label="💎 $WAR" value={num(me?.war ?? 0)} accent="amber" />
             <Stat label="🏆 TROPHIES" value={`${myBase.trophies}`} accent="amber" />
-            <Stat label="CMD CENTER" value={`L${ccLevelOf(myBase)}`} accent="sky" />
-            <Stat label="BUILDERS" value={`${freeBuilders}/${myBase.builders}`} accent={freeBuilders > 0 ? "emerald" : "neutral"} />
+            <Stat label="TOWN HALL" value={`L${ccLevel(myBase)}`} accent="sky" />
+            <Stat label="BUILDERS" value={`${freeBuilders(myBase)}/${builderCount(myBase)}`} accent={freeBuilders(myBase) > 0 ? "emerald" : "neutral"} />
             <Stat label="ARMY" value={`${housingUsed(myBase)}/${housingCap(myBase)}`} accent="blood" />
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
-            {myBase.builders < MAX_BUILDERS && (
-              <Button size="sm" variant="outline" icon="🔨" onClick={() => send({ type: "buyBuilder" })}>
-                +BUILDER · 💎{num(builderCost(myBase.builders))}
+            <Button size="sm" variant="outline" icon="⚔️" onClick={() => setArmyOpen(true)}>ARMY ({armyTotal(myBase.army)})</Button>
+            <Button size="sm" variant="outline" icon="🤝" onClick={() => setClanOpen(true)}>CLAN</Button>
+            {builderCount(myBase) < MAX_BUILDERS && (
+              <Button size="sm" variant="outline" icon="🔨" onClick={() => { setScreen("base"); setMode("build"); setPlacing("builderHut"); setSelected(null); }}>
+                +BUILDER · 💎{num(builderCost(builderCount(myBase)))}
               </Button>
             )}
-            <Button size="sm" variant="outline" icon="🛡️" onClick={() => send({ type: "extendShield", hours: 2 })}>
-              +2h SHIELD · 💎1,000
-            </Button>
-            {myBase.shieldUntil > state.tick && (
-              <Badge tone="emerald" variant="soft">SHIELDED {Math.ceil((myBase.shieldUntil - state.tick) / 3600)}h</Badge>
-            )}
+            <Button size="sm" variant="outline" icon="🛡️" onClick={() => send({ type: "extendShield", hours: 2 })}>+2h SHIELD · 💎1,000</Button>
+            {myBase.shieldUntil > state.tick && <Badge tone="emerald" variant="soft">SHIELDED {Math.ceil((myBase.shieldUntil - state.tick) / 3600)}h</Badge>}
           </div>
         </Panel>
       ) : (
-        <Panel title="CLAIM YOUR GROUND" rim="amber" padding="12px 14px" style={{ marginTop: 12 }}>
-          <p style={{ margin: 0, fontSize: 13, color: "var(--text-secondary)" }}>
-            Tap an unclaimed hex with all six neighbours free to stake your Command Center and the ring around it.
-          </p>
-        </Panel>
-      )}
-      {wallMode && <div style={{ marginTop: 8 }}><Badge tone="amber" variant="soft" icon="🧱">{wallFrom ? `WALL FROM ${wallFrom} — tap an adjacent hex` : "TAP TWO ADJACENT OWNED HEXES"}</Badge></div>}
-      {myBase && <div style={{ marginTop: 8, fontSize: 11, color: "var(--text-muted)" }}>Tip: tap another commander&apos;s territory to scout &amp; raid.</div>}
-
-      {/* Map */}
-      <div style={mapWrap}>
-        <div className="wl-hexgrid" style={{ position: "absolute", inset: 0, opacity: 0.5, pointerEvents: "none" }} />
-        <div className="wl-scanline" />
-        <svg viewBox="-260 -260 520 520" style={{ width: "100%", height: "100%", display: "block", position: "relative" }}>
-          {Object.values(state.hexes).map((h) => {
-            const key = `${h.q},${h.r}`;
-            const { x, y } = axialToPixel(h.q, h.r, SIZE);
-            const owner = state.claimedHexes[key];
-            const mine = owner && owner === playerId;
-            const active = mine && (sel === key || wallFrom === key);
-            const isTarget = !!owner && owner === raidTarget;
-            const b = mine ? myBase!.buildings[key] : undefined;
-            const job = mine ? jobByHex.get(key) : undefined;
-            const fill = mine ? "var(--panel-2)" : owner ? "var(--panel)" : terrainFill(h.terrain);
-            const rim = active || isTarget ? "var(--rim-selected)" : mine ? "var(--rim-owned)" : owner ? "var(--rim-enemy)" : "var(--rim-neutral)";
-            return (
-              <g key={key} transform={`translate(${x},${y})`} onClick={() => onHexClick(key, h.q, h.r)}
-                style={{ cursor: "pointer", filter: active || isTarget ? "drop-shadow(0 0 4px rgba(245,179,1,0.6))" : undefined }}>
-                <polygon points={hexPoints(SIZE)} fill={fill} stroke={rim} strokeWidth={mine || owner ? 1.4 : 0.5} />
-                {b && <text textAnchor="middle" dy="3" fontSize="11">{ICON[b.id]}</text>}
-                {b && b.level >= 1 && <text textAnchor="middle" dy="13" fontSize="6" fill="var(--amber-text)" style={{ fontFamily: "var(--font-mono)" }}>L{b.level}</text>}
-                {job && <text textAnchor="middle" dy="-7" fontSize="6" fill="var(--warning)" style={{ fontFamily: "var(--font-mono)" }}>{Math.max(0, job.finishesAtTick - state.tick)}s</text>}
-              </g>
-            );
-          })}
-          {myBase && Object.entries(myBase.walls).map(([ek, level]) => {
-            const [aK, bK] = ek.split("|");
-            const a = center(aK), b = center(bK);
-            const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
-            const dx = b.x - a.x, dy = b.y - a.y;
-            const len = Math.hypot(dx, dy) || 1;
-            const px = -dy / len, py = dx / len;
-            const half = SIZE * 0.5;
-            return (
-              <g key={ek} onClick={() => { setSel(null); setSelWall(ek); }} style={{ cursor: "pointer" }}>
-                <line x1={mx + px * half} y1={my + py * half} x2={mx - px * half} y2={my - py * half} stroke="transparent" strokeWidth={10} />
-                <line x1={mx + px * half} y1={my + py * half} x2={mx - px * half} y2={my - py * half} stroke={selWall === ek ? "var(--rim-selected)" : "var(--concrete)"} strokeWidth={2 + level * 1.5} strokeLinecap="round" />
-              </g>
-            );
-          })}
-        </svg>
-      </div>
-
-      {/* Wall panel */}
-      {myBase && selWall && (
-        <Panel title="WALL" accent padding="12px 14px" style={{ marginTop: 12 }} headerRight={<button onClick={() => setSelWall(null)} style={closeBtn}>✕</button>}>
-          <WallInfo base={myBase} ek={selWall} onUpgrade={() => send({ type: "upgradeWall", edgeKey: selWall })} />
+        <Panel title="CLAIM YOUR GROUND" rim="amber" padding="12px 14px" style={{ marginTop: 10 }}>
+          <p style={{ margin: 0, fontSize: 13, color: "var(--text-secondary)" }}>Tap any unclaimed hex on the world map to found your village. You build your base on a 20×20 plot.</p>
         </Panel>
       )}
 
-      {/* Build/Upgrade panel */}
-      {myBase && sel && (
-        <Panel title={selBuilding ? BUILDINGS[selBuilding.id].name : `HEX ${sel}`} accent={!!selBuilding} padding="12px 14px" style={{ marginTop: 12 }}
-          headerRight={<button onClick={() => setSel(null)} style={closeBtn}>✕</button>}>
-          {selBuilding ? (
-            <BuildingInfo base={myBase} building={selBuilding} job={jobByHex.get(sel)} tick={state.tick} freeBuilders={freeBuilders}
-              war={me?.war ?? 0}
-              onUpgrade={() => send({ type: "upgradeBuilding", hexKey: sel })}
-              onFinish={() => send({ type: "finishNow", hexKey: sel })} />
-          ) : (
-            <div style={{ display: "grid", gap: 12 }}>
-              <BuildGroup label="RESOURCES" ids={resourceBuildings} base={myBase} tier={tier!} freeBuilders={freeBuilders} onBuild={(id) => send({ type: "placeBuilding", hexKey: sel, buildingId: id })} />
-              <BuildGroup label="DEFENSE" ids={defenseBuildings} base={myBase} tier={tier!} freeBuilders={freeBuilders} onBuild={(id) => send({ type: "placeBuilding", hexKey: sel, buildingId: id })} />
-              <BuildGroup label="ARMY" ids={armyBuildings} base={myBase} tier={tier!} freeBuilders={freeBuilders} onBuild={(id) => send({ type: "placeBuilding", hexKey: sel, buildingId: id })} />
-              <ExpandRow base={myBase} state={state} onExpand={(q, r) => send({ type: "expandCluster", q, r })} />
+      {/* ===================== WORLD ===================== */}
+      {view === "world" && (
+        <>
+          <div style={{ marginTop: 8, fontSize: 11, color: "var(--text-muted)" }}>
+            {myBase ? "Tap your village to manage it · tap an enemy village to scout." : "Tap an unclaimed hex to found your village."}
+          </div>
+          <div style={mapWrap}>
+            <div className="wl-hexgrid" style={{ position: "absolute", inset: 0, opacity: 0.5, pointerEvents: "none" }} />
+            <div className="wl-scanline" />
+            <svg viewBox="-260 -260 520 520" style={{ width: "100%", height: "100%", display: "block", position: "relative" }}>
+              {Object.values(state.hexes).map((h) => {
+                const key = `${h.q},${h.r}`;
+                const { x, y } = axialToPixel(h.q, h.r, HEX);
+                const owner = state.claimedHexes[key];
+                const mine = !!owner && owner === playerId;
+                const b = owner ? state.bases[owner] : undefined;
+                const fill = mine ? "var(--panel-2)" : owner ? "var(--panel)" : terrainFill(h.terrain);
+                const rim = mine ? "var(--rim-owned)" : owner ? "var(--rim-enemy)" : "var(--rim-neutral)";
+                return (
+                  <g key={key} transform={`translate(${x},${y})`} style={{ cursor: "pointer" }}
+                    onClick={() => {
+                      if (!myBase) { send({ type: "claimBase", q: h.q, r: h.r }); return; }
+                      if (mine) { setScreen("base"); return; }
+                      if (owner) { setScout(owner); return; }
+                    }}>
+                    <polygon points={hexPoints(HEX)} fill={fill} stroke={rim} strokeWidth={owner ? 1.6 : 0.5} />
+                    {b && <text textAnchor="middle" dy="-1" fontSize="10">{mine ? "🏠" : "💀"}</text>}
+                    {b && <text textAnchor="middle" dy="9" fontSize="6" fill={mine ? "var(--amber-text)" : "var(--blood-text)"} style={{ fontFamily: "var(--font-mono)" }}>TH{ccLevel(b)}</text>}
+                    {b && b.shieldUntil > state.tick && <text textAnchor="middle" dy="-9" fontSize="7">🛡️</text>}
+                  </g>
+                );
+              })}
+            </svg>
+          </div>
+        </>
+      )}
+
+      {/* ===================== MY BASE ===================== */}
+      {view === "base" && myBase && (
+        <>
+          <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+            <Button size="sm" variant={mode === "build" ? "primary" : "outline"} icon="🏗️"
+              onClick={() => { if (mode === "build") resetBaseUi(); else { setMode("build"); setSelected(null); setMoveFrom(null); } }}>
+              {mode === "build" ? "BUILDING…" : "BUILD"}
+            </Button>
+            <Button size="sm" variant={mode === "wall" ? "primary" : "outline"} icon="🧱"
+              onClick={() => { if (mode === "wall") resetBaseUi(); else { setMode("wall"); setPlacing(null); setSelected(null); setMoveFrom(null); } }}>
+              {mode === "wall" ? "WALL MODE: ON" : "WALL"}
+            </Button>
+            {moveFrom && <Badge tone="amber" variant="soft" icon="✥">TAP A DESTINATION TILE</Badge>}
+            {placing && <Badge tone="amber" variant="soft">PLACING {BUILDINGS[placing].name.toUpperCase()} — TAP A TILE</Badge>}
+            {mode === "wall" && <Badge tone="amber" variant="soft">TAP TILES TO RAISE WALLS · 🪙{WALL.levels[0].cost.gold}</Badge>}
+          </div>
+
+          <div style={{ marginTop: 10 }}>
+            <BaseGrid
+              base={myBase} tick={state.tick}
+              selected={selected} placing={placing} wallMode={mode === "wall"} moveFrom={moveFrom}
+              canPlace={(a, id) => canPlaceAt(myBase, a, id)}
+              onSelectBuilding={(a) => { if (mode === "view" && !moveFrom) setSelected(a); }}
+              onTile={onTile}
+            />
+          </div>
+
+          {/* Build tray (bottom sheet) */}
+          {mode === "build" && (
+            <div style={sheet}>
+              <Panel title="BUILD" accent padding="12px 14px" headerRight={<button onClick={resetBaseUi} style={closeBtn}>✕</button>}>
+                <BuildTray base={myBase} war={me?.war ?? 0} onPick={(id) => { setPlacing(id); }} active={placing} />
+              </Panel>
             </div>
           )}
-        </Panel>
+
+          {/* Building info / upgrade / move / finish (bottom sheet) */}
+          {mode === "view" && selected && myBase.buildings[selected] && (
+            <div style={sheet}>
+              <Panel title={BUILDINGS[myBase.buildings[selected].id].name} accent padding="12px 14px"
+                headerRight={<button onClick={() => setSelected(null)} style={closeBtn}>✕</button>}>
+                <BuildingInfo base={myBase} anchor={selected} building={myBase.buildings[selected]} tick={state.tick} war={me?.war ?? 0}
+                  onUpgrade={() => send({ type: "upgradeBuilding", tileKey: selected })}
+                  onFinish={() => send({ type: "finishNow", tileKey: selected })}
+                  onMove={() => { setMoveFrom(selected); setSelected(null); }}
+                />
+              </Panel>
+            </div>
+          )}
+        </>
       )}
 
-      {/* Army / training */}
+      {/* ===================== Overlays ===================== */}
       {myBase && armyOpen && (
         <Overlay onClose={() => setArmyOpen(false)}>
           <ArmyPanel base={myBase} onTrain={(u) => send({ type: "trainTroop", unit: u })} onClose={() => setArmyOpen(false)} />
         </Overlay>
       )}
-
-      {/* Scout / attack */}
-      {myBase && raidTarget && state.bases[raidTarget] && (
-        <Overlay onClose={() => setRaidTarget(null)}>
-          <AttackPanel
-            me={myBase} target={state.bases[raidTarget]} tick={state.tick} deploy={deploy} setDeploy={setDeploy}
-            onAttack={() => { send({ type: "raid", targetOwner: raidTarget, army: deploy }); setRaidTarget(null); }}
-            onClose={() => setRaidTarget(null)}
-          />
-        </Overlay>
-      )}
-
-      {/* Clan */}
       {myBase && clanOpen && playerId && (
         <Overlay onClose={() => setClanOpen(false)}>
           <ClanPanel state={state} playerId={playerId} send={send} onClose={() => setClanOpen(false)} />
         </Overlay>
       )}
-
-      {/* Result card */}
+      {scout && state.bases[scout] && (
+        <Overlay onClose={() => setScout(null)}>
+          <ScoutCard target={state.bases[scout]} tick={state.tick} onClose={() => setScout(null)} />
+        </Overlay>
+      )}
       {report && (
         <Overlay onClose={clearReport}>
           <ResultCard report={report} mine={report.attacker === playerId} onClose={clearReport} />
@@ -246,7 +237,94 @@ export default function WorldPage() {
 function Overlay({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
   return (
     <div style={overlay} onClick={onClose}>
-      <div style={{ width: "100%", maxWidth: 460 }} onClick={(e) => e.stopPropagation()}>{children}</div>
+      <div style={{ width: "100%", maxWidth: 460, maxHeight: "90vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>{children}</div>
+    </div>
+  );
+}
+
+function BuildTray({ base, war, onPick, active }: { base: CocBase; war: number; onPick: (id: CocBuildingId) => void; active: CocBuildingId | null }) {
+  const tier = ccTier(ccLevel(base));
+  const inCaps = Object.keys(tier.caps) as CocBuildingId[];
+  const groups: { label: string; ids: CocBuildingId[] }[] = [
+    { label: "RESOURCES", ids: inCaps.filter((id) => ["collector", "storage"].includes(BUILDINGS[id].category)) },
+    { label: "DEFENSE", ids: inCaps.filter((id) => BUILDINGS[id].category === "defense") },
+    { label: "ARMY", ids: inCaps.filter((id) => BUILDINGS[id].category === "army") },
+    { label: "SPECIAL", ids: ["builderHut" as CocBuildingId, ...inCaps.filter((id) => id === "clanCastle")] },
+  ];
+  const countOf = (id: CocBuildingId) => Object.values(base.buildings).filter((b) => b.id === id).length;
+  return (
+    <div style={{ display: "grid", gap: 12 }}>
+      {groups.map((g) => g.ids.length === 0 ? null : (
+        <div key={g.label}>
+          <span className="wl-label">{g.label}</span>
+          <div style={{ display: "grid", gap: 6, marginTop: 8 }}>
+            {g.ids.map((id) => {
+              const def = BUILDINGS[id];
+              const lv = levelDef(id, 1)!;
+              if (id === "builderHut") {
+                const cost = builderCost(builderCount(base));
+                const atMax = builderCount(base) >= MAX_BUILDERS;
+                const ok = !atMax && war >= cost;
+                return <TrayCard key={id} id={id} name={def.name} sub={atMax ? "MAX BUILDERS" : `💎${num(cost)} · instant`} ok={ok} activeId={active} onPick={onPick} />;
+              }
+              const cap = tier.caps[id]!;
+              const atCap = countOf(id) >= cap.maxCount;
+              const afford = base.gold >= (lv.cost.gold ?? 0) && base.elixir >= (lv.cost.elixir ?? 0);
+              const ok = !atCap && afford && freeBuilders(base) > 0;
+              return <TrayCard key={id} id={id} name={def.name} sub={atCap ? "AT LIMIT" : `${costStr(lv.cost)} · ${lv.buildTimeSec}s`} ok={ok} activeId={active} onPick={onPick} />;
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TrayCard({ id, name, sub, ok, activeId, onPick }: { id: CocBuildingId; name: string; sub: string; ok: boolean; activeId: CocBuildingId | null; onPick: (id: CocBuildingId) => void }) {
+  return (
+    <button disabled={!ok} onClick={() => onPick(id)} style={{ ...trayCard, opacity: ok ? 1 : 0.45, outline: activeId === id ? "2px solid var(--rim-selected)" : "none", cursor: ok ? "pointer" : "not-allowed" }}>
+      <img src={buildingArt(id, 1)} alt="" width={34} height={34} style={{ flexShrink: 0 }} />
+      <span style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 2 }}>
+        <span style={{ fontSize: 13, fontWeight: 600 }}>{name}</span>
+        <span className="wl-num" style={{ fontSize: 11, color: "var(--text-secondary)" }}>{sub}</span>
+      </span>
+    </button>
+  );
+}
+
+function BuildingInfo({ base, anchor, building, tick, war, onUpgrade, onFinish, onMove }: {
+  base: CocBase; anchor: string; building: PlacedBuilding; tick: number; war: number; onUpgrade: () => void; onFinish: () => void; onMove: () => void;
+}) {
+  const def = BUILDINGS[building.id];
+  const job = base.jobs.find((j) => j.tileKey === anchor);
+  const next = building.level + 1;
+  const maxed = next > maxLevelOf(building.id);
+  const cap = ccTier(ccLevel(base)).caps[building.id];
+  const ccBlocked = building.id !== "commandCenter" && (!cap || next > cap.maxLevel);
+  const lv = !maxed ? levelDef(building.id, next) : undefined;
+  const cost = lv?.cost ?? {};
+  const afford = base.gold >= (cost.gold ?? 0) && base.elixir >= (cost.elixir ?? 0);
+  const ok = building.level >= 1 && !job && !maxed && !ccBlocked && afford && freeBuilders(base) > 0;
+  const total = job ? levelDef(job.buildingId, job.toLevel)?.buildTimeSec ?? 1 : 1;
+  const remaining = job ? Math.max(0, job.finishesAtTick - tick) : 0;
+  const stats = levelDef(building.id, Math.max(1, building.level));
+  const movable = building.level >= 1 && !job;
+  return (
+    <div style={{ fontSize: 13 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
+        <Badge tone={building.level >= 1 ? "amber" : "sky"} variant="soft">{building.level >= 1 ? `LEVEL ${building.level}` : "UNDER CONSTRUCTION"}</Badge>
+        {def.category === "defense" && stats && (<><Badge tone="blood" variant="soft">DEF {stats.hp}</Badge><Badge tone="teal" variant="soft">RNG {stats.range}</Badge><Badge tone="neutral" variant="soft">{stats.targets?.toUpperCase()}</Badge></>)}
+        {building.id === "armyCamp" && stats?.housing && <Badge tone="blood" variant="soft">⌂ {stats.housing}</Badge>}
+        {building.id === "clanCastle" && <Badge tone="neutral" variant="soft">REINFORCE: SOON</Badge>}
+      </div>
+      {job ? (
+        <div style={{ display: "grid", gap: 8 }}>
+          <ProgressBar tone="amber" label="BUILDING" valueText={`${remaining}s`} value={total - remaining} max={total} />
+          <Button variant="outline" full icon="💎" disabled={war < finishCost(remaining)} onClick={onFinish}>FINISH NOW · 💎{finishCost(remaining).toLocaleString()}</Button>
+        </div>
+      ) : maxed ? <Badge tone="neutral" variant="soft">MAX LEVEL</Badge>
+        : <Button variant="primary" full disabled={!ok} icon="⬆" onClick={onUpgrade}>UPGRADE → L{next} · {costStr(cost)} · {lv?.buildTimeSec}s{ccBlocked ? "  · RAISE TH" : ""}</Button>}
+      {movable && <div style={{ marginTop: 8 }}><Button variant="outline" full icon="✥" onClick={onMove}>MOVE</Button></div>}
     </div>
   );
 }
@@ -274,9 +352,7 @@ function ArmyPanel({ base, onTrain, onClose }: { base: CocBase; onTrain: (u: Coc
                 <span aria-hidden>{UNIT_ICON[u]}</span> {d.name}
                 <span style={{ color: "var(--text-muted)", fontSize: 10 }}>{d.role}</span>
               </span>
-              <span className="wl-num" style={{ fontSize: 11, color: "var(--text-secondary)" }}>
-                ×{have}{queued ? ` (+${queued})` : ""} · 🧪{d.cost.elixir} · ⌂{d.housing}
-              </span>
+              <span className="wl-num" style={{ fontSize: 11, color: "var(--text-secondary)" }}>×{have}{queued ? ` (+${queued})` : ""} · 🧪{d.cost.elixir} · ⌂{d.housing}</span>
             </Button>
           );
         })}
@@ -285,41 +361,21 @@ function ArmyPanel({ base, onTrain, onClose }: { base: CocBase; onTrain: (u: Coc
   );
 }
 
-function AttackPanel({ me, target, tick, deploy, setDeploy, onAttack, onClose }: {
-  me: CocBase; target: CocBase; tick: number; deploy: Army; setDeploy: (a: Army) => void; onAttack: () => void; onClose: () => void;
-}) {
+function ScoutCard({ target, tick, onClose }: { target: CocBase; tick: number; onClose: () => void }) {
   const shielded = target.shieldUntil > tick;
-  const cc = target.buildings[target.centerKey]?.level ?? 1;
-  const estGold = Math.floor(target.gold * LOOT_PCT);
-  const estElixir = Math.floor(target.elixir * LOOT_PCT);
-  const selected = armyTotal(deploy);
-  const set = (u: CocUnitId, n: number) => setDeploy({ ...deploy, [u]: Math.max(0, Math.min(me.army[u] ?? 0, n)) });
   return (
-    <Panel title="SCOUT & RAID" rim="blood" padding="14px" headerRight={<button onClick={onClose} style={closeBtn}>✕</button>}>
+    <Panel title="SCOUT REPORT" rim="blood" padding="14px" headerRight={<button onClick={onClose} style={closeBtn}>✕</button>}>
       <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 10 }}>
-        <Stat label="ENEMY CC" value={`L${cc}`} accent="sky" />
-        <Stat label="EST LOOT" value={`🪙${num(estGold)} 🧪${num(estElixir)}`} accent="amber" />
-        {shielded ? <Badge tone="emerald" variant="soft">SHIELDED</Badge> : <Badge tone="blood" variant="soft">RAIDABLE</Badge>}
+        <Stat label="TOWN HALL" value={`L${ccLevel(target)}`} accent="sky" />
+        <Stat label="EST LOOT" value={`🪙${num(target.gold * LOOT_PCT)} 🧪${num(target.elixir * LOOT_PCT)}`} accent="amber" />
+        {shielded ? <Badge tone="emerald" variant="soft">SHIELDED</Badge> : <Badge tone="blood" variant="soft">EXPOSED</Badge>}
       </div>
-      <span className="wl-label">DEPLOY</span>
-      <div style={{ display: "grid", gap: 6, marginTop: 8 }}>
-        {UNIT_IDS.filter((u) => (me.army[u] ?? 0) > 0).map((u) => (
-          <div key={u} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, background: "var(--surface-raised)", border: "1px solid var(--hairline)", borderRadius: "var(--radius-sm)", padding: "6px 10px" }}>
-            <span style={{ fontSize: 12 }}>{UNIT_ICON[u]} {UNITS[u].name} <span style={{ color: "var(--text-muted)" }}>/{me.army[u]}</span></span>
-            <span style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
-              <button style={step} onClick={() => set(u, (deploy[u] ?? 0) - 1)}>−</button>
-              <span className="wl-num" style={{ minWidth: 24, textAlign: "center" }}>{deploy[u] ?? 0}</span>
-              <button style={step} onClick={() => set(u, (deploy[u] ?? 0) + 1)}>+</button>
-              <button style={{ ...step, width: "auto", padding: "0 8px" }} onClick={() => set(u, me.army[u] ?? 0)}>ALL</button>
-            </span>
-          </div>
-        ))}
-        {armyTotal(me.army) === 0 && <Badge tone="neutral" variant="soft">No troops — train an army first.</Badge>}
+      <div style={{ borderRadius: "var(--radius-md)", overflow: "hidden", border: "1px solid var(--hairline)" }}>
+        <BaseGrid base={target} tick={tick} readOnly />
       </div>
       <div style={{ marginTop: 12 }}>
-        <Button variant="danger" full icon="⚔️" disabled={shielded || selected === 0} onClick={onAttack}>
-          {shielded ? "TARGET SHIELDED" : selected === 0 ? "SELECT TROOPS" : `ATTACK WITH ${selected}`}
-        </Button>
+        <Button variant="danger" full icon="⚔️" disabled>RAID — RETURNS IN GV1</Button>
+        <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 6, textAlign: "center" }}>Live grid raids land in the next update.</div>
       </div>
     </Panel>
   );
@@ -354,9 +410,7 @@ function ClanPanel({ state, playerId, send, onClose }: { state: CocWorld; player
                 <div key={m} style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                   <span className="wl-num" style={{ fontSize: 11, minWidth: 56 }}>{short(m)}</span>
                   {myUnits.map((u) => (
-                    <Button key={u} size="sm" variant="secondary" onClick={() => send({ type: "donateTroops", toOwner: m, army: { [u]: 1 } })}>
-                      🎁{UNIT_ICON[u]}
-                    </Button>
+                    <Button key={u} size="sm" variant="secondary" onClick={() => send({ type: "donateTroops", toOwner: m, army: { [u]: 1 } })}>🎁{UNIT_ICON[u]}</Button>
                   ))}
                 </div>
               ))}
@@ -394,9 +448,7 @@ function ResultCard({ report, mine, onClose }: { report: BattleReport; mine: boo
   return (
     <Panel title={mine ? "RAID REPORT" : "UNDER ATTACK"} accent padding="16px" headerRight={<button onClick={onClose} style={closeBtn}>✕</button>}>
       <div style={{ textAlign: "center" }}>
-        <div style={{ fontSize: 40, letterSpacing: 6 }}>
-          {[0, 1, 2].map((i) => <span key={i} style={{ color: i < report.stars ? "var(--amber)" : "var(--disabled)" }}>★</span>)}
-        </div>
+        <div style={{ fontSize: 40, letterSpacing: 6 }}>{[0, 1, 2].map((i) => <span key={i} style={{ color: i < report.stars ? "var(--amber)" : "var(--disabled)" }}>★</span>)}</div>
         <div className="wl-num" style={{ fontSize: 28, marginTop: 4 }}>{Math.round(report.destructionPct * 100)}%</div>
         <div className="wl-label">DESTRUCTION</div>
       </div>
@@ -410,104 +462,6 @@ function ResultCard({ report, mine, onClose }: { report: BattleReport; mine: boo
   );
 }
 
-function BuildGroup({ label, ids, base, tier, freeBuilders, onBuild }: {
-  label: string; ids: CocBuildingId[]; base: CocBase; tier: ReturnType<typeof ccTier>; freeBuilders: number; onBuild: (id: CocBuildingId) => void;
-}) {
-  if (ids.length === 0) return null;
-  return (
-    <div>
-      <span className="wl-label">{label}</span>
-      <div style={{ display: "grid", gap: 6, marginTop: 8 }}>
-        {ids.map((id) => {
-          const lv = levelDef(id, 1)!;
-          const count = Object.values(base.buildings).filter((x) => x.id === id).length;
-          const cap = tier.caps[id]!;
-          const atCap = count >= cap.maxCount;
-          const afford = base.gold >= (lv.cost.gold ?? 0) && base.elixir >= (lv.cost.elixir ?? 0);
-          const ok = !atCap && afford && freeBuilders > 0;
-          return (
-            <Button key={id} variant="secondary" full disabled={!ok} style={rowBtn} onClick={() => onBuild(id)}>
-              <span style={{ display: "inline-flex", gap: 6, alignItems: "center" }}><span aria-hidden>{ICON[id]}</span> {BUILDINGS[id].name}</span>
-              <span className="wl-num" style={{ fontSize: 11, color: "var(--text-secondary)" }}>{atCap ? "AT LIMIT" : `${costStr(lv.cost)} · ${lv.buildTimeSec}s`}</span>
-            </Button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function BuildingInfo({ base, building, job, tick, freeBuilders, war, onUpgrade, onFinish }: {
-  base: CocBase; building: PlacedBuilding; job?: { toLevel: number; buildingId: CocBuildingId; finishesAtTick: number }; tick: number; freeBuilders: number; war: number; onUpgrade: () => void; onFinish: () => void;
-}) {
-  const def = BUILDINGS[building.id];
-  const next = building.level + 1;
-  const maxed = next > maxLevelOf(building.id);
-  const cap = ccTier(base.buildings[base.centerKey]?.level ?? 1).caps[building.id];
-  const ccBlocked = building.id !== "commandCenter" && (!cap || next > cap.maxLevel);
-  const lv = !maxed ? levelDef(building.id, next) : undefined;
-  const cost = lv?.cost ?? {};
-  const afford = base.gold >= (cost.gold ?? 0) && base.elixir >= (cost.elixir ?? 0);
-  const ok = building.level >= 1 && !job && !maxed && !ccBlocked && afford && freeBuilders > 0;
-  const total = job ? levelDef(job.buildingId, job.toLevel)?.buildTimeSec ?? 1 : 1;
-  const remaining = job ? Math.max(0, job.finishesAtTick - tick) : 0;
-  const stats = levelDef(building.id, Math.max(1, building.level));
-  return (
-    <div style={{ fontSize: 13 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
-        <Badge tone={building.level >= 1 ? "amber" : "sky"} variant="soft">{building.level >= 1 ? `LEVEL ${building.level}` : "UNDER CONSTRUCTION"}</Badge>
-        {def.category === "defense" && stats && (<><Badge tone="blood" variant="soft">DEF {stats.hp}</Badge><Badge tone="teal" variant="soft">RNG {stats.range}</Badge><Badge tone="neutral" variant="soft">{stats.targets?.toUpperCase()}</Badge></>)}
-        {def.category === "army" && building.id === "armyCamp" && stats?.housing && <Badge tone="blood" variant="soft">⌂ {stats.housing}</Badge>}
-        {building.buffer != null && building.level >= 1 && def.category === "collector" && <span className="wl-num" style={{ fontSize: 11, color: "var(--text-secondary)" }}>BUFFER {num(building.buffer)}</span>}
-      </div>
-      {job ? (
-        <div style={{ display: "grid", gap: 8 }}>
-          <ProgressBar tone="amber" label="BUILDING" valueText={`${remaining}s`} value={total - remaining} max={total} />
-          <Button variant="outline" full icon="💎" disabled={war < finishCost(remaining)} onClick={onFinish}>
-            FINISH NOW · 💎{finishCost(remaining).toLocaleString()}
-          </Button>
-        </div>
-      ) : maxed ? <Badge tone="neutral" variant="soft">MAX LEVEL</Badge>
-        : <Button variant="primary" full disabled={!ok} icon="⬆" onClick={onUpgrade}>UPGRADE → L{next} · {costStr(cost)} · {lv?.buildTimeSec}s{ccBlocked ? "  · RAISE CC" : ""}</Button>}
-    </div>
-  );
-}
-
-function WallInfo({ base, ek, onUpgrade }: { base: CocBase; ek: string; onUpgrade: () => void }) {
-  const level = base.walls[ek] ?? 1;
-  const cc = base.buildings[base.centerKey]?.level ?? 1;
-  const next = level + 1;
-  const maxed = next > WALL.levels.length;
-  const ccBlocked = next > maxWallLevel(cc);
-  const cost = !maxed ? WALL.levels[next - 1].cost : {};
-  const afford = base.gold >= (cost.gold ?? 0);
-  const ok = !maxed && !ccBlocked && afford;
-  const stats = WALL.levels[level - 1];
-  return (
-    <div style={{ fontSize: 13 }}>
-      <div style={{ display: "flex", gap: 8, marginBottom: 8 }}><Badge tone="amber" variant="soft">LEVEL {level}</Badge><Badge tone="blood" variant="soft">HP {stats.hp}</Badge></div>
-      {maxed ? <Badge tone="neutral" variant="soft">MAX LEVEL</Badge>
-        : <Button variant="primary" full disabled={!ok} icon="⬆" onClick={onUpgrade}>REINFORCE → L{next} · {costStr(cost)}{ccBlocked ? "  · RAISE CC" : ""}</Button>}
-    </div>
-  );
-}
-
-function ExpandRow({ base, state, onExpand }: { base: CocBase; state: CocWorld; onExpand: (q: number, r: number) => void }) {
-  const tier = ccTier(base.buildings[base.centerKey]?.level ?? 1);
-  if (base.ownedHexes.length >= tier.maxHexes) return null;
-  const dirs = [[1, 0], [1, -1], [0, -1], [-1, 0], [-1, 1], [0, 1]];
-  for (const owned of base.ownedHexes) {
-    const [oq, or] = owned.split(",").map(Number);
-    for (const [dq, dr] of dirs) {
-      const q = oq + dq, r = or + dr, k = `${q},${r}`;
-      if (state.hexes[k] && !state.claimedHexes[k]) {
-        return <Button variant="outline" full icon="➕" style={{ justifyContent: "flex-start" }} onClick={() => onExpand(q, r)}>ANNEX {k} · up to {tier.maxHexes} hexes</Button>;
-      }
-    }
-  }
-  return null;
-}
-
 function hexPoints(size: number): string {
   const pts: string[] = [];
   for (let i = 0; i < 6; i++) {
@@ -516,17 +470,12 @@ function hexPoints(size: number): string {
   }
   return pts.join(" ");
 }
-function costStr(cost: Partial<Record<CocResource, number>>): string {
-  const parts: string[] = [];
-  if (cost.gold) parts.push(`🪙${cost.gold}`);
-  if (cost.elixir) parts.push(`🧪${cost.elixir}`);
-  return parts.join(" ") || "FREE";
-}
 
 const page: CSSProperties = { minHeight: "100dvh", background: "var(--bg-app)", color: "var(--text-primary)", padding: "max(16px, env(safe-area-inset-top)) 16px 96px", fontFamily: "var(--font-ui)" };
-const mapWrap: CSSProperties = { position: "relative", marginTop: 12, width: "100%", maxWidth: 560, height: "clamp(320px, 56vh, 560px)", background: "var(--surface-sunken)", borderRadius: "var(--radius-lg)", border: "1px solid var(--hairline)", overflow: "hidden", touchAction: "none" };
+const mapWrap: CSSProperties = { position: "relative", marginTop: 10, width: "100%", maxWidth: 560, height: "clamp(320px, 56vh, 560px)", background: "var(--surface-sunken)", borderRadius: "var(--radius-lg)", border: "1px solid var(--hairline)", overflow: "hidden", touchAction: "none" };
 const rowBtn: CSSProperties = { justifyContent: "space-between", textAlign: "left", fontWeight: 500 };
+const trayCard: CSSProperties = { display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left", background: "var(--surface-raised)", border: "1px solid var(--hairline)", borderRadius: "var(--radius-sm)", padding: "8px 10px", color: "var(--text-primary)" };
 const closeBtn: CSSProperties = { background: "transparent", color: "var(--text-secondary)", border: 0, cursor: "pointer", fontSize: 14, lineHeight: 1 };
 const overlay: CSSProperties = { position: "fixed", inset: 0, zIndex: 60, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 };
-const step: CSSProperties = { width: 26, height: 26, borderRadius: "var(--radius-sm)", border: "1px solid var(--hairline)", background: "var(--panel-2)", color: "var(--text-primary)", cursor: "pointer", fontSize: 14 };
+const sheet: CSSProperties = { position: "fixed", left: 8, right: 8, bottom: "max(8px, env(safe-area-inset-bottom))", maxWidth: 560, margin: "0 auto", zIndex: 55, maxHeight: "46vh", overflowY: "auto" };
 const input: CSSProperties = { flex: 1, background: "var(--surface-sunken)", border: "1px solid var(--hairline)", borderRadius: "var(--radius-sm)", color: "var(--text-primary)", padding: "8px 10px", fontSize: 13, fontFamily: "var(--font-ui)" };

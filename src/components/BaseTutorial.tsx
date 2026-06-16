@@ -5,12 +5,12 @@ import { BUILDINGS, type CocBase } from "@/sim/coc";
 
 function currentStep(base: CocBase | null): { n: number; total: number; title: string; tip: string } | null {
   const total = 5;
-  if (!base) return { n: 1, total, title: "CLAIM YOUR GROUND", tip: "Tap an unclaimed hex with all six neighbours free to stake your Command Center and the ring around it." };
+  if (!base) return { n: 1, total, title: "FOUND YOUR VILLAGE", tip: "Tap any unclaimed hex on the world map to claim it. Your base is built on a 20×20 plot — tap your village to enter it." };
   const has = (cat: string) => Object.values(base.buildings).some((b) => BUILDINGS[b.id].category === cat);
-  if (!has("collector")) return { n: 2, total, title: "BUILD A COLLECTOR", tip: "Tap an owned empty hex → Resources → build a Gold or Elixir collector. It fills over time; tap COLLECT to bank it." };
-  if (!has("storage")) return { n: 3, total, title: "RAISE A STORAGE", tip: "Storages lift your resource cap. Build one on an empty hex from the Resources group." };
-  if (!has("defense")) return { n: 4, total, title: "RAISE A DEFENSE", tip: "Build a Cannon from the Defense group. Defenses stand inert until raids arrive in a later update." };
-  if (Object.keys(base.walls).length === 0) return { n: 5, total, title: "WALL IT OFF", tip: "Toggle WALL MODE, then tap two adjacent owned hexes to raise a wall on their shared edge." };
+  if (!has("collector")) return { n: 2, total, title: "BUILD A COLLECTOR", tip: "Tap BUILD → Resources → pick a Gold Mine or Elixir Collector, then tap an empty tile to place it. It fills over time; tap COLLECT to bank it." };
+  if (!has("storage")) return { n: 3, total, title: "RAISE A STORAGE", tip: "Storages lift your resource cap. Place one from BUILD → Resources onto an empty tile." };
+  if (!has("defense")) return { n: 4, total, title: "RAISE A DEFENSE", tip: "Place a Cannon from BUILD → Defense. Defenses stand ready for live raids arriving in the next update." };
+  if (Object.keys(base.walls).length === 0) return { n: 5, total, title: "WALL IT OFF", tip: "Tap WALL, then tap tiles to ring your base in steel." };
   return null;
 }
 
