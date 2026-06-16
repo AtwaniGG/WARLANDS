@@ -17,6 +17,9 @@ export type CocBuildingId =
 
 export type CocUnitId = "grunt" | "marksman" | "breacher" | "juggernaut" | "gunship";
 
+/** Hidden battle traps placed on a tile (1×1). */
+export type CocTrapId = "bomb" | "airMine";
+
 /** A building placed on the village grid, anchored at a tile key "x,y". level 0 = under construction. */
 export interface PlacedBuilding {
   id: CocBuildingId;
@@ -56,11 +59,15 @@ export interface CocBase {
   buildings: Record<string, PlacedBuilding>;
   /** wall tiles: tile "x,y" -> wall level (each wall is 1×1) */
   walls: Record<string, number>;
+  /** hidden traps: tile "x,y" -> trap (1×1, triggered in battle) */
+  traps: Record<string, { id: CocTrapId; level: number }>;
   gold: number;
   elixir: number;
   jobs: BuildJob[];
   /** trained troops ready to attack with */
   army: Army;
+  /** clanmate-donated troops stationed in the Clan Castle; defend when raided */
+  garrison: Army;
   trainQueue: TrainOrder[];
   /** tick until which the base is protected from raids (0 = none) */
   shieldUntil: number;
@@ -101,6 +108,7 @@ export type CocCommand =
   | { type: "collect" }
   | { type: "placeWall"; tileKey: string }
   | { type: "upgradeWall"; tileKey: string }
+  | { type: "placeTrap"; tileKey: string; trapId: CocTrapId }
   | { type: "trainTroop"; unit: CocUnitId }
   | { type: "raid"; targetOwner: string; deploy: Deployment[] }
   | { type: "finishNow"; tileKey: string }

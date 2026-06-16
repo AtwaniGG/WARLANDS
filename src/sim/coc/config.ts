@@ -1,4 +1,4 @@
-import type { CocBuildingId, CocResource, CocUnitId } from "./types";
+import type { CocBuildingId, CocResource, CocTrapId, CocUnitId } from "./types";
 
 export const STARTING_WAR = 200_000;
 export const STARTING_GOLD = 500;
@@ -169,8 +169,8 @@ export const BUILDINGS: Record<CocBuildingId, BuildingDef> = {
     name: "Clan Castle",
     category: "clan",
     footprint: { w: 3, h: 3 },
-    // Inert in GV0 (reinforcements deferred); placeable + lootable HP only.
-    levels: [{ cost: { elixir: 1000 }, buildTimeSec: 300, hp: 500 }],
+    // Houses clanmate-donated defenders (GV2 reinforcements); lootable HP.
+    levels: [{ cost: { elixir: 1000 }, buildTimeSec: 300, hp: 500, housing: 20 }],
   },
 };
 
@@ -242,6 +242,22 @@ export function maxWallLevel(ccLevel: number): number {
   return Math.min(Math.max(ccLevel, 1), WALL.levels.length);
 }
 
+/** Hidden traps: 1×1, instant, gold-only, single-use; trigger matching troops in battle. */
+export interface TrapDef {
+  id: CocTrapId;
+  name: string;
+  /** which troops it triggers on */
+  target: "ground" | "air";
+  cost: { gold: number };
+  damage: number;
+  radius: number; // tiles
+}
+export const TRAPS: Record<CocTrapId, TrapDef> = {
+  bomb: { id: "bomb", name: "Bomb", target: "ground", cost: { gold: 400 }, damage: 120, radius: 1.6 },
+  airMine: { id: "airMine", name: "Air Mine", target: "air", cost: { gold: 600 }, damage: 150, radius: 1.6 },
+};
+export const TRAP_IDS: CocTrapId[] = ["bomb", "airMine"];
+
 export interface CcCap {
   maxCount: number;
   maxLevel: number;
@@ -249,6 +265,8 @@ export interface CcCap {
 export interface CcTier {
   /** Max number of wall tiles allowed at this Command Center level. */
   maxWalls: number;
+  /** Max number of hidden traps allowed at this Command Center level. */
+  maxTraps: number;
   caps: Partial<Record<CocBuildingId, CcCap>>;
 }
 
@@ -256,6 +274,7 @@ export interface CcTier {
 export const CC_PROGRESSION: CcTier[] = [
   {
     maxWalls: 12,
+    maxTraps: 0,
     caps: {
       goldCollector: { maxCount: 1, maxLevel: 1 },
       elixirCollector: { maxCount: 1, maxLevel: 1 },
@@ -268,6 +287,7 @@ export const CC_PROGRESSION: CcTier[] = [
   },
   {
     maxWalls: 25,
+    maxTraps: 2,
     caps: {
       goldCollector: { maxCount: 2, maxLevel: 2 },
       elixirCollector: { maxCount: 2, maxLevel: 2 },
@@ -281,6 +301,7 @@ export const CC_PROGRESSION: CcTier[] = [
   },
   {
     maxWalls: 50,
+    maxTraps: 4,
     caps: {
       goldCollector: { maxCount: 2, maxLevel: 3 },
       elixirCollector: { maxCount: 2, maxLevel: 3 },
@@ -296,6 +317,7 @@ export const CC_PROGRESSION: CcTier[] = [
   },
   {
     maxWalls: 75,
+    maxTraps: 6,
     caps: {
       goldCollector: { maxCount: 3, maxLevel: 3 },
       elixirCollector: { maxCount: 3, maxLevel: 3 },
@@ -311,6 +333,7 @@ export const CC_PROGRESSION: CcTier[] = [
   },
   {
     maxWalls: 100,
+    maxTraps: 10,
     caps: {
       goldCollector: { maxCount: 4, maxLevel: 3 },
       elixirCollector: { maxCount: 4, maxLevel: 3 },

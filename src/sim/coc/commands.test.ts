@@ -221,6 +221,25 @@ describe("upgradeWall", () => {
   });
 });
 
+describe("placeTrap", () => {
+  const cc2 = (s: CocWorld) => withBase(s, { buildings: { ...s.bases.p1.buildings, "8,8": { id: "commandCenter", level: 2 } } });
+  it("rejects traps at CC1 (none allowed yet)", () => {
+    const r = applyCommand(give(claimed(), 1000, 0), "p1", { type: "placeTrap", tileKey: "0,0", trapId: "bomb" });
+    expect(r.error).toMatch(/limit|town hall/i);
+  });
+  it("places a bomb at CC2 on open ground, spending gold, instantly", () => {
+    const r = applyCommand(cc2(give(claimed(), 1000, 0)), "p1", { type: "placeTrap", tileKey: "0,0", trapId: "bomb" });
+    expect(r.error).toBeUndefined();
+    expect(r.state.bases.p1.traps["0,0"]).toEqual({ id: "bomb", level: 1 });
+    expect(r.state.bases.p1.gold).toBe(600);
+    expect(r.state.bases.p1.jobs.length).toBe(0);
+  });
+  it("rejects a trap on an occupied tile", () => {
+    const r = applyCommand(cc2(give(claimed(), 1000, 0)), "p1", { type: "placeTrap", tileKey: "8,8", trapId: "bomb" });
+    expect(r.error).toMatch(/occupied/i);
+  });
+});
+
 // army-capable base: barracks + army camp operational
 function withArmyBuildings(s: CocWorld, elixir: number): CocWorld {
   return addBuildings(withBase(s, { elixir }), { "0,0": { id: "barracks", level: 1 }, "0,4": { id: "armyCamp", level: 1 } });
@@ -368,7 +387,7 @@ describe("clans", () => {
     const r = applyCommand(s, "p1", { type: "leaveClan" });
     expect(r.state.clans[clanId]).toBeUndefined();
   });
-  it("donates troops to a clanmate with housing", () => {
+  it("donates troops into a clanmate's Clan Castle garrison", () => {
     let s = applyCommand(twoBases(), "p1", { type: "createClan", name: "Iron Vanguard" }).state;
     const clanId = Object.keys(s.clans)[0];
     s = applyCommand(s, "p2", { type: "joinClan", clanId }).state;
@@ -377,13 +396,21 @@ describe("clans", () => {
       bases: {
         ...s.bases,
         p1: { ...s.bases.p1, army: { grunt: 5 } },
-        p2: { ...s.bases.p2, buildings: { ...s.bases.p2.buildings, "0,0": { id: "armyCamp", level: 1 } } },
+        p2: { ...s.bases.p2, buildings: { ...s.bases.p2.buildings, "0,0": { id: "clanCastle", level: 1 } } },
       },
     };
     const r = applyCommand(s, "p1", { type: "donateTroops", toOwner: "p2", army: { grunt: 3 } });
     expect(r.error).toBeUndefined();
     expect(r.state.bases.p1.army.grunt).toBe(2);
-    expect(r.state.bases.p2.army.grunt).toBe(3);
+    expect(r.state.bases.p2.garrison.grunt).toBe(3);
+  });
+  it("rejects donating to a clanmate with no Clan Castle", () => {
+    let s = applyCommand(twoBases(), "p1", { type: "createClan", name: "Iron Vanguard" }).state;
+    const clanId = Object.keys(s.clans)[0];
+    s = applyCommand(s, "p2", { type: "joinClan", clanId }).state;
+    s = { ...s, bases: { ...s.bases, p1: { ...s.bases.p1, army: { grunt: 5 } } } };
+    const r = applyCommand(s, "p1", { type: "donateTroops", toOwner: "p2", army: { grunt: 1 } });
+    expect(r.error).toMatch(/clan castle/i);
   });
   it("rejects donating to a non-clanmate", () => {
     let s = applyCommand(twoBases(), "p1", { type: "createClan", name: "Iron Vanguard" }).state;

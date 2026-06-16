@@ -8,10 +8,12 @@ const D = (over: Partial<CocBase> = {}): CocBase => ({
   location: "0,0",
   buildings: { "8,8": { id: "commandCenter", level: 1 } },
   walls: {},
+  traps: {},
   gold: 1000,
   elixir: 1000,
   jobs: [],
   army: {},
+  garrison: {},
   trainQueue: [],
   shieldUntil: 0,
   trophies: 0,
@@ -81,6 +83,21 @@ describe("resolveRaid (positional)", () => {
     const r = resolveRaid([], D(), 1);
     expect(r.stars).toBe(0);
     expect(r.loot).toEqual({ gold: 0, elixir: 0 });
+  });
+
+  it("a hidden bomb shreds a thin ground push", () => {
+    const base = D();
+    const withBomb = resolveRaid(units("grunt", 1), D({ traps: { "0,0": { id: "bomb", level: 1 } } }), 33);
+    const noBomb = resolveRaid(units("grunt", 1), base, 33);
+    expect(noBomb.structuresDestroyed).toBeGreaterThan(0); // 1 grunt cracks an undefended TH
+    expect(withBomb.structuresDestroyed).toBe(0); // bomb kills it on the way in
+  });
+
+  it("Clan Castle garrison defenders blunt an attack", () => {
+    const buildings = { "8,8": { id: "commandCenter" as const, level: 1 }, "0,0": { id: "clanCastle" as const, level: 1 } };
+    const garrisoned = resolveRaid(units("grunt", 6, 14, 14), D({ buildings, garrison: { juggernaut: 4 } }), 88);
+    const empty = resolveRaid(units("grunt", 6, 14, 14), D({ buildings, garrison: {} }), 88);
+    expect(empty.structuresDestroyed).toBeGreaterThan(garrisoned.structuresDestroyed);
   });
 
   it("emits frames with non-increasing structure hp and troop survival", () => {

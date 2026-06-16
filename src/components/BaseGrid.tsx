@@ -53,6 +53,10 @@ export interface BaseGridProps {
   deployMode?: boolean;
   /** placed troop markers shown during the deploy phase */
   deployMarkers?: { unit: CocUnitId; x: number; y: number }[];
+  /** build mode: a trap queued for placement (tap an open tile) */
+  placingTrap?: string | null;
+  /** render the owner's own (hidden) traps — only in MY BASE, never on a scout */
+  showTraps?: boolean;
   /** battle playback: render troops + structure damage from this frame */
   frame?: BattleFrame | null;
 }
@@ -61,7 +65,8 @@ function num(n: number): string {
   return Math.floor(n).toLocaleString();
 }
 
-export function BaseGrid({ base, tick, readOnly, selected, placing, wallMode, moveFrom, canPlace, onSelectBuilding, onTile, deployMode, deployMarkers, frame }: BaseGridProps) {
+export function BaseGrid({ base, tick, readOnly, selected, placing, wallMode, moveFrom, canPlace, onSelectBuilding, onTile, deployMode, deployMarkers, placingTrap, showTraps, frame }: BaseGridProps) {
+  const tilePlacing = wallMode || deployMode || !!placingTrap;
   const wrapRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState({ x: 0, y: 0, scale: 1 });
   const [ghost, setGhost] = useState<string | null>(null);
@@ -117,7 +122,7 @@ export function BaseGrid({ base, tick, readOnly, selected, placing, wallMode, mo
 
   const onPointerMove = (e: RPointerEvent) => {
     if (!pointers.current.has(e.pointerId)) {
-      if ((placing || wallMode || moveFrom || deployMode) && !readOnly) {
+      if ((placing || tilePlacing || moveFrom) && !readOnly) {
         const t = tileAt(e.clientX, e.clientY);
         setGhost(t ? `${t.tx},${t.ty}` : null);
       }
@@ -147,12 +152,12 @@ export function BaseGrid({ base, tick, readOnly, selected, placing, wallMode, mo
       const t = tileAt(e.clientX, e.clientY);
       if (t) {
         const key = `${t.tx},${t.ty}`;
-        if (!readOnly && (placing || wallMode || moveFrom || deployMode)) {
+        if (!readOnly && (placing || tilePlacing || moveFrom)) {
           onTile?.(key);
-        } else if (!deployMode) {
+        } else if (!tilePlacing) {
           onSelectBuilding?.(anchorAtTile(key));
         }
-      } else if (!placing && !wallMode && !moveFrom && !deployMode) {
+      } else if (!placing && !tilePlacing && !moveFrom) {
         onSelectBuilding?.(null);
       }
     }
@@ -191,6 +196,14 @@ export function BaseGrid({ base, tick, readOnly, selected, placing, wallMode, mo
           return (
             <img key={`w${key}`} src={wallArt(level)} alt="wall" draggable={false}
               style={{ position: "absolute", left: x * TILE, top: y * TILE, width: TILE, height: TILE, pointerEvents: "none" }} />
+          );
+        })}
+
+        {/* own hidden traps (never shown on a scout) */}
+        {showTraps && Object.entries(base.traps ?? {}).map(([key, tp]) => {
+          const [x, y] = key.split(",").map(Number);
+          return (
+            <span key={`tp${key}`} title={tp.id} style={{ position: "absolute", left: x * TILE + TILE / 2 - 6, top: y * TILE + TILE / 2 - 6, width: 12, height: 12, borderRadius: "50%", border: "1.5px solid var(--blood-text)", background: "rgba(156,43,43,0.35)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 8, pointerEvents: "none", zIndex: 7 }}>{tp.id === "airMine" ? "▲" : "●"}</span>
           );
         })}
 
@@ -247,17 +260,17 @@ export function BaseGrid({ base, tick, readOnly, selected, placing, wallMode, mo
           <span key={`dm${i}`} style={{ ...dot, left: m.x * TILE + TILE / 2 - 4, top: m.y * TILE + TILE / 2 - 4, background: UNIT_COLOR[m.unit] }} />
         ))}
 
-        {/* live battle troops (playback) */}
+        {/* live battle troops (playback): attackers solid, defenders ringed red */}
         {frame?.troops.filter((t) => t.alive).map((t, i) => (
-          <span key={`bt${i}`} style={{ ...dot, left: t.x * TILE + TILE / 2 - 4, top: t.y * TILE + TILE / 2 - 4, background: UNIT_COLOR[t.unit] }} />
+          <span key={`bt${i}`} style={{ ...dot, left: t.x * TILE + TILE / 2 - 4, top: t.y * TILE + TILE / 2 - 4, background: UNIT_COLOR[t.unit], border: t.side === "def" ? "2px solid var(--blood-text)" : undefined }} />
         ))}
 
-        {/* placement / wall / move / deploy ghost */}
-        {ghost && (placing || wallMode || moveFrom || deployMode) && (() => {
+        {/* placement / wall / move / deploy / trap ghost */}
+        {ghost && (placing || tilePlacing || moveFrom) && (() => {
           const id: CocBuildingId | null = placing ?? (moveFrom ? base.buildings[moveFrom]?.id ?? null : null);
-          const { w, h } = deployMode || wallMode ? { w: 1, h: 1 } : id ? BUILDINGS[id].footprint : { w: 1, h: 1 };
+          const { w, h } = tilePlacing ? { w: 1, h: 1 } : id ? BUILDINGS[id].footprint : { w: 1, h: 1 };
           const [gx, gy] = ghost.split(",").map(Number);
-          const valid = deployMode ? isOpenTile(ghost) : wallMode ? !canPlace || canPlace(ghost, "builderHut") : id ? !canPlace || canPlace(ghost, id) : false;
+          const valid = tilePlacing ? isOpenTile(ghost) : id ? !canPlace || canPlace(ghost, id) : false;
           return (
             <div style={{ position: "absolute", left: gx * TILE, top: gy * TILE, width: w * TILE, height: h * TILE, background: valid ? "var(--bb-valid)" : "var(--bb-invalid)", border: `2px solid ${valid ? "var(--bb-valid-line)" : "var(--bb-invalid-line)"}`, borderRadius: 4, pointerEvents: "none" }} />
           );

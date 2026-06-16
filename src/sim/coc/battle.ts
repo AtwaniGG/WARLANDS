@@ -1,21 +1,23 @@
-import { BUILDINGS, LOOT_PCT, UNITS, WALL, GRID_W, GRID_H } from "./config";
+import { BUILDINGS, LOOT_PCT, TRAPS, UNITS, WALL, GRID_W, GRID_H } from "./config";
 import { footprintTiles } from "./world";
-import type { CocBase, CocBuildingId, CocUnitId, Deployment } from "./types";
+import type { Army, CocBase, CocBuildingId, CocTrapId, CocUnitId, Deployment } from "./types";
 
 // ---- battle tuning ----
 const BATTLE_TICKS = 180;
 const RETARGET_EVERY = 8;
 const FRAME_EVERY = 2;
 const SPLASH_R = 1.6;
+const AGGRO_R = 3.5; // attacker troops break off to fight nearby garrison defenders
 /** per-unit attack range (tiles, Chebyshev) and move speed (tiles/tick). */
 const ATTACK_RANGE: Record<CocUnitId, number> = { grunt: 1, marksman: 4, breacher: 1, juggernaut: 1, gunship: 3 };
 const MOVE_SPEED: Record<CocUnitId, number> = { grunt: 1.0, marksman: 0.9, breacher: 1.1, juggernaut: 0.7, gunship: 1.2 };
 
 export interface BattleFrame {
   t: number;
-  troops: { x: number; y: number; unit: CocUnitId; alive: boolean }[];
+  troops: { x: number; y: number; unit: CocUnitId; side: "atk" | "def"; alive: boolean }[];
   structures: { key: string; hp: number; max: number }[];
   walls: { key: string; hp: number }[];
+  traps: { key: string; armed: boolean }[];
 }
 
 export interface BattleResult {
@@ -49,46 +51,25 @@ function structureHp(id: CocBuildingId, level: number): number {
 }
 
 interface Struct {
-  key: string;
-  isCC: boolean;
-  hp: number;
-  maxHp: number;
-  tiles: [number, number][];
-  cx: number;
-  cy: number;
-  rank: number;
-  dps: number;
-  range: number;
-  targetsAir: boolean;
-  targetsGround: boolean;
-  splash: boolean;
+  key: string; isCC: boolean; isClanCastle: boolean;
+  hp: number; maxHp: number;
+  tiles: [number, number][]; cx: number; cy: number; rank: number;
+  dps: number; range: number; targetsAir: boolean; targetsGround: boolean; splash: boolean;
 }
-interface Wall {
-  key: string;
-  x: number;
-  y: number;
-  hp: number;
-}
+interface Wall { key: string; x: number; y: number; hp: number; }
+interface Trap { key: string; x: number; y: number; target: "ground" | "air"; damage: number; radius: number; armed: boolean; }
 interface Troop {
-  unit: CocUnitId;
-  x: number;
-  y: number;
-  hp: number;
-  flying: boolean;
-  range: number;
-  speed: number;
-  dps: number;
-  wallDps: number; // breacher bonus vs walls
+  unit: CocUnitId; side: "atk" | "def";
+  x: number; y: number; hp: number; flying: boolean;
+  range: number; speed: number; dps: number; wallDps: number;
   alive: boolean;
   target: { kind: "struct" | "wall"; idx: number } | null;
-  path: [number, number][];
-  retargetAt: number;
+  path: [number, number][]; retargetAt: number;
 }
 
 const cheb = (ax: number, ay: number, bx: number, by: number) => Math.max(Math.abs(ax - bx), Math.abs(ay - by));
 const eucl = (ax: number, ay: number, bx: number, by: number) => Math.hypot(ax - bx, ay - by);
 
-/** Chebyshev distance from a point to the nearest footprint tile of a structure. */
 function distToStruct(x: number, y: number, s: Struct): number {
   let best = Infinity;
   for (const [tx, ty] of s.tiles) best = Math.min(best, cheb(x, y, tx, ty));
@@ -97,8 +78,9 @@ function distToStruct(x: number, y: number, s: Struct): number {
 
 /**
  * Pure, deterministic positional raid resolution on the defender's grid. Ground troops path
- * around walls/buildings (BFS) and break walls when boxed in; flyers ignore both and are only hit
- * by air defense. Reproducible for a given (deploy, defender, seed).
+ * around walls/buildings (BFS) and break walls when boxed in; flyers ignore both. Hidden traps
+ * detonate on matching troops, and Clan Castle garrison troops spawn to defend. Reproducible for
+ * a given (deploy, defender, seed).
  */
 export function resolveRaid(deploy: Deployment[], defender: CocBase, seed: number, opts?: { frames?: boolean }): BattleResult {
   const rnd = mulberry32(seed);
@@ -106,6 +88,7 @@ export function resolveRaid(deploy: Deployment[], defender: CocBase, seed: numbe
 
   // ---- structures ----
   const structs: Struct[] = [];
+  let clanCastle: Struct | null = null;
   for (const [key, b] of Object.entries(defender.buildings)) {
     const def = BUILDINGS[b.id];
     const stat = def.levels[Math.max(0, b.level - 1)];
@@ -114,8 +97,8 @@ export function resolveRaid(deploy: Deployment[], defender: CocBase, seed: numbe
     let cx = 0, cy = 0;
     for (const [tx, ty] of tiles) { cx += tx; cy += ty; }
     cx /= tiles.length; cy /= tiles.length;
-    structs.push({
-      key, isCC: b.id === "commandCenter",
+    const s: Struct = {
+      key, isCC: b.id === "commandCenter", isClanCastle: b.id === "clanCastle",
       hp: structureHp(b.id, Math.max(1, b.level)), maxHp: structureHp(b.id, Math.max(1, b.level)),
       tiles, cx, cy, rank: 0,
       dps: fires ? stat?.dps ?? 0 : 0,
@@ -123,10 +106,11 @@ export function resolveRaid(deploy: Deployment[], defender: CocBase, seed: numbe
       targetsAir: fires ? stat?.targets === "air" || stat?.targets === "any" : false,
       targetsGround: fires ? stat?.targets === "ground" || stat?.targets === "any" : false,
       splash: fires ? !!stat?.splash : false,
-    });
+    };
+    structs.push(s);
+    if (s.isClanCastle && b.level >= 1) clanCastle = s;
   }
   const totalStructures = structs.length;
-  // seeded focus order → stable tie-break for "nearest" target selection
   const order = structs.map((_, i) => i);
   for (let i = order.length - 1; i > 0; i--) {
     const j = Math.floor(rnd() * (i + 1));
@@ -137,7 +121,7 @@ export function resolveRaid(deploy: Deployment[], defender: CocBase, seed: numbe
   const empty = (trophies: number): BattleResult => ({ stars: 0, destructionPct: 0, loot: { gold: 0, elixir: 0 }, trophies, structuresTotal: totalStructures, structuresDestroyed: 0, ccDestroyed: false, ticks: 0, frames: wantFrames ? [] : undefined });
   if (totalStructures === 0) return empty(0);
 
-  // ---- walls ----
+  // ---- walls + traps ----
   const walls: Wall[] = [];
   for (const [key, lvl] of Object.entries(defender.walls)) {
     const hp = WALL.levels[lvl - 1]?.hp ?? 0;
@@ -145,27 +129,47 @@ export function resolveRaid(deploy: Deployment[], defender: CocBase, seed: numbe
     const [x, y] = key.split(",").map(Number);
     walls.push({ key, x, y, hp });
   }
-  const wallAt = new Map<string, Wall>();
-  for (const w of walls) wallAt.set(w.key, w);
-
-  // ---- troops ----
-  const troops: Troop[] = [];
-  for (const d of deploy) {
-    const u = UNITS[d.unit];
-    if (!u) continue;
-    troops.push({
-      unit: d.unit, x: d.x, y: d.y, hp: u.hp,
-      flying: !!u.flying, range: ATTACK_RANGE[d.unit], speed: MOVE_SPEED[d.unit],
-      dps: u.dps, wallDps: u.favoriteTarget === "wall" ? u.dps * (u.wallMultiplier ?? 1) : u.dps * 0.05,
-      alive: true, target: null, path: [], retargetAt: 0,
-    });
+  const traps: Trap[] = [];
+  for (const [key, tr] of Object.entries(defender.traps ?? {})) {
+    const def = TRAPS[tr.id as CocTrapId];
+    if (!def) continue;
+    const [x, y] = key.split(",").map(Number);
+    traps.push({ key, x, y, target: def.target, damage: def.damage, radius: def.radius, armed: true });
   }
-  if (troops.length === 0) return empty(0);
 
+  // ---- troops: attackers (deploy) + defenders (garrison) ----
+  const troops: Troop[] = [];
+  function mkTroop(unit: CocUnitId, side: "atk" | "def", x: number, y: number): Troop {
+    const u = UNITS[unit];
+    return {
+      unit, side, x, y, hp: u.hp, flying: !!u.flying,
+      range: ATTACK_RANGE[unit], speed: MOVE_SPEED[unit], dps: u.dps,
+      wallDps: u.favoriteTarget === "wall" ? u.dps * (u.wallMultiplier ?? 1) : u.dps * 0.05,
+      alive: true, target: null, path: [], retargetAt: 0,
+    };
+  }
+  for (const d of deploy) { if (UNITS[d.unit]) troops.push(mkTroop(d.unit, "atk", d.x, d.y)); }
+  const attackerCount = troops.length;
+  if (attackerCount === 0) return empty(0);
+  // defenders spawn around the clan castle (golden-angle ring), deterministic
+  if (clanCastle) {
+    let gi = 0;
+    const garrison: Army = defender.garrison ?? {};
+    for (const [unit, n] of Object.entries(garrison)) {
+      for (let k = 0; k < (n ?? 0); k++, gi++) {
+        const r = 1 + gi * 0.35;
+        const ang = gi * 2.399963;
+        const gx = Math.max(0, Math.min(GRID_W - 1, clanCastle.cx + r * Math.cos(ang)));
+        const gy = Math.max(0, Math.min(GRID_H - 1, clanCastle.cy + r * Math.sin(ang)));
+        troops.push(mkTroop(unit as CocUnitId, "def", gx, gy));
+      }
+    }
+  }
+
+  const attackers = () => troops.filter((t) => t.side === "atk" && t.alive);
+  const defenders = () => troops.filter((t) => t.side === "def" && t.alive);
   const livingStructs = () => structs.filter((s) => s.hp > 0);
-  const aliveTroops = () => troops.filter((t) => t.alive);
 
-  // blocked tiles for ground BFS = living walls + living building footprints
   function blockedSet(): Set<string> {
     const set = new Set<string>();
     for (const w of walls) if (w.hp > 0) set.add(w.key);
@@ -173,7 +177,6 @@ export function resolveRaid(deploy: Deployment[], defender: CocBase, seed: numbe
     return set;
   }
 
-  // BFS from (sx,sy) to the nearest tile satisfying isGoal, avoiding `blocked` (start always allowed).
   function bfs(sx: number, sy: number, isGoal: (x: number, y: number) => boolean, blocked: Set<string>): [number, number][] | null {
     const start = `${sx},${sy}`;
     if (isGoal(sx, sy)) return [];
@@ -190,7 +193,7 @@ export function resolveRaid(deploy: Deployment[], defender: CocBase, seed: numbe
         const k = `${nx},${ny}`;
         if (seen.has(k)) continue;
         const goal = isGoal(nx, ny);
-        if (blocked.has(k) && !goal) continue; // may step onto a goal tile even if "blocked"
+        if (blocked.has(k) && !goal) continue;
         seen.add(k);
         prev.set(k, `${cx},${cy}`);
         if (goal) {
@@ -226,25 +229,34 @@ export function resolveRaid(deploy: Deployment[], defender: CocBase, seed: numbe
     }
     return best;
   }
+  /** nearest alive enemy troop (by index for stable ties); within `maxR` if given. */
+  function nearestEnemy(t: Troop, maxR = Infinity): Troop | null {
+    let best: Troop | null = null, bestD = Infinity, bestI = Infinity;
+    for (let i = 0; i < troops.length; i++) {
+      const o = troops[i];
+      if (!o.alive || o.side === t.side) continue;
+      const d = eucl(t.x, t.y, o.x, o.y);
+      if (d > maxR) continue;
+      if (d < bestD - 1e-9 || (Math.abs(d - bestD) <= 1e-9 && i < bestI)) { best = o; bestD = d; bestI = i; }
+    }
+    return best;
+  }
 
   function acquire(t: Troop, tick: number): void {
     t.retargetAt = tick + RETARGET_EVERY;
     const sIdx = nearestStruct(t);
     if (sIdx < 0) { t.target = null; t.path = []; return; }
     if (t.flying) { t.target = { kind: "struct", idx: sIdx }; t.path = []; return; }
-    // ground: try to path to within range of the structure
     const blocked = blockedSet();
     const tx = Math.round(t.x), ty = Math.round(t.y);
     const s = structs[sIdx];
     const goalS = (x: number, y: number) => distToStruct(x, y, s) <= t.range && !blocked.has(`${x},${y}`);
-    let path = bfs(tx, ty, goalS, blocked);
+    const path = bfs(tx, ty, goalS, blocked);
     if (path) { t.target = { kind: "struct", idx: sIdx }; t.path = path; return; }
-    // boxed in → break the nearest wall
     const wIdx = nearestWall(t);
     if (wIdx >= 0) {
       const w = walls[wIdx];
-      const goalW = (x: number, y: number) => cheb(x, y, w.x, w.y) <= t.range;
-      const pw = bfs(tx, ty, goalW, blocked);
+      const pw = bfs(tx, ty, (x, y) => cheb(x, y, w.x, w.y) <= t.range, blocked);
       t.target = { kind: "wall", idx: wIdx };
       t.path = pw ?? [];
       return;
@@ -257,28 +269,31 @@ export function resolveRaid(deploy: Deployment[], defender: CocBase, seed: numbe
   function snapshot(t: number): void {
     frames.push({
       t,
-      troops: troops.map((tr) => ({ x: Math.round(tr.x * 10) / 10, y: Math.round(tr.y * 10) / 10, unit: tr.unit, alive: tr.alive })),
+      troops: troops.map((tr) => ({ x: Math.round(tr.x * 10) / 10, y: Math.round(tr.y * 10) / 10, unit: tr.unit, side: tr.side, alive: tr.alive })),
       structures: structs.map((s) => ({ key: s.key, hp: Math.max(0, Math.round(s.hp)), max: s.maxHp })),
       walls: walls.map((w) => ({ key: w.key, hp: Math.max(0, Math.round(w.hp)) })),
+      traps: traps.map((tp) => ({ key: tp.key, armed: tp.armed })),
     });
   }
 
   let ticks = 0;
   for (; ticks < BATTLE_TICKS; ticks++) {
     if (wantFrames && ticks % FRAME_EVERY === 0) snapshot(ticks);
-    const living = livingStructs();
-    const alive = aliveTroops();
-    if (living.length === 0 || alive.length === 0) break;
+    if (livingStructs().length === 0 || attackers().length === 0) break;
 
-    // ---- troops act ----
-    for (const t of alive) {
-      // (re)acquire target
+    // ---- attacker troops act ----
+    for (const t of attackers()) {
+      const foe = nearestEnemy(t, AGGRO_R); // engage nearby garrison first
+      if (foe) {
+        if (eucl(t.x, t.y, foe.x, foe.y) <= t.range) foe.hp -= t.dps;
+        else stepToward(t, foe.x, foe.y);
+        continue;
+      }
       const targetDead = !t.target
         || (t.target.kind === "struct" && structs[t.target.idx].hp <= 0)
         || (t.target.kind === "wall" && walls[t.target.idx].hp <= 0);
       if (targetDead || ticks >= t.retargetAt) acquire(t, ticks);
       if (!t.target) continue;
-
       if (t.target.kind === "struct") {
         const s = structs[t.target.idx];
         if (distToStruct(t.x, t.y, s) <= t.range) { s.hp -= t.dps; continue; }
@@ -291,13 +306,21 @@ export function resolveRaid(deploy: Deployment[], defender: CocBase, seed: numbe
       }
     }
 
-    // ---- defenses fire ----
+    // ---- defender garrison troops act (chase attackers, move straight) ----
+    for (const d of defenders()) {
+      const foe = nearestEnemy(d);
+      if (!foe) continue;
+      if (eucl(d.x, d.y, foe.x, foe.y) <= d.range) foe.hp -= d.dps;
+      else stepToward(d, foe.x, foe.y);
+    }
+
+    // ---- defenses fire at attackers ----
     for (const s of structs) {
       if (s.hp <= 0 || s.dps <= 0) continue;
       let best: Troop | null = null, bestD = Infinity, bestIdx = Infinity;
       for (let i = 0; i < troops.length; i++) {
         const tr = troops[i];
-        if (!tr.alive) continue;
+        if (!tr.alive || tr.side !== "atk") continue;
         if (tr.flying && !s.targetsAir) continue;
         if (!tr.flying && !s.targetsGround) continue;
         const d = distToStruct(tr.x, tr.y, s);
@@ -308,16 +331,30 @@ export function resolveRaid(deploy: Deployment[], defender: CocBase, seed: numbe
       best.hp -= s.dps;
       if (s.splash) {
         for (const tr of troops) {
-          if (!tr.alive || tr === best || tr.flying !== best.flying) continue;
+          if (!tr.alive || tr.side !== "atk" || tr === best || tr.flying !== best.flying) continue;
           if (eucl(tr.x, tr.y, best.x, best.y) <= SPLASH_R) tr.hp -= s.dps * 0.5;
         }
       }
     }
+
+    // ---- hidden traps detonate on matching attacker troops ----
+    for (const tp of traps) {
+      if (!tp.armed) continue;
+      const triggers = troops.some((tr) => tr.alive && tr.side === "atk" && (tp.target === "air") === tr.flying && eucl(tr.x, tr.y, tp.x, tp.y) <= tp.radius);
+      if (!triggers) continue;
+      tp.armed = false;
+      for (const tr of troops) {
+        if (!tr.alive || tr.side !== "atk") continue;
+        if ((tp.target === "air") !== tr.flying) continue;
+        if (eucl(tr.x, tr.y, tp.x, tp.y) <= tp.radius) tr.hp -= tp.damage;
+      }
+    }
+
     for (const tr of troops) if (tr.alive && tr.hp <= 0) tr.alive = false;
   }
   if (wantFrames) snapshot(ticks);
 
-  // ---- scoring (walls don't count) ----
+  // ---- scoring (only buildings count; walls/traps/garrison do not) ----
   const destroyed = structs.filter((s) => s.hp <= 0).length;
   const ccDestroyed = structs.some((s) => s.isCC && s.hp <= 0);
   const pct = destroyed / totalStructures;

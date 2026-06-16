@@ -51,7 +51,21 @@ export function occupiedTiles(base: CocBase, excludeAnchor?: string): Set<string
     for (const t of footprintTiles(anchor, b.id)) set.add(t);
   }
   for (const t of Object.keys(base.walls)) set.add(t);
+  for (const t of Object.keys(base.traps ?? {})) set.add(t);
   return set;
+}
+
+/** Defender garrison capacity from the Clan Castle (0 without one). */
+export function garrisonCap(base: CocBase): number {
+  for (const b of Object.values(base.buildings)) {
+    if (b.id === "clanCastle" && b.level >= 1) return BUILDINGS.clanCastle.levels[b.level - 1]?.housing ?? 0;
+  }
+  return 0;
+}
+export function garrisonUsed(base: CocBase): number {
+  let used = 0;
+  for (const [unit, n] of Object.entries(base.garrison ?? {})) used += UNITS[unit as keyof typeof UNITS].housing * (n ?? 0);
+  return used;
 }
 
 // ---- base introspection ----
@@ -125,10 +139,12 @@ export function normalizeWorld(state: CocWorld): CocWorld {
       location: loc,
       buildings: b.buildings ?? {},
       walls: b.walls ?? {},
+      traps: b.traps ?? {},
       gold: b.gold ?? 0,
       elixir: b.elixir ?? 0,
       jobs: b.jobs ?? [],
       army: b.army ?? {},
+      garrison: b.garrison ?? {},
       trainQueue: b.trainQueue ?? [],
       shieldUntil: b.shieldUntil ?? 0,
       trophies: b.trophies ?? 0,

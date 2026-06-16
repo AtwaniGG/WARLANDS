@@ -12,7 +12,7 @@ import { createWorld, addPlayer, builderCount, fitsInGrid, housingCap, housingUs
 import { applyCommand } from "./commands";
 import { applyTick } from "./tick";
 import { resolveRaid } from "./battle";
-import { maxLevelOf, UNIT_IDS, WALL } from "./config";
+import { maxLevelOf, TRAP_IDS, UNIT_IDS, WALL } from "./config";
 import type { CocBuildingId, CocCommand, CocUnitId, CocWorld, CocBase } from "./types";
 
 const RUN = !!process.env.STRESS;
@@ -84,7 +84,8 @@ function randomCommand(rnd: () => number, w: CocWorld): CocCommand {
   if (r < 0.48) return { type: "collect" };
   if (r < 0.55) return { type: "moveBuilding", fromTile: randomTile(rnd), toTile: randomTile(rnd) };
   if (r < 0.62) return { type: "placeWall", tileKey: randomTile(rnd) };
-  if (r < 0.67) return { type: "upgradeWall", tileKey: randomTile(rnd) };
+  if (r < 0.66) return { type: "upgradeWall", tileKey: randomTile(rnd) };
+  if (r < 0.70) return { type: "placeTrap", tileKey: randomTile(rnd), trapId: pick(rnd, TRAP_IDS) };
   if (r < 0.77) return { type: "trainTroop", unit: pick(rnd, UNIT_IDS) as CocUnitId };
   if (r < 0.86) {
     const deploy = [];
@@ -132,15 +133,11 @@ describe.skipIf(!RUN)("CoC STRESS (long-running)", () => {
     const rnd = mulberry32(0xBA771E);
     for (let i = 0; i < BATTLES; i++) {
       const defender = randomDefender(rnd);
-      const army = {
-        grunt: Math.floor(rnd() * 60),
-        marksman: Math.floor(rnd() * 40),
-        breacher: Math.floor(rnd() * 20),
-        juggernaut: Math.floor(rnd() * 10),
-        gunship: Math.floor(rnd() * 15),
-      };
+      const deploy = [];
+      const n = Math.floor(rnd() * 40);
+      for (let k = 0; k < n; k++) deploy.push({ unit: pick(rnd, UNIT_IDS) as CocUnitId, x: Math.floor(rnd() * 20), y: Math.floor(rnd() * 20) });
       const seed = Math.floor(rnd() * 0xffffffff);
-      const res = resolveRaid(army, defender, seed);
+      const res = resolveRaid(deploy, defender, seed);
       expect(res.stars).toBeGreaterThanOrEqual(0);
       expect(res.stars).toBeLessThanOrEqual(3);
       expect(res.destructionPct).toBeGreaterThanOrEqual(0);
@@ -148,7 +145,7 @@ describe.skipIf(!RUN)("CoC STRESS (long-running)", () => {
       expect(res.loot.gold).toBeLessThanOrEqual(defender.gold);
       expect(res.loot.elixir).toBeLessThanOrEqual(defender.elixir);
       expect(Number.isFinite(res.loot.gold)).toBe(true);
-      if (i % 5000 === 0) expect(resolveRaid(army, defender, seed)).toEqual(res); // determinism
+      if (i % 5000 === 0) expect(resolveRaid(deploy, defender, seed)).toEqual(res); // determinism
     }
   }, NINETY_MIN);
 });
@@ -162,9 +159,12 @@ function randomDefender(rnd: () => number): CocBase {
   const walls: Record<string, number> = {};
   if (rnd() < 0.7) walls["1,1"] = 1 + Math.floor(rnd() * 3);
   if (rnd() < 0.5) walls["2,2"] = 1 + Math.floor(rnd() * 3);
+  const traps: Record<string, { id: "bomb" | "airMine"; level: number }> = {};
+  if (rnd() < 0.5) traps["3,3"] = { id: "bomb", level: 1 };
+  if (rnd() < 0.3) traps["4,4"] = { id: "airMine", level: 1 };
   return {
-    owner: "d", location: "0,0", buildings, walls,
+    owner: "d", location: "0,0", buildings, walls, traps,
     gold: Math.floor(rnd() * 20000), elixir: Math.floor(rnd() * 20000),
-    jobs: [], army: {}, trainQueue: [], shieldUntil: 0, trophies: 0,
+    jobs: [], army: {}, garrison: {}, trainQueue: [], shieldUntil: 0, trophies: 0,
   };
 }

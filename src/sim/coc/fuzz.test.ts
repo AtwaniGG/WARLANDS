@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { createWorld, addPlayer, builderCount, fitsInGrid, housingCap, housingUsed, inGrid, parseTile } from "./world";
 import { applyCommand } from "./commands";
 import { applyTick } from "./tick";
-import { maxLevelOf, UNIT_IDS, WALL } from "./config";
+import { maxLevelOf, TRAP_IDS, UNIT_IDS, WALL } from "./config";
 import type { CocBuildingId, CocCommand, CocUnitId, CocWorld } from "./types";
 
 // Deterministic PRNG so a failure is reproducible.
@@ -64,8 +64,10 @@ function checkInvariants(w: CocWorld): void {
       expect(lvl).toBeGreaterThanOrEqual(1);
       expect(lvl).toBeLessThanOrEqual(WALL.levels.length);
     }
-    // army counts non-negative
-    for (const u of UNIT_IDS) expect(b.army[u] ?? 0).toBeGreaterThanOrEqual(0);
+    // trap tiles are in-grid
+    for (const tk of Object.keys(b.traps)) { const { x, y } = parseTile(tk); expect(inGrid(x, y)).toBe(true); }
+    // army + garrison counts non-negative
+    for (const u of UNIT_IDS) { expect(b.army[u] ?? 0).toBeGreaterThanOrEqual(0); expect(b.garrison[u] ?? 0).toBeGreaterThanOrEqual(0); }
   }
   // clan membership is consistent both ways
   for (const [cid, clan] of Object.entries(w.clans)) {
@@ -87,7 +89,8 @@ function randomCommand(rnd: () => number, w: CocWorld, pid: string): CocCommand 
   if (r < 0.48) return { type: "collect" };
   if (r < 0.55) return { type: "moveBuilding", fromTile: randomTile(rnd), toTile: randomTile(rnd) };
   if (r < 0.62) return { type: "placeWall", tileKey: randomTile(rnd) };
-  if (r < 0.67) return { type: "upgradeWall", tileKey: randomTile(rnd) };
+  if (r < 0.66) return { type: "upgradeWall", tileKey: randomTile(rnd) };
+  if (r < 0.70) return { type: "placeTrap", tileKey: randomTile(rnd), trapId: pick(rnd, TRAP_IDS) };
   if (r < 0.77) return { type: "trainTroop", unit: pick(rnd, UNIT_IDS) as CocUnitId };
   if (r < 0.86) {
     const deploy = [];

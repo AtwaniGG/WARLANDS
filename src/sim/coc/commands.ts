@@ -1,8 +1,8 @@
 import { hexKey } from "@/game/world";
-import { builderCost, BUILDINGS, ccTier, finishCost, levelDef, maxLevelOf, maxWallLevel, MAX_BUILDERS, SHIELD_MAX_SECS, SHIELD_SECS_PER_PCT, STARTING_ELIXIR, STARTING_GOLD, UNITS, WALL, WAR_RAID_REWARD_PER_STAR, WAR_SHIELD_PER_HOUR } from "./config";
-import { builderCount, ccLevel, fitsInGrid, footprintTiles, freeBuilders, hasBarracks, housingCap, housingUsed, inGrid, occupiedTiles, parseTile, storageCap } from "./world";
+import { builderCost, BUILDINGS, ccTier, finishCost, levelDef, maxLevelOf, maxWallLevel, MAX_BUILDERS, SHIELD_MAX_SECS, SHIELD_SECS_PER_PCT, STARTING_ELIXIR, STARTING_GOLD, TRAPS, UNITS, WALL, WAR_RAID_REWARD_PER_STAR, WAR_SHIELD_PER_HOUR } from "./config";
+import { builderCount, ccLevel, fitsInGrid, footprintTiles, freeBuilders, garrisonCap, garrisonUsed, hasBarracks, housingCap, housingUsed, inGrid, occupiedTiles, parseTile, storageCap } from "./world";
 import { resolveRaid } from "./battle";
-import type { Army, Clan, CocBase, CocBuildingId, CocCommand, CocResource, CocUnitId, CocWorld, CommandResult, Deployment, PlacedBuilding } from "./types";
+import type { Army, Clan, CocBase, CocBuildingId, CocCommand, CocResource, CocTrapId, CocUnitId, CocWorld, CommandResult, Deployment, PlacedBuilding } from "./types";
 
 const CLAN_MAX_MEMBERS = 10;
 /** Starting village layout on the 20×20 grid: a centered Town Hall flanked by two Builder's Huts. */
@@ -46,10 +46,12 @@ function claimBase(state: CocWorld, playerId: string, q: number, r: number): Com
     location: key,
     buildings,
     walls: {},
+    traps: {},
     gold: STARTING_GOLD,
     elixir: STARTING_ELIXIR,
     jobs: [],
     army: {},
+    garrison: {},
     trainQueue: [],
     shieldUntil: 0,
     trophies: 0,
@@ -202,6 +204,26 @@ function upgradeWall(state: CocWorld, playerId: string, tileKey: string): Comman
   if (!canAfford(base, cost)) return fail(state, "Not enough gold.");
   const { gold, elixir } = spend(base, cost);
   return { state: { ...state, bases: { ...state.bases, [playerId]: { ...base, gold, elixir, walls: { ...base.walls, [tileKey]: nextLevel } } } } };
+}
+
+function placeTrap(state: CocWorld, playerId: string, tileKey: string, trapId: CocTrapId): CommandResult {
+  const base = state.bases[playerId];
+  if (!base) return fail(state, "You have no base.");
+  const def = TRAPS[trapId];
+  if (!def) return fail(state, "Unknown trap.");
+  const { x, y } = parseTile(tileKey);
+  if (!inGrid(x, y)) return fail(state, "That tile is outside the village.");
+  if (occupiedTiles(base).has(tileKey)) return fail(state, "That tile is occupied.");
+  if (Object.keys(base.traps).length >= ccTier(ccLevel(base)).maxTraps) {
+    return fail(state, "Trap limit reached — upgrade the Town Hall.");
+  }
+  if (base.gold < def.cost.gold) return fail(state, "Not enough gold.");
+  return {
+    state: {
+      ...state,
+      bases: { ...state.bases, [playerId]: { ...base, gold: base.gold - def.cost.gold, traps: { ...base.traps, [tileKey]: { id: trapId, level: 1 } } } },
+    },
+  };
 }
 
 function trainTroop(state: CocWorld, playerId: string, unit: CocUnitId): CommandResult {
@@ -401,13 +423,14 @@ function donateTroops(state: CocWorld, playerId: string, toOwner: string, army: 
     total += n;
   }
   if (total <= 0) return fail(state, "Select troops to donate.");
-  if (housingUsed(recip) + housing > housingCap(recip)) return fail(state, "Your clanmate has no army housing free.");
+  if (garrisonCap(recip) <= 0) return fail(state, "Your clanmate needs a Clan Castle.");
+  if (garrisonUsed(recip) + housing > garrisonCap(recip)) return fail(state, "Your clanmate's Clan Castle is full.");
   const donorArmy: Army = { ...donor.army };
-  const recipArmy: Army = { ...recip.army };
+  const recipGarrison: Army = { ...recip.garrison };
   for (const [u, n] of Object.entries(army)) {
     if (!n) continue;
     donorArmy[u as CocUnitId] = (donorArmy[u as CocUnitId] ?? 0) - n;
-    recipArmy[u as CocUnitId] = (recipArmy[u as CocUnitId] ?? 0) + n;
+    recipGarrison[u as CocUnitId] = (recipGarrison[u as CocUnitId] ?? 0) + n;
   }
   return {
     state: {
@@ -415,7 +438,7 @@ function donateTroops(state: CocWorld, playerId: string, toOwner: string, army: 
       bases: {
         ...state.bases,
         [playerId]: { ...donor, army: donorArmy },
-        [toOwner]: { ...recip, army: recipArmy },
+        [toOwner]: { ...recip, garrison: recipGarrison },
       },
     },
   };
@@ -437,6 +460,8 @@ export function applyCommand(state: CocWorld, playerId: string, cmd: CocCommand)
       return placeWall(state, playerId, cmd.tileKey);
     case "upgradeWall":
       return upgradeWall(state, playerId, cmd.tileKey);
+    case "placeTrap":
+      return placeTrap(state, playerId, cmd.tileKey, cmd.trapId);
     case "trainTroop":
       return trainTroop(state, playerId, cmd.unit);
     case "raid":

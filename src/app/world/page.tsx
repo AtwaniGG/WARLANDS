@@ -6,9 +6,9 @@ import { Badge, Button, Panel, ProgressBar, Stat } from "@/components/ui";
 import { BaseTutorial } from "@/components/BaseTutorial";
 import { BaseGrid, buildingArt, UNIT_COLOR } from "@/components/BaseGrid";
 import {
-  BUILDINGS, LOOT_PCT, MAX_BUILDERS, UNITS, UNIT_IDS, WALL,
-  builderCost, builderCount, ccLevel, ccTier, fitsInGrid, finishCost, freeBuilders, housingCap, housingUsed, levelDef, maxLevelOf, maxWallLevel, occupiedTiles, resolveRaid, storageCap,
-  type Army, type BattleFrame, type BattleReport, type CocBase, type CocBuildingId, type CocResource, type CocUnitId, type CocWorld, type Deployment, type PlacedBuilding,
+  BUILDINGS, LOOT_PCT, MAX_BUILDERS, TRAPS, TRAP_IDS, UNITS, UNIT_IDS, WALL,
+  builderCost, builderCount, ccLevel, ccTier, fitsInGrid, finishCost, freeBuilders, garrisonCap, garrisonUsed, housingCap, housingUsed, levelDef, maxLevelOf, maxWallLevel, occupiedTiles, resolveRaid, storageCap,
+  type Army, type BattleFrame, type BattleReport, type CocBase, type CocBuildingId, type CocResource, type CocTrapId, type CocUnitId, type CocWorld, type Deployment, type PlacedBuilding,
 } from "@/sim/coc";
 
 const SERVER_URL = process.env.NEXT_PUBLIC_GAME_SERVER_URL ?? "ws://localhost:8080";
@@ -44,6 +44,7 @@ export default function WorldPage() {
   const [mode, setMode] = useState<"view" | "build" | "wall">("view");
   const [selected, setSelected] = useState<string | null>(null);
   const [placing, setPlacing] = useState<CocBuildingId | null>(null);
+  const [placingTrap, setPlacingTrap] = useState<CocTrapId | null>(null);
   const [moveFrom, setMoveFrom] = useState<string | null>(null);
   const [armyOpen, setArmyOpen] = useState(false);
   const [clanOpen, setClanOpen] = useState(false);
@@ -93,11 +94,12 @@ export default function WorldPage() {
   const me = playerId ? state.players[playerId] ?? null : null;
   const view = myBase ? screen : "world";
 
-  function resetBaseUi() { setMode("view"); setPlacing(null); setMoveFrom(null); setSelected(null); }
+  function resetBaseUi() { setMode("view"); setPlacing(null); setPlacingTrap(null); setMoveFrom(null); setSelected(null); }
 
   function onTile(key: string) {
     if (!myBase) return;
     if (placing) { send({ type: "placeBuilding", tileKey: key, buildingId: placing }); setPlacing(null); setMode("view"); return; }
+    if (placingTrap) { send({ type: "placeTrap", tileKey: key, trapId: placingTrap }); return; }
     if (mode === "wall") { send({ type: "placeWall", tileKey: key }); return; }
     if (moveFrom) { send({ type: "moveBuilding", fromTile: moveFrom, toTile: key }); setMoveFrom(null); return; }
   }
@@ -229,13 +231,14 @@ export default function WorldPage() {
             </Button>
             {moveFrom && <Badge tone="amber" variant="soft" icon="✥">TAP A DESTINATION TILE</Badge>}
             {placing && <Badge tone="amber" variant="soft">PLACING {BUILDINGS[placing].name.toUpperCase()} — TAP A TILE</Badge>}
+            {placingTrap && <Badge tone="blood" variant="soft">PLACING {TRAPS[placingTrap].name.toUpperCase()} — TAP OPEN GROUND</Badge>}
             {mode === "wall" && <Badge tone="amber" variant="soft">TAP TILES TO RAISE WALLS · 🪙{WALL.levels[0].cost.gold}</Badge>}
           </div>
 
           <div style={{ marginTop: 10 }}>
             <BaseGrid
-              base={myBase} tick={state.tick}
-              selected={selected} placing={placing} wallMode={mode === "wall"} moveFrom={moveFrom}
+              base={myBase} tick={state.tick} showTraps
+              selected={selected} placing={placing} placingTrap={placingTrap} wallMode={mode === "wall"} moveFrom={moveFrom}
               canPlace={(a, id) => canPlaceAt(myBase, a, id)}
               onSelectBuilding={(a) => { if (mode === "view" && !moveFrom) setSelected(a); }}
               onTile={onTile}
@@ -246,7 +249,10 @@ export default function WorldPage() {
           {mode === "build" && (
             <div style={sheet}>
               <Panel title="BUILD" accent padding="12px 14px" headerRight={<button onClick={resetBaseUi} style={closeBtn}>✕</button>}>
-                <BuildTray base={myBase} war={me?.war ?? 0} onPick={(id) => { setPlacing(id); }} active={placing} />
+                <BuildTray base={myBase} war={me?.war ?? 0}
+                  onPick={(id) => { setPlacing(id); setPlacingTrap(null); }}
+                  onPickTrap={(t) => { setPlacingTrap(t); setPlacing(null); }}
+                  active={placing} activeTrap={placingTrap} />
               </Panel>
             </div>
           )}
@@ -353,7 +359,7 @@ function Overlay({ children, onClose }: { children: React.ReactNode; onClose: ()
   );
 }
 
-function BuildTray({ base, war, onPick, active }: { base: CocBase; war: number; onPick: (id: CocBuildingId) => void; active: CocBuildingId | null }) {
+function BuildTray({ base, war, onPick, onPickTrap, active, activeTrap }: { base: CocBase; war: number; onPick: (id: CocBuildingId) => void; onPickTrap: (t: CocTrapId) => void; active: CocBuildingId | null; activeTrap: CocTrapId | null }) {
   const tier = ccTier(ccLevel(base));
   const inCaps = Object.keys(tier.caps) as CocBuildingId[];
   const groups: { label: string; ids: CocBuildingId[] }[] = [
@@ -387,6 +393,28 @@ function BuildTray({ base, war, onPick, active }: { base: CocBase; war: number; 
           </div>
         </div>
       ))}
+      {tier.maxTraps > 0 && (
+        <div>
+          <span className="wl-label">TRAPS ({Object.keys(base.traps).length}/{tier.maxTraps})</span>
+          <div style={{ display: "grid", gap: 6, marginTop: 8 }}>
+            {TRAP_IDS.map((tid) => {
+              const t = TRAPS[tid];
+              const atCap = Object.keys(base.traps).length >= tier.maxTraps;
+              const ok = !atCap && base.gold >= t.cost.gold;
+              return (
+                <button key={tid} disabled={!ok} onClick={() => onPickTrap(tid)}
+                  style={{ ...trayCard, opacity: ok ? 1 : 0.45, outline: activeTrap === tid ? "2px solid var(--rim-selected)" : "none", cursor: ok ? "pointer" : "not-allowed" }}>
+                  <span style={{ width: 18, height: 18, borderRadius: "50%", border: "1.5px solid var(--blood-text)", background: "rgba(156,43,43,0.35)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 10, flexShrink: 0 }}>{tid === "airMine" ? "▲" : "●"}</span>
+                  <span style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 2 }}>
+                    <span style={{ fontSize: 13, fontWeight: 600 }}>{t.name}</span>
+                    <span className="wl-num" style={{ fontSize: 11, color: "var(--text-secondary)" }}>{atCap ? "AT LIMIT" : `🪙${t.cost.gold} · hidden · ${t.target}`}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -497,7 +525,8 @@ function ClanPanel({ state, playerId, send, onClose }: { state: CocWorld; player
   const [name, setName] = useState("");
   const me = state.players[playerId];
   const myClan = me?.clanId ? state.clans[me.clanId] : null;
-  const myArmy = state.bases[playerId]?.army ?? {};
+  const myBase = state.bases[playerId];
+  const myArmy = myBase?.army ?? {};
   const short = (id: string) => id.slice(0, 6).toUpperCase();
 
   if (myClan) {
@@ -514,6 +543,16 @@ function ClanPanel({ state, playerId, send, onClose }: { state: CocWorld; player
             </div>
           ))}
         </div>
+        {myBase && (
+          <div style={{ margin: "0 0 12px" }}>
+            <span className="wl-label">YOUR CLAN CASTLE</span>
+            <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 4 }}>
+              {garrisonCap(myBase) > 0
+                ? `Defenders ${garrisonUsed(myBase)}/${garrisonCap(myBase)}${garrisonUsed(myBase) > 0 ? " — they fight for you when raided" : " — ask clanmates to donate"}`
+                : "Build a Clan Castle to receive defending troops."}
+            </div>
+          </div>
+        )}
         {mates.length > 0 && myUnits.length > 0 && (
           <>
             <span className="wl-label">DONATE A TROOP</span>
