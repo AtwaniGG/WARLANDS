@@ -16,10 +16,8 @@
         "patterns": [
           {
             "group": [
-              "asset-prompts/**",
               "components/core/**",
-              "components/game/**",
-              "ui_kits/warlands-game/**"
+              "ui_kits/warroom/**"
             ],
             "message": "Import design-system components from 'index.js', not component internals."
           }
@@ -37,56 +35,32 @@
         "message": "Raw px value — use a design-system spacing token via var()."
       },
       {
-        "selector": "Literal[value=/font-family\\s*:\\s*(?!['\\\"]?(?:Oswald|Geist|Geist Mono))/i]",
-        "message": "Font not provided by the design system. Available: Oswald, Geist, Geist Mono."
+        "selector": "Literal[value=/font-family\\s*:\\s*(?!['\\\"]?(?:Geist|Geist Mono|Oswald))/i]",
+        "message": "Font not provided by the design system. Available: Geist, Geist Mono, Oswald."
       },
       {
-        "selector": "JSXOpeningElement[name.name='Badge'] > JSXAttribute > JSXIdentifier[name!=/^(?:tone|variant|icon|children|key|ref|className|style|children)$/]",
-        "message": "<Badge> doesn't accept that prop. Declared props: tone, variant, icon, children."
-      },
-      {
-        "selector": "JSXOpeningElement[name.name='Badge'] > JSXAttribute[name.name='tone'] > Literal[value!=/^(?:amber|blood|sky|emerald|violet|teal|neutral)$/]",
-        "message": "<Badge> tone must be one of 'amber' | 'blood' | 'sky' | 'emerald' | 'violet' | 'teal' | 'neutral'."
+        "selector": "JSXOpeningElement[name.name='Badge'] > JSXAttribute > JSXIdentifier[name!=/^(?:tone|variant|icon|key|ref|className|style|children)$/]",
+        "message": "<Badge> doesn't accept that prop. Declared props: tone, variant, icon."
       },
       {
         "selector": "JSXOpeningElement[name.name='Badge'] > JSXAttribute[name.name='variant'] > Literal[value!=/^(?:soft|solid)$/]",
         "message": "<Badge> variant must be one of 'soft' | 'solid'."
       },
       {
-        "selector": "JSXOpeningElement[name.name='Button'] > JSXAttribute > JSXIdentifier[name!=/^(?:variant|size|icon|full|disabled|children|key|ref|className|style|children)$/]",
-        "message": "<Button> doesn't accept that prop. Declared props: variant, size, icon, full, disabled, children."
+        "selector": "JSXOpeningElement[name.name='Button'] > JSXAttribute > JSXIdentifier[name!=/^(?:variant|size|icon|full|key|ref|className|style|children)$/]",
+        "message": "<Button> doesn't accept that prop. Declared props: variant, size, icon, full."
       },
       {
-        "selector": "JSXOpeningElement[name.name='Button'] > JSXAttribute[name.name='variant'] > Literal[value!=/^(?:primary|secondary|danger|info|success|ghost|outline)$/]",
-        "message": "<Button> variant must be one of 'primary' | 'secondary' | 'danger' | 'info' | 'success' | 'ghost' | 'outline'."
-      },
-      {
-        "selector": "JSXOpeningElement[name.name='Button'] > JSXAttribute[name.name='size'] > Literal[value!=/^(?:sm|md|lg)$/]",
-        "message": "<Button> size must be one of 'sm' | 'md' | 'lg'."
-      },
-      {
-        "selector": "JSXOpeningElement[name.name='Panel'] > JSXAttribute > JSXIdentifier[name!=/^(?:title|label|accent|rim|padding|headerRight|children|key|ref|className|style|children)$/]",
-        "message": "<Panel> doesn't accept that prop. Declared props: title, label, accent, rim, padding, headerRight, children."
-      },
-      {
-        "selector": "JSXOpeningElement[name.name='Panel'] > JSXAttribute[name.name='rim'] > Literal[value!=/^(?:amber|blood|sky|emerald)$/]",
-        "message": "<Panel> rim must be one of 'amber' | 'blood' | 'sky' | 'emerald'."
+        "selector": "JSXOpeningElement[name.name='Panel'] > JSXAttribute > JSXIdentifier[name!=/^(?:title|label|accent|rim|padding|headerRight|key|ref|className|style|children)$/]",
+        "message": "<Panel> doesn't accept that prop. Declared props: title, label, accent, rim, padding, headerRight."
       },
       {
         "selector": "JSXOpeningElement[name.name='ProgressBar'] > JSXAttribute > JSXIdentifier[name!=/^(?:value|max|tone|label|valueText|height|key|ref|className|style|children)$/]",
         "message": "<ProgressBar> doesn't accept that prop. Declared props: value, max, tone, label, valueText, height."
       },
       {
-        "selector": "JSXOpeningElement[name.name='ProgressBar'] > JSXAttribute[name.name='tone'] > Literal[value!=/^(?:amber|blood|sky|emerald|violet)$/]",
-        "message": "<ProgressBar> tone must be one of 'amber' | 'blood' | 'sky' | 'emerald' | 'violet'."
-      },
-      {
         "selector": "JSXOpeningElement[name.name='ResourceChip'] > JSXAttribute > JSXIdentifier[name!=/^(?:icon|name|amount|tier|size|key|ref|className|style|children)$/]",
         "message": "<ResourceChip> doesn't accept that prop. Declared props: icon, name, amount, tier, size."
-      },
-      {
-        "selector": "JSXOpeningElement[name.name='ResourceChip'] > JSXAttribute[name.name='tier'] > Literal[value!=/^(?:raw|intermediate|finished)$/]",
-        "message": "<ResourceChip> tier must be one of 'raw' | 'intermediate' | 'finished'."
       },
       {
         "selector": "JSXOpeningElement[name.name='ResourceChip'] > JSXAttribute[name.name='size'] > Literal[value!=/^(?:sm|md)$/]",
@@ -95,10 +69,6 @@
       {
         "selector": "JSXOpeningElement[name.name='Stat'] > JSXAttribute > JSXIdentifier[name!=/^(?:label|value|accent|align|size|key|ref|className|style|children)$/]",
         "message": "<Stat> doesn't accept that prop. Declared props: label, value, accent, align, size."
-      },
-      {
-        "selector": "JSXOpeningElement[name.name='Stat'] > JSXAttribute[name.name='accent'] > Literal[value!=/^(?:amber|blood|sky|emerald|violet|teal|neutral)$/]",
-        "message": "<Stat> accent must be one of 'amber' | 'blood' | 'sky' | 'emerald' | 'violet' | 'teal' | 'neutral'."
       },
       {
         "selector": "JSXOpeningElement[name.name='Stat'] > JSXAttribute[name.name='align'] > Literal[value!=/^(?:row|stack)$/]",
@@ -155,13 +125,12 @@
       "--amber",
       "--amber-text",
       "--ash",
+      "--background",
       "--bg-app",
       "--blood",
       "--blood-text",
       "--border-default",
       "--border-strong",
-      "--border-w",
-      "--border-w-strong",
       "--concrete",
       "--cta-bg",
       "--cta-bg-hover",
@@ -172,33 +141,20 @@
       "--disabled",
       "--dur",
       "--dur-fast",
-      "--dur-instant",
-      "--dur-slow",
-      "--ease-in-out",
       "--ease-out",
       "--ease-snap",
-      "--edge-inset",
       "--emerald-text",
       "--error",
       "--focus-ring",
-      "--focus-ring-w",
+      "--focus-ring-color",
       "--font-display",
       "--font-mono",
       "--font-ui",
-      "--fw-black",
-      "--fw-bold",
-      "--fw-medium",
-      "--fw-regular",
-      "--fw-semibold",
+      "--foreground",
       "--glow-amber",
-      "--glow-blood",
       "--gunmetal",
       "--hairline",
       "--info",
-      "--leading-normal",
-      "--leading-snug",
-      "--leading-tight",
-      "--num-feature",
       "--olive-drab",
       "--panel",
       "--panel-2",
@@ -217,20 +173,14 @@
       "--shadow-modal",
       "--sky",
       "--sky-text",
-      "--space-0",
-      "--space-0_5",
       "--space-1",
-      "--space-10",
-      "--space-12",
-      "--space-16",
-      "--space-1_5",
       "--space-2",
       "--space-3",
       "--space-4",
       "--space-5",
       "--space-6",
+      "--space-7",
       "--space-8",
-      "--space-px",
       "--success",
       "--surface-card",
       "--surface-raised",
@@ -266,15 +216,15 @@
       "--text-xs",
       "--toxic",
       "--tracking-label",
-      "--tracking-normal",
       "--tracking-tight",
-      "--tracking-tighter",
-      "--tracking-wide",
       "--violet",
       "--violet-text",
       "--warning"
     ],
     "tokenKinds": {
+      "--font-display": "font",
+      "--font-ui": "font",
+      "--font-mono": "font",
       "--gunmetal": "color",
       "--ash": "color",
       "--olive-drab": "color",
@@ -284,7 +234,9 @@
       "--panel-void": "color",
       "--panel": "color",
       "--panel-2": "color",
+      "--surface-sunken": "color",
       "--hairline": "color",
+      "--border-strong": "color",
       "--text-hi": "font",
       "--text-lo": "font",
       "--text-faint": "font",
@@ -304,15 +256,6 @@
       "--warning": "color",
       "--error": "color",
       "--disabled": "color",
-      "--terrain-plains": "color",
-      "--terrain-forest": "color",
-      "--terrain-river": "color",
-      "--terrain-mountain": "color",
-      "--terrain-desert": "color",
-      "--terrain-coastal": "color",
-      "--terrain-industrial": "color",
-      "--terrain-techruins": "color",
-      "--terrain-warzone": "color",
       "--rim-owned": "color",
       "--rim-enemy": "color",
       "--rim-neutral": "color",
@@ -320,9 +263,7 @@
       "--bg-app": "color",
       "--surface-card": "color",
       "--surface-raised": "color",
-      "--surface-sunken": "color",
       "--border-default": "color",
-      "--border-strong": "color",
       "--text-primary": "font",
       "--text-secondary": "font",
       "--text-muted": "font",
@@ -336,15 +277,9 @@
       "--info": "color",
       "--ally": "color",
       "--tech": "color",
-      "--focus-ring": "color",
-      "--font-display": "font",
-      "--font-ui": "font",
-      "--font-mono": "font",
-      "--fw-regular": "font",
-      "--fw-medium": "font",
-      "--fw-semibold": "font",
-      "--fw-bold": "font",
-      "--fw-black": "font",
+      "--focus-ring-color": "color",
+      "--background": "color",
+      "--foreground": "color",
       "--text-2xs": "font",
       "--text-xs": "font",
       "--text-sm": "font",
@@ -356,49 +291,38 @@
       "--text-3xl": "font",
       "--text-4xl": "font",
       "--text-display": "font",
-      "--leading-tight": "font",
-      "--leading-snug": "font",
-      "--leading-normal": "font",
-      "--tracking-tighter": "font",
-      "--tracking-tight": "font",
-      "--tracking-normal": "font",
-      "--tracking-wide": "font",
       "--tracking-label": "font",
-      "--num-feature": "font",
-      "--space-0": "spacing",
-      "--space-px": "spacing",
-      "--space-0_5": "spacing",
+      "--tracking-tight": "font",
       "--space-1": "spacing",
-      "--space-1_5": "spacing",
       "--space-2": "spacing",
       "--space-3": "spacing",
       "--space-4": "spacing",
       "--space-5": "spacing",
       "--space-6": "spacing",
+      "--space-7": "spacing",
       "--space-8": "spacing",
-      "--space-10": "spacing",
-      "--space-12": "spacing",
-      "--space-16": "spacing",
       "--radius-sm": "radius",
       "--radius-md": "radius",
       "--radius-lg": "radius",
       "--radius-pill": "radius",
-      "--border-w": "spacing",
-      "--border-w-strong": "spacing",
       "--shadow-1": "shadow",
       "--shadow-2": "shadow",
       "--shadow-modal": "shadow",
-      "--edge-inset": "spacing",
-      "--focus-ring-w": "spacing",
+      "--focus-ring": "color",
       "--glow-amber": "shadow",
-      "--glow-blood": "shadow",
-      "--dur-instant": "other",
       "--dur-fast": "other",
       "--dur": "other",
-      "--dur-slow": "other",
       "--ease-out": "other",
-      "--ease-in-out": "other",
-      "--ease-snap": "other"
+      "--ease-snap": "other",
+      "--terrain-plains": "color",
+      "--terrain-forest": "color",
+      "--terrain-river": "color",
+      "--terrain-mountain": "color",
+      "--terrain-desert": "color",
+      "--terrain-coastal": "color",
+      "--terrain-industrial": "color",
+      "--terrain-techruins": "color",
+      "--terrain-warzone": "color"
     },
     "fontFamilies": [
       "Geist",

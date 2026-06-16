@@ -1,464 +1,48 @@
-/* @ds-bundle: {"format":3,"namespace":"WARLANDSDesignSystem_e0d283","components":[{"name":"Badge","sourcePath":"components/core/Badge.jsx"},{"name":"Button","sourcePath":"components/core/Button.jsx"},{"name":"Panel","sourcePath":"components/core/Panel.jsx"},{"name":"Stat","sourcePath":"components/core/Stat.jsx"},{"name":"ProgressBar","sourcePath":"components/game/ProgressBar.jsx"},{"name":"ResourceChip","sourcePath":"components/game/ResourceChip.jsx"},{"name":"Tabs","sourcePath":"components/game/Tabs.jsx"}],"sourceHashes":{"asset-prompts/assets-data.js":"6f94349728b7","components/core/Badge.jsx":"5b9127c18afa","components/core/Button.jsx":"c8deff3ab27a","components/core/Panel.jsx":"819c3e273dde","components/core/Stat.jsx":"fc44facd45ec","components/game/ProgressBar.jsx":"cec610fb6565","components/game/ResourceChip.jsx":"c3f9df745321","components/game/Tabs.jsx":"b92fd809cf8a","ui_kits/warlands-game/App.jsx":"91d291d9daa5","ui_kits/warlands-game/HexMap.jsx":"a85fdb33b06f","ui_kits/warlands-game/Panels.jsx":"eeaa7f408b0a","ui_kits/warlands-game/data.js":"f836772e6f16"},"inlinedExternals":[],"unexposedExports":[]} */
+/* @ds-bundle: {"format":3,"namespace":"WARLANDSDesignSystem_2e7699","components":[{"name":"Badge","sourcePath":"components/core/Badge.jsx"},{"name":"Button","sourcePath":"components/core/Button.jsx"},{"name":"Panel","sourcePath":"components/core/Panel.jsx"},{"name":"ProgressBar","sourcePath":"components/core/ProgressBar.jsx"},{"name":"ResourceChip","sourcePath":"components/core/ResourceChip.jsx"},{"name":"Stat","sourcePath":"components/core/Stat.jsx"},{"name":"Tabs","sourcePath":"components/core/Tabs.jsx"}],"sourceHashes":{"components/core/Badge.jsx":"d95fe2984bbb","components/core/Button.jsx":"5aa3af8c9573","components/core/Panel.jsx":"f8cef3810cfa","components/core/ProgressBar.jsx":"d1ab8e81b7c8","components/core/ResourceChip.jsx":"c7bfe89e10a7","components/core/Stat.jsx":"0df19590beb6","components/core/Tabs.jsx":"e74f70722fa5","ui_kits/warroom/app.js":"3c798d94d742","ui_kits/warroom/data.js":"0bba06564738","ui_kits/warroom/panels.js":"90fe5a099af3","ui_kits/warroom/shell.js":"4303fe4b91f7"},"inlinedExternals":[],"unexposedExports":[]} */
 
 (() => {
 
-const __ds_ns = (window.WARLANDSDesignSystem_e0d283 = window.WARLANDSDesignSystem_e0d283 || {});
+const __ds_ns = (window.WARLANDSDesignSystem_2e7699 = window.WARLANDSDesignSystem_2e7699 || {});
 
 const __ds_scope = {};
 
 (__ds_ns.__errors = __ds_ns.__errors || []);
 
-// asset-prompts/assets-data.js
-try { (() => {
-window.WL_ASSETS = [{
-  "group": "Terrain",
-  "file": "public/assets/terrain/plains.png",
-  "spec": "512x512 PNG, transparent outside hex, tileable",
-  "read": "Neutral low-contrast starter land so the amber owned-rim reads clearly on top",
-  "prompt": "Dry temperate grassland with patchy scrub and faint dirt vehicle tracks. Top-down orthographic view of a single flat-top hexagon map tile, edges designed to seam seamlessly with neighbours. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: olive base #7c8a4f with sand #c9a14a track accents. Lighting: soft top-down ambient with a faint warm key from the north-west, gentle readable relief shadows. Background: art fills the hex, fully transparent outside the hexagon silhouette. 512x512 PNG, transparent outside hex, tileable."
-}, {
-  "group": "Terrain",
-  "file": "public/assets/terrain/forest.png",
-  "spec": "512x512 PNG, transparent outside hex, tileable",
-  "read": "Darkest tile; canopy texture reads as cover at full map zoom",
-  "prompt": "Dense dark coniferous canopy of tight treetops with a few shadowed clearings. Top-down orthographic view of a single flat-top hexagon map tile, edges designed to seam seamlessly with neighbours. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: forest base #2f5d3a with gunmetal #2a2f3a shadow. Lighting: soft top-down ambient with a faint warm key from the north-west, gentle readable relief shadows. Background: art fills the hex, fully transparent outside the hexagon silhouette. 512x512 PNG, transparent outside hex, tileable."
-}, {
-  "group": "Terrain",
-  "file": "public/assets/terrain/river.png",
-  "spec": "512x512 PNG, transparent outside hex, tileable",
-  "read": "Blue ribbon visually links into continuous rivers across adjacent tiles",
-  "prompt": "A flowing water channel cutting across with muddy banks and a shallow ford crossing. Top-down orthographic view of a single flat-top hexagon map tile, edges designed to seam seamlessly with neighbours. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: river base #2c6f8c with concrete #8b8f96 banks. Lighting: soft top-down ambient with a faint warm key from the north-west, gentle readable relief shadows. Background: art fills the hex, fully transparent outside the hexagon silhouette. 512x512 PNG, transparent outside hex, tileable."
-}, {
-  "group": "Terrain",
-  "file": "public/assets/terrain/mountain.png",
-  "spec": "512x512 PNG, transparent outside hex, tileable",
-  "read": "High-relief grey reads instantly as impassable/defensive terrain",
-  "prompt": "Rugged rock ridges and loose scree, hard angular high-ground relief. Top-down orthographic view of a single flat-top hexagon map tile, edges designed to seam seamlessly with neighbours. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: mountain base #6b6f78 with ash #4b515c shadow. Lighting: soft top-down ambient with a faint warm key from the north-west, gentle readable relief shadows. Background: art fills the hex, fully transparent outside the hexagon silhouette. 512x512 PNG, transparent outside hex, tileable."
-}, {
-  "group": "Terrain",
-  "file": "public/assets/terrain/desert.png",
-  "spec": "512x512 PNG, transparent outside hex, tileable",
-  "read": "Warm sand plus a single amber oil glint signals an economy/oil tile",
-  "prompt": "Rolling sand dunes with an oily sheen patch and a marked derrick drill spot. Top-down orthographic view of a single flat-top hexagon map tile, edges designed to seam seamlessly with neighbours. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: sand base #c9a14a with amber #f5b301 oil glint. Lighting: soft top-down ambient with a faint warm key from the north-west, gentle readable relief shadows. Background: art fills the hex, fully transparent outside the hexagon silhouette. 512x512 PNG, transparent outside hex, tileable."
-}, {
-  "group": "Terrain",
-  "file": "public/assets/terrain/coastal.png",
-  "spec": "512x512 PNG, transparent outside hex, tileable",
-  "read": "Sea edge and dock silhouette signal trade and logistics",
-  "prompt": "A shoreline where land meets open sea, with a small concrete dock and breakwater. Top-down orthographic view of a single flat-top hexagon map tile, edges designed to seam seamlessly with neighbours. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: teal base #3f9aa6 with sand #c9a14a shore. Lighting: soft top-down ambient with a faint warm key from the north-west, gentle readable relief shadows. Background: art fills the hex, fully transparent outside the hexagon silhouette. 512x512 PNG, transparent outside hex, tileable."
-}, {
-  "group": "Terrain",
-  "file": "public/assets/terrain/industrial.png",
-  "spec": "512x512 PNG, transparent outside hex, tileable",
-  "read": "Machined grey-brown with a factory silhouette reads as production land",
-  "prompt": "Poured concrete slabs, exposed pipe runs and a short smokestack on oil-stained ground. Top-down orthographic view of a single flat-top hexagon map tile, edges designed to seam seamlessly with neighbours. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: industrial base #8a5a3c with gunmetal #2a2f3a steel. Lighting: soft top-down ambient with a faint warm key from the north-west, gentle readable relief shadows. Background: art fills the hex, fully transparent outside the hexagon silhouette. 512x512 PNG, transparent outside hex, tileable."
-}, {
-  "group": "Terrain",
-  "file": "public/assets/terrain/techRuins.png",
-  "spec": "512x512 PNG, transparent outside hex, tileable",
-  "read": "The only violet-glow tile; instantly reads as rare tech terrain",
-  "prompt": "Broken half-buried arcology shards and exposed circuitry emitting a faint glow. Top-down orthographic view of a single flat-top hexagon map tile, edges designed to seam seamlessly with neighbours. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: techruins base #5b4b8a with violet #8b5cf6 glow. Lighting: soft top-down ambient with a faint warm key from the north-west, gentle readable relief shadows. Background: art fills the hex, fully transparent outside the hexagon silhouette. 512x512 PNG, transparent outside hex, tileable."
-}, {
-  "group": "Terrain",
-  "file": "public/assets/terrain/warzone.png",
-  "spec": "512x512 PNG, transparent outside hex, tileable",
-  "read": "Red scorched center tile reads as danger at any zoom level",
-  "prompt": "Cratered scorched earth with blast scoring, scattered wreckage and bent rebar. Top-down orthographic view of a single flat-top hexagon map tile, edges designed to seam seamlessly with neighbours. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: scorched dark base with blood #9c2b2b signal. Lighting: soft top-down ambient with a faint warm key from the north-west, gentle readable relief shadows. Background: art fills the hex, fully transparent outside the hexagon silhouette. 512x512 PNG, transparent outside hex, tileable."
-}, {
-  "group": "Buildings — Economy",
-  "file": "public/assets/buildings/camp.png",
-  "spec": "256x256 PNG, transparent",
-  "read": "Smallest building; tent + mast silhouette reads as the player HQ camp",
-  "prompt": "A humble field command tent camp with sandbag walls and a short radio mast. Three-quarter top-down billboard view, a single building on a consistent square footprint, grounded with a soft drop shadow. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: olive #5c6347 canvas with amber #f5b301 marker. Lighting: soft north-west key light with one long readable shadow. Background: transparent background (PNG alpha), nothing behind the structure. 256x256 PNG, transparent."
-}, {
-  "group": "Buildings — Economy",
-  "file": "public/assets/buildings/farm.png",
-  "spec": "256x256 PNG, transparent",
-  "read": "Striped field pattern telegraphs food production",
-  "prompt": "Small terraced crop-field plots beside a simple irrigation shed. Three-quarter top-down billboard view, a single building on a consistent square footprint, grounded with a soft drop shadow. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: olive #5c6347 with sand #c9a14a crops. Lighting: soft north-west key light with one long readable shadow. Background: transparent background (PNG alpha), nothing behind the structure. 256x256 PNG, transparent."
-}, {
-  "group": "Buildings — Economy",
-  "file": "public/assets/buildings/well.png",
-  "spec": "256x256 PNG, transparent",
-  "read": "Tank + pump silhouette reads as water",
-  "prompt": "A water well pump head feeding a small ribbed storage tank. Three-quarter top-down billboard view, a single building on a consistent square footprint, grounded with a soft drop shadow. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: concrete #8b8f96 with sky #4a90d9 water. Lighting: soft north-west key light with one long readable shadow. Background: transparent background (PNG alpha), nothing behind the structure. 256x256 PNG, transparent."
-}, {
-  "group": "Buildings — Economy",
-  "file": "public/assets/buildings/lumberCamp.png",
-  "spec": "256x256 PNG, transparent",
-  "read": "Stacked logs read as wood even at token size",
-  "prompt": "A logging yard with neatly stacked timber and an open saw shelter. Three-quarter top-down billboard view, a single building on a consistent square footprint, grounded with a soft drop shadow. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: dirt-brown #6b5840 with olive #5c6347. Lighting: soft north-west key light with one long readable shadow. Background: transparent background (PNG alpha), nothing behind the structure. 256x256 PNG, transparent."
-}, {
-  "group": "Buildings — Economy",
-  "file": "public/assets/buildings/quarry.png",
-  "spec": "256x256 PNG, transparent",
-  "read": "Stepped pit + crane reads as stone extraction",
-  "prompt": "An open stone quarry pit with cut blocks and a small jib crane. Three-quarter top-down billboard view, a single building on a consistent square footprint, grounded with a soft drop shadow. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: concrete #8b8f96 with ash #4b515c. Lighting: soft north-west key light with one long readable shadow. Background: transparent background (PNG alpha), nothing behind the structure. 256x256 PNG, transparent."
-}, {
-  "group": "Buildings — Economy",
-  "file": "public/assets/buildings/ironMine.png",
-  "spec": "256x256 PNG, transparent",
-  "read": "Headframe silhouette distinguishes it from the quarry",
-  "prompt": "A mine entrance cut into rock with ore carts and a timber headframe. Three-quarter top-down billboard view, a single building on a consistent square footprint, grounded with a soft drop shadow. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: ash #4b515c with gunmetal #2a2f3a. Lighting: soft north-west key light with one long readable shadow. Background: transparent background (PNG alpha), nothing behind the structure. 256x256 PNG, transparent."
-}, {
-  "group": "Buildings — Economy",
-  "file": "public/assets/buildings/mineralMine.png",
-  "spec": "256x256 PNG, transparent",
-  "read": "Violet ore accent marks rare-mineral extraction",
-  "prompt": "A deep mineral shaft with a conveyor lifting crystalline ore. Three-quarter top-down billboard view, a single building on a consistent square footprint, grounded with a soft drop shadow. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: gunmetal #2a2f3a with violet #8b5cf6 ore. Lighting: soft north-west key light with one long readable shadow. Background: transparent background (PNG alpha), nothing behind the structure. 256x256 PNG, transparent."
-}, {
-  "group": "Buildings — Economy",
-  "file": "public/assets/buildings/oilDerrick.png",
-  "spec": "256x256 PNG, transparent",
-  "read": "Pumpjack arm is an unmistakable oil silhouette",
-  "prompt": "A nodding pumpjack oil derrick on a stained concrete pad. Three-quarter top-down billboard view, a single building on a consistent square footprint, grounded with a soft drop shadow. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: gunmetal #2a2f3a with amber #f5b301 trim. Lighting: soft north-west key light with one long readable shadow. Background: transparent background (PNG alpha), nothing behind the structure. 256x256 PNG, transparent."
-}, {
-  "group": "Buildings — Economy",
-  "file": "public/assets/buildings/dataExcavator.png",
-  "spec": "256x256 PNG, transparent",
-  "read": "Antenna + green glow reads as data/tech harvesting",
-  "prompt": "A salvage rig excavating buried data cores with a small antenna array. Three-quarter top-down billboard view, a single building on a consistent square footprint, grounded with a soft drop shadow. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: gunmetal #2a2f3a with toxic-green #6ee7a8 glow. Lighting: soft north-west key light with one long readable shadow. Background: transparent background (PNG alpha), nothing behind the structure. 256x256 PNG, transparent."
-}, {
-  "group": "Buildings — Economy",
-  "file": "public/assets/buildings/refinery.png",
-  "spec": "256x256 PNG, transparent",
-  "read": "Round tanks cluster reads as refining",
-  "prompt": "A fuel refinery with round storage tanks and dense pipework. Three-quarter top-down billboard view, a single building on a consistent square footprint, grounded with a soft drop shadow. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: concrete #8b8f96 with amber #f5b301. Lighting: soft north-west key light with one long readable shadow. Background: transparent background (PNG alpha), nothing behind the structure. 256x256 PNG, transparent."
-}, {
-  "group": "Buildings — Economy",
-  "file": "public/assets/buildings/foundry.png",
-  "spec": "256x256 PNG, transparent",
-  "read": "Twin smokestacks telegraph the foundry",
-  "prompt": "A metal foundry with twin smokestacks and a restrained molten-pour glow. Three-quarter top-down billboard view, a single building on a consistent square footprint, grounded with a soft drop shadow. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: gunmetal #2a2f3a with amber #f5b301 heat. Lighting: soft north-west key light with one long readable shadow. Background: transparent background (PNG alpha), nothing behind the structure. 256x256 PNG, transparent."
-}, {
-  "group": "Buildings — Economy",
-  "file": "public/assets/buildings/armsFactory.png",
-  "spec": "256x256 PNG, transparent",
-  "read": "Crates + shed reads as weapons manufacture",
-  "prompt": "A small-arms factory shed with crates of rifles by a roller door. Three-quarter top-down billboard view, a single building on a consistent square footprint, grounded with a soft drop shadow. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: olive #5c6347 with ash #4b515c. Lighting: soft north-west key light with one long readable shadow. Background: transparent background (PNG alpha), nothing behind the structure. 256x256 PNG, transparent."
-}, {
-  "group": "Buildings — Economy",
-  "file": "public/assets/buildings/heavyWorks.png",
-  "spec": "256x256 PNG, transparent",
-  "read": "Gantry + hull silhouette reads as heavy manufacture",
-  "prompt": "A heavy-vehicle works hangar assembling tank hulls under a gantry. Three-quarter top-down billboard view, a single building on a consistent square footprint, grounded with a soft drop shadow. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: gunmetal #2a2f3a with amber #f5b301 gantry. Lighting: soft north-west key light with one long readable shadow. Background: transparent background (PNG alpha), nothing behind the structure. 256x256 PNG, transparent."
-}, {
-  "group": "Buildings — Economy",
-  "file": "public/assets/buildings/electronicsLab.png",
-  "spec": "256x256 PNG, transparent",
-  "read": "Dish + clean block reads as electronics/tech",
-  "prompt": "An electronics lab block with a clean-room wing and a small dish. Three-quarter top-down billboard view, a single building on a consistent square footprint, grounded with a soft drop shadow. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: concrete #8b8f96 with toxic-green #6ee7a8. Lighting: soft north-west key light with one long readable shadow. Background: transparent background (PNG alpha), nothing behind the structure. 256x256 PNG, transparent."
-}, {
-  "group": "Buildings — Economy",
-  "file": "public/assets/buildings/warehouse.png",
-  "spec": "256x256 PNG, transparent",
-  "read": "Long shed + dock reads as storage",
-  "prompt": "A corrugated storage warehouse with a loading dock and stacked crates. Three-quarter top-down billboard view, a single building on a consistent square footprint, grounded with a soft drop shadow. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: ash #4b515c with amber #f5b301 dock. Lighting: soft north-west key light with one long readable shadow. Background: transparent background (PNG alpha), nothing behind the structure. 256x256 PNG, transparent."
-}, {
-  "group": "Buildings — Allegiance",
-  "file": "public/assets/buildings/allegiance/hq.png",
-  "spec": "256x256 PNG, transparent",
-  "read": "Largest economy-side silhouette; tower + flag reads as faction HQ",
-  "prompt": "An imposing fortified headquarters bunker complex with a comms tower and a flag. Three-quarter top-down billboard view of a large, imposing regional structure on a consistent footprint, grounded with a soft drop shadow. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: gunmetal #2a2f3a with amber #f5b301 flag. Lighting: soft north-west key light with one long readable shadow. Background: transparent background (PNG alpha), nothing behind the structure. 256x256 PNG, transparent."
-}, {
-  "group": "Buildings — Allegiance",
-  "file": "public/assets/buildings/allegiance/fortress.png",
-  "spec": "256x256 PNG, transparent",
-  "read": "Thick walls + turrets read as pure defense",
-  "prompt": "A heavy concrete fortress with ramparts, corner turrets and blast walls. Three-quarter top-down billboard view of a large, imposing regional structure on a consistent footprint, grounded with a soft drop shadow. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: concrete #8b8f96 with blood #9c2b2b banners. Lighting: soft north-west key light with one long readable shadow. Background: transparent background (PNG alpha), nothing behind the structure. 256x256 PNG, transparent."
-}, {
-  "group": "Buildings — Allegiance",
-  "file": "public/assets/buildings/allegiance/tradeHub.png",
-  "spec": "256x256 PNG, transparent",
-  "read": "Cranes + containers read as a trade structure",
-  "prompt": "A large trade-hub depot with gantry cranes, shipping containers and a rail spur. Three-quarter top-down billboard view of a large, imposing regional structure on a consistent footprint, grounded with a soft drop shadow. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: ash #4b515c with teal #3f9aa6 containers. Lighting: soft north-west key light with one long readable shadow. Background: transparent background (PNG alpha), nothing behind the structure. 256x256 PNG, transparent."
-}, {
-  "group": "Buildings — Allegiance",
-  "file": "public/assets/buildings/allegiance/radar.png",
-  "spec": "256x256 PNG, transparent",
-  "read": "Giant dish is an unmistakable radar silhouette",
-  "prompt": "A regional radar network station with a giant rotating dish on a mast. Three-quarter top-down billboard view of a large, imposing regional structure on a consistent footprint, grounded with a soft drop shadow. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: gunmetal #2a2f3a with sky #4a90d9 sweep. Lighting: soft north-west key light with one long readable shadow. Background: transparent background (PNG alpha), nothing behind the structure. 256x256 PNG, transparent."
-}, {
-  "group": "Buildings — Allegiance",
-  "file": "public/assets/buildings/allegiance/research.png",
-  "spec": "256x256 PNG, transparent",
-  "read": "Domes + antennas read as research",
-  "prompt": "A research center with low domes, antenna masts and lab wings. Three-quarter top-down billboard view of a large, imposing regional structure on a consistent footprint, grounded with a soft drop shadow. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: concrete #8b8f96 with toxic-green #6ee7a8. Lighting: soft north-west key light with one long readable shadow. Background: transparent background (PNG alpha), nothing behind the structure. 256x256 PNG, transparent."
-}, {
-  "group": "Buildings — Allegiance",
-  "file": "public/assets/buildings/allegiance/factory.png",
-  "spec": "256x256 PNG, transparent",
-  "read": "Repeated halls + stacks read as heavy industry at scale",
-  "prompt": "A large alliance factory complex with multiple assembly halls and smokestacks. Three-quarter top-down billboard view of a large, imposing regional structure on a consistent footprint, grounded with a soft drop shadow. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: gunmetal #2a2f3a with amber #f5b301. Lighting: soft north-west key light with one long readable shadow. Background: transparent background (PNG alpha), nothing behind the structure. 256x256 PNG, transparent."
-}, {
-  "group": "Buildings — Allegiance",
-  "file": "public/assets/buildings/allegiance/shield.png",
-  "spec": "256x256 PNG, transparent",
-  "read": "Pylons + faint blue dome read as area defense without glow spam",
-  "prompt": "A shield-network array of emitter pylons projecting a faint hex energy dome. Three-quarter top-down billboard view of a large, imposing regional structure on a consistent footprint, grounded with a soft drop shadow. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: ash #4b515c with sky #4a90d9 dome (restrained). Lighting: soft north-west key light with one long readable shadow. Background: transparent background (PNG alpha), nothing behind the structure. 256x256 PNG, transparent."
-}, {
-  "group": "Units",
-  "file": "public/assets/units/infantry.png",
-  "spec": "128x128 PNG, transparent, must read at 24px",
-  "read": "Soft organic blob of figures contrasts with hard vehicle outlines",
-  "prompt": "A small squad cluster of infantry soldiers with helmets and packs. Top-down map-token view, single centred unit with a clear distinct outline, slight drop shadow. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: olive #5c6347 with ash #4b515c. Lighting: soft top-down light, minimal shadow. Background: transparent background (PNG alpha). 128x128 PNG, transparent, must read at 24px."
-}, {
-  "group": "Units",
-  "file": "public/assets/units/tanks.png",
-  "spec": "128x128 PNG, transparent, must read at 24px",
-  "read": "Boxy hull + barrel is the clearest 24px armor silhouette",
-  "prompt": "A tracked main battle tank with turret and a long gun barrel. Top-down map-token view, single centred unit with a clear distinct outline, slight drop shadow. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: gunmetal #2a2f3a with olive #5c6347. Lighting: soft top-down light, minimal shadow. Background: transparent background (PNG alpha). 128x128 PNG, transparent, must read at 24px."
-}, {
-  "group": "Units",
-  "file": "public/assets/units/artillery.png",
-  "spec": "128x128 PNG, transparent, must read at 24px",
-  "read": "Extra-long raised barrel distinguishes it from a tank",
-  "prompt": "A self-propelled artillery piece with a long raised gun. Top-down map-token view, single centred unit with a clear distinct outline, slight drop shadow. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: ash #4b515c with amber #f5b301 muzzle. Lighting: soft top-down light, minimal shadow. Background: transparent background (PNG alpha). 128x128 PNG, transparent, must read at 24px."
-}, {
-  "group": "Units",
-  "file": "public/assets/units/aircraft.png",
-  "spec": "128x128 PNG, transparent, must read at 24px",
-  "read": "Wing delta is unmistakable from the ground units",
-  "prompt": "A swept-wing strike aircraft seen from above. Top-down map-token view, single centred unit with a clear distinct outline, slight drop shadow. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: gunmetal #2a2f3a with sky #4a90d9. Lighting: soft top-down light, minimal shadow. Background: transparent background (PNG alpha). 128x128 PNG, transparent, must read at 24px."
-}, {
-  "group": "Units",
-  "file": "public/assets/units/drones.png",
-  "spec": "128x128 PNG, transparent, must read at 24px",
-  "read": "X-shaped rotor frame reads as a drone instantly",
-  "prompt": "A quad recon drone with rotor booms seen from above. Top-down map-token view, single centred unit with a clear distinct outline, slight drop shadow. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: ash #4b515c with toxic-green #6ee7a8. Lighting: soft top-down light, minimal shadow. Background: transparent background (PNG alpha). 128x128 PNG, transparent, must read at 24px."
-}, {
-  "group": "Units",
-  "file": "public/assets/units/engineers.png",
-  "spec": "128x128 PNG, transparent, must read at 24px",
-  "read": "Dozer blade + tool kit reads as support/engineering",
-  "prompt": "An engineer sapper vehicle with a dozer blade and tools. Top-down map-token view, single centred unit with a clear distinct outline, slight drop shadow. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: olive #5c6347 with amber #f5b301 blade. Lighting: soft top-down light, minimal shadow. Background: transparent background (PNG alpha). 128x128 PNG, transparent, must read at 24px."
-}, {
-  "group": "Resources",
-  "file": "public/assets/resources/food.png",
-  "spec": "96x96 PNG, transparent, crisp at 24px",
-  "read": "Plain frame instantly signals the raw supply tier",
-  "prompt": "A bundled sheaf of grain, on a plain rounded-square chip with no frame ornament (tier: raw). Flat 2D front-facing icon, bold simple two-tone shapes plus one accent. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: gunmetal #2a2f3a and concrete #8b8f96 two-tone with amber #f5b301 accent. Lighting: flat even lighting, minimal shadow. Background: transparent background (PNG alpha) around the rounded-square chip. 96x96 PNG, transparent, crisp at 24px."
-}, {
-  "group": "Resources",
-  "file": "public/assets/resources/water.png",
-  "spec": "96x96 PNG, transparent, crisp at 24px",
-  "read": "Plain frame instantly signals the raw supply tier",
-  "prompt": "A single water droplet over a canteen, on a plain rounded-square chip with no frame ornament (tier: raw). Flat 2D front-facing icon, bold simple two-tone shapes plus one accent. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: gunmetal #2a2f3a and concrete #8b8f96 two-tone with sky #4a90d9 accent. Lighting: flat even lighting, minimal shadow. Background: transparent background (PNG alpha) around the rounded-square chip. 96x96 PNG, transparent, crisp at 24px."
-}, {
-  "group": "Resources",
-  "file": "public/assets/resources/wood.png",
-  "spec": "96x96 PNG, transparent, crisp at 24px",
-  "read": "Plain frame instantly signals the raw supply tier",
-  "prompt": "A short stack of cut logs, on a plain rounded-square chip with no frame ornament (tier: raw). Flat 2D front-facing icon, bold simple two-tone shapes plus one accent. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: gunmetal #2a2f3a and concrete #8b8f96 two-tone with dirt-brown #6b5840 accent. Lighting: flat even lighting, minimal shadow. Background: transparent background (PNG alpha) around the rounded-square chip. 96x96 PNG, transparent, crisp at 24px."
-}, {
-  "group": "Resources",
-  "file": "public/assets/resources/stone.png",
-  "spec": "96x96 PNG, transparent, crisp at 24px",
-  "read": "Plain frame instantly signals the raw supply tier",
-  "prompt": "A rough cut stone block, on a plain rounded-square chip with no frame ornament (tier: raw). Flat 2D front-facing icon, bold simple two-tone shapes plus one accent. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: gunmetal #2a2f3a and concrete #8b8f96 two-tone with concrete #8b8f96 accent. Lighting: flat even lighting, minimal shadow. Background: transparent background (PNG alpha) around the rounded-square chip. 96x96 PNG, transparent, crisp at 24px."
-}, {
-  "group": "Resources",
-  "file": "public/assets/resources/iron.png",
-  "spec": "96x96 PNG, transparent, crisp at 24px",
-  "read": "Plain frame instantly signals the raw supply tier",
-  "prompt": "A chunk of iron ore beside an ingot, on a plain rounded-square chip with no frame ornament (tier: raw). Flat 2D front-facing icon, bold simple two-tone shapes plus one accent. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: gunmetal #2a2f3a and concrete #8b8f96 two-tone with ash #4b515c accent. Lighting: flat even lighting, minimal shadow. Background: transparent background (PNG alpha) around the rounded-square chip. 96x96 PNG, transparent, crisp at 24px."
-}, {
-  "group": "Resources",
-  "file": "public/assets/resources/rareMinerals.png",
-  "spec": "96x96 PNG, transparent, crisp at 24px",
-  "read": "Plain frame instantly signals the raw supply tier",
-  "prompt": "A cluster of raw crystals, on a plain rounded-square chip with no frame ornament (tier: raw). Flat 2D front-facing icon, bold simple two-tone shapes plus one accent. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: gunmetal #2a2f3a and concrete #8b8f96 two-tone with violet #8b5cf6 accent. Lighting: flat even lighting, minimal shadow. Background: transparent background (PNG alpha) around the rounded-square chip. 96x96 PNG, transparent, crisp at 24px."
-}, {
-  "group": "Resources",
-  "file": "public/assets/resources/oil.png",
-  "spec": "96x96 PNG, transparent, crisp at 24px",
-  "read": "Plain frame instantly signals the raw supply tier",
-  "prompt": "A black oil barrel with a drop, on a plain rounded-square chip with no frame ornament (tier: raw). Flat 2D front-facing icon, bold simple two-tone shapes plus one accent. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: gunmetal #2a2f3a and concrete #8b8f96 two-tone with amber #f5b301 accent. Lighting: flat even lighting, minimal shadow. Background: transparent background (PNG alpha) around the rounded-square chip. 96x96 PNG, transparent, crisp at 24px."
-}, {
-  "group": "Resources",
-  "file": "public/assets/resources/dataChips.png",
-  "spec": "96x96 PNG, transparent, crisp at 24px",
-  "read": "Plain frame instantly signals the raw supply tier",
-  "prompt": "A salvaged microchip wafer, on a plain rounded-square chip with no frame ornament (tier: raw). Flat 2D front-facing icon, bold simple two-tone shapes plus one accent. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: gunmetal #2a2f3a and concrete #8b8f96 two-tone with toxic-green #6ee7a8 accent. Lighting: flat even lighting, minimal shadow. Background: transparent background (PNG alpha) around the rounded-square chip. 96x96 PNG, transparent, crisp at 24px."
-}, {
-  "group": "Resources",
-  "file": "public/assets/resources/fuel.png",
-  "spec": "96x96 PNG, transparent, crisp at 24px",
-  "read": "Bracketed frame instantly signals the intermediate supply tier",
-  "prompt": "A military jerrycan fuel can, on a rounded-square chip with bracketed corner marks (tier: intermediate). Flat 2D front-facing icon, bold simple two-tone shapes plus one accent. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: gunmetal #2a2f3a and concrete #8b8f96 two-tone with amber #f5b301 accent. Lighting: flat even lighting, minimal shadow. Background: transparent background (PNG alpha) around the rounded-square chip. 96x96 PNG, transparent, crisp at 24px."
-}, {
-  "group": "Resources",
-  "file": "public/assets/resources/steel.png",
-  "spec": "96x96 PNG, transparent, crisp at 24px",
-  "read": "Bracketed frame instantly signals the intermediate supply tier",
-  "prompt": "A polished steel I-beam, on a rounded-square chip with bracketed corner marks (tier: intermediate). Flat 2D front-facing icon, bold simple two-tone shapes plus one accent. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: gunmetal #2a2f3a and concrete #8b8f96 two-tone with concrete #8b8f96 accent. Lighting: flat even lighting, minimal shadow. Background: transparent background (PNG alpha) around the rounded-square chip. 96x96 PNG, transparent, crisp at 24px."
-}, {
-  "group": "Resources",
-  "file": "public/assets/resources/electronics.png",
-  "spec": "96x96 PNG, transparent, crisp at 24px",
-  "read": "Bracketed frame instantly signals the intermediate supply tier",
-  "prompt": "A small green circuit board, on a rounded-square chip with bracketed corner marks (tier: intermediate). Flat 2D front-facing icon, bold simple two-tone shapes plus one accent. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: gunmetal #2a2f3a and concrete #8b8f96 two-tone with toxic-green #6ee7a8 accent. Lighting: flat even lighting, minimal shadow. Background: transparent background (PNG alpha) around the rounded-square chip. 96x96 PNG, transparent, crisp at 24px."
-}, {
-  "group": "Resources",
-  "file": "public/assets/resources/machineParts.png",
-  "spec": "96x96 PNG, transparent, crisp at 24px",
-  "read": "Bracketed frame instantly signals the intermediate supply tier",
-  "prompt": "An interlocking gear and cog, on a rounded-square chip with bracketed corner marks (tier: intermediate). Flat 2D front-facing icon, bold simple two-tone shapes plus one accent. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: gunmetal #2a2f3a and concrete #8b8f96 two-tone with ash #4b515c accent. Lighting: flat even lighting, minimal shadow. Background: transparent background (PNG alpha) around the rounded-square chip. 96x96 PNG, transparent, crisp at 24px."
-}, {
-  "group": "Resources",
-  "file": "public/assets/resources/ammunition.png",
-  "spec": "96x96 PNG, transparent, crisp at 24px",
-  "read": "Bracketed frame instantly signals the intermediate supply tier",
-  "prompt": "A row of artillery shell rounds, on a rounded-square chip with bracketed corner marks (tier: intermediate). Flat 2D front-facing icon, bold simple two-tone shapes plus one accent. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: gunmetal #2a2f3a and concrete #8b8f96 two-tone with blood #9c2b2b accent. Lighting: flat even lighting, minimal shadow. Background: transparent background (PNG alpha) around the rounded-square chip. 96x96 PNG, transparent, crisp at 24px."
-}, {
-  "group": "Resources",
-  "file": "public/assets/resources/chemicals.png",
-  "spec": "96x96 PNG, transparent, crisp at 24px",
-  "read": "Bracketed frame instantly signals the intermediate supply tier",
-  "prompt": "A sealed chemical canister/flask, on a rounded-square chip with bracketed corner marks (tier: intermediate). Flat 2D front-facing icon, bold simple two-tone shapes plus one accent. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: gunmetal #2a2f3a and concrete #8b8f96 two-tone with toxic-green #6ee7a8 accent. Lighting: flat even lighting, minimal shadow. Background: transparent background (PNG alpha) around the rounded-square chip. 96x96 PNG, transparent, crisp at 24px."
-}, {
-  "group": "Resources",
-  "file": "public/assets/resources/rifles.png",
-  "spec": "96x96 PNG, transparent, crisp at 24px",
-  "read": "Badged frame instantly signals the finished supply tier",
-  "prompt": "A single service rifle, on a rounded-square chip with a bordered badge frame (tier: finished). Flat 2D front-facing icon, bold simple two-tone shapes plus one accent. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: gunmetal #2a2f3a and concrete #8b8f96 two-tone with ash #4b515c accent. Lighting: flat even lighting, minimal shadow. Background: transparent background (PNG alpha) around the rounded-square chip. 96x96 PNG, transparent, crisp at 24px."
-}, {
-  "group": "Resources",
-  "file": "public/assets/resources/tanks.png",
-  "spec": "96x96 PNG, transparent, crisp at 24px",
-  "read": "Badged frame instantly signals the finished supply tier",
-  "prompt": "A compact tank silhouette badge, on a rounded-square chip with a bordered badge frame (tier: finished). Flat 2D front-facing icon, bold simple two-tone shapes plus one accent. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: gunmetal #2a2f3a and concrete #8b8f96 two-tone with olive #5c6347 accent. Lighting: flat even lighting, minimal shadow. Background: transparent background (PNG alpha) around the rounded-square chip. 96x96 PNG, transparent, crisp at 24px."
-}, {
-  "group": "Resources",
-  "file": "public/assets/resources/drones.png",
-  "spec": "96x96 PNG, transparent, crisp at 24px",
-  "read": "Badged frame instantly signals the finished supply tier",
-  "prompt": "A finished recon drone badge, on a rounded-square chip with a bordered badge frame (tier: finished). Flat 2D front-facing icon, bold simple two-tone shapes plus one accent. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: gunmetal #2a2f3a and concrete #8b8f96 two-tone with sky #4a90d9 accent. Lighting: flat even lighting, minimal shadow. Background: transparent background (PNG alpha) around the rounded-square chip. 96x96 PNG, transparent, crisp at 24px."
-}, {
-  "group": "Resources",
-  "file": "public/assets/resources/aircraft.png",
-  "spec": "96x96 PNG, transparent, crisp at 24px",
-  "read": "Badged frame instantly signals the finished supply tier",
-  "prompt": "A finished strike aircraft badge, on a rounded-square chip with a bordered badge frame (tier: finished). Flat 2D front-facing icon, bold simple two-tone shapes plus one accent. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: gunmetal #2a2f3a and concrete #8b8f96 two-tone with sky #4a90d9 accent. Lighting: flat even lighting, minimal shadow. Background: transparent background (PNG alpha) around the rounded-square chip. 96x96 PNG, transparent, crisp at 24px."
-}, {
-  "group": "Resources",
-  "file": "public/assets/resources/turrets.png",
-  "spec": "96x96 PNG, transparent, crisp at 24px",
-  "read": "Badged frame instantly signals the finished supply tier",
-  "prompt": "A defensive turret emplacement, on a rounded-square chip with a bordered badge frame (tier: finished). Flat 2D front-facing icon, bold simple two-tone shapes plus one accent. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: gunmetal #2a2f3a and concrete #8b8f96 two-tone with ash #4b515c accent. Lighting: flat even lighting, minimal shadow. Background: transparent background (PNG alpha) around the rounded-square chip. 96x96 PNG, transparent, crisp at 24px."
-}, {
-  "group": "Resources",
-  "file": "public/assets/resources/buildingComponents.png",
-  "spec": "96x96 PNG, transparent, crisp at 24px",
-  "read": "Badged frame instantly signals the finished supply tier",
-  "prompt": "A bundle of prefab girders, on a rounded-square chip with a bordered badge frame (tier: finished). Flat 2D front-facing icon, bold simple two-tone shapes plus one accent. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: gunmetal #2a2f3a and concrete #8b8f96 two-tone with amber #f5b301 accent. Lighting: flat even lighting, minimal shadow. Background: transparent background (PNG alpha) around the rounded-square chip. 96x96 PNG, transparent, crisp at 24px."
-}, {
-  "group": "Commanders",
-  "file": "public/assets/commanders/portrait-1.png",
-  "spec": "512x512 PNG",
-  "read": "Recon-lit bust with strong jaw silhouette reads as a distinct named commander",
-  "prompt": "A weathered older male field commander, grey buzzcut, a scar across one brow, hard stare, diverse and grounded, no exaggeration. Bust portrait, shoulders-up, recon side-lighting, muted military fatigues. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: desaturated olive #5c6347 and gunmetal #2a2f3a fatigues, skin kept natural. Lighting: low-angle directional recon key light, deep but readable shadow. Background: neutral dark gunmetal #2a2f3a studio background, slight vignette. 512x512 PNG."
-}, {
-  "group": "Commanders",
-  "file": "public/assets/commanders/portrait-2.png",
-  "spec": "512x512 PNG",
-  "read": "Recon-lit bust with strong jaw silhouette reads as a distinct named commander",
-  "prompt": "A stern female officer with tied-back dark hair and a worn beret, calm and unflinching, diverse and grounded, no exaggeration. Bust portrait, shoulders-up, recon side-lighting, muted military fatigues. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: desaturated olive #5c6347 and gunmetal #2a2f3a fatigues, skin kept natural. Lighting: low-angle directional recon key light, deep but readable shadow. Background: neutral dark gunmetal #2a2f3a studio background, slight vignette. 512x512 PNG."
-}, {
-  "group": "Commanders",
-  "file": "public/assets/commanders/portrait-3.png",
-  "spec": "512x512 PNG",
-  "read": "Recon-lit bust with strong jaw silhouette reads as a distinct named commander",
-  "prompt": "A young male sergeant with stubble and a dented helmet, soot on his jaw, diverse and grounded, no exaggeration. Bust portrait, shoulders-up, recon side-lighting, muted military fatigues. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: desaturated olive #5c6347 and gunmetal #2a2f3a fatigues, skin kept natural. Lighting: low-angle directional recon key light, deep but readable shadow. Background: neutral dark gunmetal #2a2f3a studio background, slight vignette. 512x512 PNG."
-}, {
-  "group": "Commanders",
-  "file": "public/assets/commanders/portrait-4.png",
-  "spec": "512x512 PNG",
-  "read": "Recon-lit bust with strong jaw silhouette reads as a distinct named commander",
-  "prompt": "A veteran female colonel with cropped grey hair and a leather eyepatch, composed, diverse and grounded, no exaggeration. Bust portrait, shoulders-up, recon side-lighting, muted military fatigues. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: desaturated olive #5c6347 and gunmetal #2a2f3a fatigues, skin kept natural. Lighting: low-angle directional recon key light, deep but readable shadow. Background: neutral dark gunmetal #2a2f3a studio background, slight vignette. 512x512 PNG."
-}, {
-  "group": "Commanders",
-  "file": "public/assets/commanders/portrait-5.png",
-  "spec": "512x512 PNG",
-  "read": "Recon-lit bust with strong jaw silhouette reads as a distinct named commander",
-  "prompt": "A broad-shouldered male heavy-ops soldier, shaved head, goggles pushed up on his forehead, diverse and grounded, no exaggeration. Bust portrait, shoulders-up, recon side-lighting, muted military fatigues. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: desaturated olive #5c6347 and gunmetal #2a2f3a fatigues, skin kept natural. Lighting: low-angle directional recon key light, deep but readable shadow. Background: neutral dark gunmetal #2a2f3a studio background, slight vignette. 512x512 PNG."
-}, {
-  "group": "Commanders",
-  "file": "public/assets/commanders/portrait-6.png",
-  "spec": "512x512 PNG",
-  "read": "Recon-lit bust with strong jaw silhouette reads as a distinct named commander",
-  "prompt": "A sharp female intelligence officer with thin glasses and a comms headset, focused, diverse and grounded, no exaggeration. Bust portrait, shoulders-up, recon side-lighting, muted military fatigues. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: desaturated olive #5c6347 and gunmetal #2a2f3a fatigues, skin kept natural. Lighting: low-angle directional recon key light, deep but readable shadow. Background: neutral dark gunmetal #2a2f3a studio background, slight vignette. 512x512 PNG."
-}, {
-  "group": "Commanders",
-  "file": "public/assets/commanders/portrait-7.png",
-  "spec": "512x512 PNG",
-  "read": "Recon-lit bust with strong jaw silhouette reads as a distinct named commander",
-  "prompt": "A grizzled male tank commander, oil-smeared face, a battered field cap, mid-40s, diverse and grounded, no exaggeration. Bust portrait, shoulders-up, recon side-lighting, muted military fatigues. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: desaturated olive #5c6347 and gunmetal #2a2f3a fatigues, skin kept natural. Lighting: low-angle directional recon key light, deep but readable shadow. Background: neutral dark gunmetal #2a2f3a studio background, slight vignette. 512x512 PNG."
-}, {
-  "group": "Commanders",
-  "file": "public/assets/commanders/portrait-8.png",
-  "spec": "512x512 PNG",
-  "read": "Recon-lit bust with strong jaw silhouette reads as a distinct named commander",
-  "prompt": "A calm female drone pilot with short hair and a visor pushed up, level gaze, diverse and grounded, no exaggeration. Bust portrait, shoulders-up, recon side-lighting, muted military fatigues. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: desaturated olive #5c6347 and gunmetal #2a2f3a fatigues, skin kept natural. Lighting: low-angle directional recon key light, deep but readable shadow. Background: neutral dark gunmetal #2a2f3a studio background, slight vignette. 512x512 PNG."
-}, {
-  "group": "Commanders",
-  "file": "public/assets/commanders/frame-common.png",
-  "spec": "512x512 PNG, transparent center",
-  "read": "common tier signalled by the #8a92a3 accent; frame composites over any portrait",
-  "prompt": "An ornamented square military rank frame border (common rarity) with corner insignia and an empty transparent center, brushed steel. Front-facing square decorative frame, even thickness, hollow middle. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: gunmetal #2a2f3a metal with #8a92a3 common accent. Lighting: even frontal light. Background: transparent center and outside the frame (PNG alpha). 512x512 PNG, transparent center."
-}, {
-  "group": "Commanders",
-  "file": "public/assets/commanders/frame-rare.png",
-  "spec": "512x512 PNG, transparent center",
-  "read": "rare tier signalled by the #4a90d9 accent; frame composites over any portrait",
-  "prompt": "An ornamented square military rank frame border (rare rarity) with corner insignia and an empty transparent center, sky-blue trim. Front-facing square decorative frame, even thickness, hollow middle. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: gunmetal #2a2f3a metal with #4a90d9 rare accent. Lighting: even frontal light. Background: transparent center and outside the frame (PNG alpha). 512x512 PNG, transparent center."
-}, {
-  "group": "Commanders",
-  "file": "public/assets/commanders/frame-epic.png",
-  "spec": "512x512 PNG, transparent center",
-  "read": "epic tier signalled by the #8b5cf6 accent; frame composites over any portrait",
-  "prompt": "An ornamented square military rank frame border (epic rarity) with corner insignia and an empty transparent center, violet inlay. Front-facing square decorative frame, even thickness, hollow middle. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: gunmetal #2a2f3a metal with #8b5cf6 epic accent. Lighting: even frontal light. Background: transparent center and outside the frame (PNG alpha). 512x512 PNG, transparent center."
-}, {
-  "group": "Commanders",
-  "file": "public/assets/commanders/frame-legendary.png",
-  "spec": "512x512 PNG, transparent center",
-  "read": "legendary tier signalled by the #f5b301 accent; frame composites over any portrait",
-  "prompt": "An ornamented square military rank frame border (legendary rarity) with corner insignia and an empty transparent center, amber gilt. Front-facing square decorative frame, even thickness, hollow middle. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: gunmetal #2a2f3a metal with #f5b301 legendary accent. Lighting: even frontal light. Background: transparent center and outside the frame (PNG alpha). 512x512 PNG, transparent center."
-}, {
-  "group": "Brand & Key Art",
-  "file": "public/assets/brand/logo.svg",
-  "spec": "SVG vector lockup, ~ exported 1024x256 PNG preview",
-  "read": "Reads as a hard military mark at favicon size; convert the approved raster to clean SVG paths",
-  "prompt": "The WARLANDS horizontal logo lockup: a condensed industrial stencil-adjacent uppercase wordmark WARLANDS beside a compact angular mark (a stylised fortified hex or chevron blade). Flat 2D vector lockup, sharp geometry, single-weight, designed to vectorise cleanly. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: amber #f5b301 wordmark on transparent, optional blood #9c2b2b accent notch (2 accents max). Lighting: flat, no lighting. Background: transparent (deliver as SVG; this prompt is the raster design reference). SVG vector lockup, ~ exported 1024x256 PNG preview."
-}, {
-  "group": "Brand & Key Art",
-  "file": "public/assets/brand/mark.svg",
-  "spec": "SVG vector, ~512x512 PNG preview",
-  "read": "Must survive 16px favicon as a single readable silhouette",
-  "prompt": "The standalone WARLANDS icon mark only: a single bold angular emblem (fortified hex / chevron blade), no text. Flat 2D vector emblem, one solid silhouette, app-icon ready. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: amber #f5b301 on gunmetal #2a2f3a. Lighting: flat, no lighting. Background: transparent or solid gunmetal tile for app icon. SVG vector, ~512x512 PNG preview."
-}, {
-  "group": "Brand & Key Art",
-  "file": "public/assets/keyart/keyart.png",
-  "spec": "2560x1440 PNG",
-  "read": "Hero marketing frame; legible focal armies with negative space reserved for a headline",
-  "prompt": "Key art of THE CRUCIBLE: a contested central warzone hex at amber dusk, two armies of tracked armor and infantry converging, oil fires and black smoke, a radar dish sweeping, distant industrial skyline. Cinematic wide establishing shot, grounded painterly-but-realistic, low-angle recon light, headline space kept clear at upper-left (composition not centred). Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: desaturated gunmetal #2a2f3a world with amber #f5b301 dusk and blood #9c2b2b fire as the only accents. Lighting: low-angle warm key from the horizon, long dramatic shadows, diesel haze. Background: full-bleed scene, no transparency. 2560x1440 PNG."
-}, {
-  "group": "Brand & Key Art",
-  "file": "public/assets/brand/og.png",
-  "spec": "1200x630 PNG",
-  "read": "Stays legible as a 600px-wide thumbnail in a social feed",
-  "prompt": "Social share card: the WARLANDS wordmark over a tight crop of the Crucible warzone hex with converging armor and a single oil fire. Horizontal social-card composition, wordmark upper-left, subject lower-right, safe margins. Gritty militarized near-future dieselpunk, lightly stylized for readability (not photoreal); weathered PBR materials (rust, oil, poured concrete, cold steel, sandbags); subtle film grain; desaturated world where color is a sparse signal; strong clean silhouette readable as solid black at 32px. Negative: no neon cyberpunk, no fantasy or magic FX, no glossy mobile-cartoon gloss, no centered subject floating on a gradient, no rainbow palette, no lens flare, no AI-melted detail. Palette: gunmetal #2a2f3a with amber #f5b301 and blood #9c2b2b accents only. Lighting: moody dusk key light, light haze. Background: full-bleed, no transparency. 1200x630 PNG."
-}];
-})(); } catch (e) { __ds_ns.__errors.push({ path: "asset-prompts/assets-data.js", error: String((e && e.message) || e) }); }
-
 // components/core/Badge.jsx
 try { (() => {
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
-/**
- * WARLANDS Badge — compact status / ownership tag.
- * OWNED (amber), PROTOTYPE/enemy (blood), TIER (sky), etc.
- * Solid = strong signal; soft = tinted background with colored text.
- */
+const TONES = {
+  amber: {
+    solid: ["var(--amber)", "#0c0a04"],
+    soft: ["rgba(245,179,1,0.16)", "var(--amber-text)"]
+  },
+  blood: {
+    solid: ["var(--danger-strong)", "#fff"],
+    soft: ["rgba(156,43,43,0.28)", "var(--blood-text)"]
+  },
+  sky: {
+    solid: ["var(--sky)", "#06121f"],
+    soft: ["rgba(74,144,217,0.18)", "var(--sky-text)"]
+  },
+  emerald: {
+    solid: ["#15803d", "#eafff2"],
+    soft: ["rgba(52,211,153,0.16)", "var(--emerald-text)"]
+  },
+  violet: {
+    solid: ["var(--violet)", "#0c0a14"],
+    soft: ["rgba(139,92,246,0.2)", "var(--violet-text)"]
+  },
+  teal: {
+    solid: ["var(--teal)", "#04161a"],
+    soft: ["rgba(63,154,166,0.2)", "var(--teal-text)"]
+  },
+  neutral: {
+    solid: ["var(--surface-raised)", "var(--text-primary)"],
+    soft: ["rgba(255,255,255,0.06)", "var(--text-secondary)"]
+  }
+};
+
+/** Compact uppercase status / ownership tag (OWNED, PROTOTYPE, TIER 3, SHIELDED). */
 function Badge({
   children,
   tone = "amber",
@@ -467,37 +51,7 @@ function Badge({
   style,
   ...rest
 }) {
-  const tones = {
-    amber: {
-      solid: ["var(--amber)", "#0c0a04"],
-      soft: ["rgba(245,179,1,0.16)", "var(--amber-text)"]
-    },
-    blood: {
-      solid: ["var(--danger-strong)", "#fff"],
-      soft: ["rgba(156,43,43,0.28)", "var(--blood-text)"]
-    },
-    sky: {
-      solid: ["var(--sky)", "#06121f"],
-      soft: ["rgba(74,144,217,0.18)", "var(--sky-text)"]
-    },
-    emerald: {
-      solid: ["#15803d", "#eafff2"],
-      soft: ["rgba(52,211,153,0.16)", "var(--emerald-text)"]
-    },
-    violet: {
-      solid: ["var(--violet)", "#0c0a14"],
-      soft: ["rgba(139,92,246,0.2)", "var(--violet-text)"]
-    },
-    teal: {
-      solid: ["var(--teal)", "#04161a"],
-      soft: ["rgba(63,154,166,0.2)", "var(--teal-text)"]
-    },
-    neutral: {
-      solid: ["var(--surface-raised)", "var(--text-primary)"],
-      soft: ["rgba(255,255,255,0.06)", "var(--text-secondary)"]
-    }
-  };
-  const [bg, fg] = (tones[tone] || tones.amber)[variant] || tones.amber.soft;
+  const [bg, fg] = TONES[tone][variant];
   return /*#__PURE__*/React.createElement("span", _extends({
     style: {
       display: "inline-flex",
@@ -506,7 +60,7 @@ function Badge({
       padding: "2px 7px",
       fontFamily: "var(--font-ui)",
       fontSize: "10px",
-      fontWeight: "var(--fw-semibold)",
+      fontWeight: 600,
       letterSpacing: "0.06em",
       textTransform: "uppercase",
       lineHeight: 1.4,
@@ -516,7 +70,7 @@ function Badge({
       whiteSpace: "nowrap",
       ...style
     }
-  }, rest), icon && /*#__PURE__*/React.createElement("span", {
+  }, rest), icon != null && /*#__PURE__*/React.createElement("span", {
     "aria-hidden": "true"
   }, icon), children);
 }
@@ -526,126 +80,120 @@ Object.assign(__ds_scope, { Badge });
 // components/core/Button.jsx
 try { (() => {
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
+const SIZES = {
+  sm: {
+    padding: "4px 10px",
+    fontSize: "11px",
+    gap: "5px",
+    borderRadius: "var(--radius-sm)"
+  },
+  md: {
+    padding: "8px 14px",
+    fontSize: "13px",
+    gap: "6px",
+    borderRadius: "var(--radius-sm)"
+  },
+  lg: {
+    padding: "11px 18px",
+    fontSize: "14px",
+    gap: "8px",
+    borderRadius: "var(--radius-md)"
+  }
+};
+const PALETTES = {
+  primary: {
+    bg: "var(--cta-bg)",
+    bgHover: "var(--cta-bg-hover)",
+    fg: "var(--cta-fg)",
+    border: "transparent"
+  },
+  secondary: {
+    bg: "var(--surface-raised)",
+    bgHover: "#222b3d",
+    fg: "var(--text-primary)",
+    border: "var(--hairline)"
+  },
+  danger: {
+    bg: "var(--danger-strong)",
+    bgHover: "#ef4444",
+    fg: "#fff",
+    border: "transparent"
+  },
+  info: {
+    bg: "var(--sky)",
+    bgHover: "#5a9ee0",
+    fg: "#06121f",
+    border: "transparent"
+  },
+  success: {
+    bg: "#15803d",
+    bgHover: "#16a34a",
+    fg: "#eafff2",
+    border: "transparent"
+  },
+  ghost: {
+    bg: "transparent",
+    bgHover: "rgba(255,255,255,0.05)",
+    fg: "var(--text-secondary)",
+    border: "transparent"
+  },
+  outline: {
+    bg: "transparent",
+    bgHover: "rgba(245,179,1,0.08)",
+    fg: "var(--amber-text)",
+    border: "rgba(245,179,1,0.4)"
+  }
+};
+
 /**
- * WARLANDS Button — the tactical action control.
- * Primary actions are amber with near-black text (the "$WAR / claim" CTA);
- * secondary/ghost recede; danger is blood-red; info is sky.
+ * Tactical action control. Amber `primary` is the claim / $WAR CTA.
+ * WARLANDS uses emoji as functional icons — pass one to `icon`.
  */
 function Button({
   children,
   variant = "primary",
   size = "md",
   icon,
-  disabled = false,
   full = false,
+  disabled = false,
   type = "button",
-  onClick,
   style,
   ...rest
 }) {
   const [hover, setHover] = React.useState(false);
-  const sizes = {
-    sm: {
-      padding: "4px 10px",
-      fontSize: "11px",
-      gap: "5px",
-      radius: "var(--radius-sm)"
-    },
-    md: {
-      padding: "8px 14px",
-      fontSize: "13px",
-      gap: "6px",
-      radius: "var(--radius-sm)"
-    },
-    lg: {
-      padding: "11px 18px",
-      fontSize: "14px",
-      gap: "8px",
-      radius: "var(--radius-md)"
-    }
-  };
-  const palettes = {
-    primary: {
-      bg: "var(--amber)",
-      bgHover: "var(--cta-bg-hover)",
-      fg: "var(--cta-fg)",
-      border: "transparent"
-    },
-    secondary: {
-      bg: "var(--surface-raised)",
-      bgHover: "#222b3d",
-      fg: "var(--text-primary)",
-      border: "var(--hairline)"
-    },
-    danger: {
-      bg: "var(--danger-strong)",
-      bgHover: "#ef4444",
-      fg: "#fff",
-      border: "transparent"
-    },
-    info: {
-      bg: "var(--sky)",
-      bgHover: "#5a9ee0",
-      fg: "#06121f",
-      border: "transparent"
-    },
-    success: {
-      bg: "#15803d",
-      bgHover: "#16a34a",
-      fg: "#eafff2",
-      border: "transparent"
-    },
-    ghost: {
-      bg: "transparent",
-      bgHover: "rgba(255,255,255,0.05)",
-      fg: "var(--text-secondary)",
-      border: "transparent"
-    },
-    outline: {
-      bg: "transparent",
-      bgHover: "rgba(245,179,1,0.08)",
-      fg: "var(--amber-text)",
-      border: "rgba(245,179,1,0.4)"
-    }
-  };
-  const s = sizes[size] || sizes.md;
-  const p = palettes[variant] || palettes.primary;
-  const base = {
-    display: full ? "flex" : "inline-flex",
-    width: full ? "100%" : "auto",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: s.gap,
-    padding: s.padding,
-    fontFamily: "var(--font-ui)",
-    fontSize: s.fontSize,
-    fontWeight: "var(--fw-semibold)",
-    lineHeight: 1,
-    letterSpacing: "0.01em",
-    color: disabled ? "var(--text-muted)" : p.fg,
-    background: disabled ? "var(--disabled)" : hover ? p.bgHover : p.bg,
-    border: `1px solid ${disabled ? "transparent" : p.border}`,
-    borderRadius: s.radius,
-    cursor: disabled ? "not-allowed" : "pointer",
-    transition: "background var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out)",
-    transform: hover && !disabled ? "translateY(-1px)" : "none",
-    userSelect: "none",
-    whiteSpace: "nowrap",
-    ...style
-  };
+  const s = SIZES[size];
+  const p = PALETTES[variant];
   return /*#__PURE__*/React.createElement("button", _extends({
     type: type,
     disabled: disabled,
-    onClick: onClick,
     onMouseEnter: () => setHover(true),
     onMouseLeave: () => setHover(false),
-    style: base
-  }, rest), icon && /*#__PURE__*/React.createElement("span", {
+    style: {
+      display: full ? "flex" : "inline-flex",
+      width: full ? "100%" : "auto",
+      alignItems: "center",
+      justifyContent: "center",
+      ...s,
+      fontFamily: "var(--font-ui)",
+      fontWeight: 600,
+      lineHeight: 1,
+      letterSpacing: "0.01em",
+      color: disabled ? "var(--text-muted)" : p.fg,
+      background: disabled ? "var(--disabled)" : hover ? p.bgHover : p.bg,
+      border: `1px solid ${disabled ? "transparent" : p.border}`,
+      cursor: disabled ? "not-allowed" : "pointer",
+      transition: "background var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out)",
+      transform: hover && !disabled ? "translateY(-1px)" : "none",
+      userSelect: "none",
+      whiteSpace: "nowrap",
+      ...style
+    }
+  }, rest), icon != null && /*#__PURE__*/React.createElement("span", {
+    "aria-hidden": "true",
     style: {
       fontSize: "1.05em",
       lineHeight: 1
-    },
-    "aria-hidden": "true"
+    }
   }, icon), children);
 }
 Object.assign(__ds_scope, { Button });
@@ -654,12 +202,14 @@ Object.assign(__ds_scope, { Button });
 // components/core/Panel.jsx
 try { (() => {
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
-/**
- * WARLANDS Panel — the bordered dark surface that frames every group of
- * controls (the rounded-lg border + panel background used across the HUD).
- * Optional ALL-CAPS title and an accent rim (e.g. amber for "your" panels,
- * blood for hostile-camp panels).
- */
+const RIMS = {
+  amber: "rgba(245,179,1,0.3)",
+  blood: "rgba(220,38,38,0.3)",
+  sky: "rgba(74,144,217,0.3)",
+  emerald: "rgba(52,211,153,0.3)"
+};
+
+/** Dark bordered surface that frames a group of HUD controls. */
 function Panel({
   children,
   title,
@@ -667,22 +217,17 @@ function Panel({
   accent,
   rim,
   padding = "16px",
-  style,
   headerRight,
+  style,
   ...rest
 }) {
-  const rimColor = {
-    amber: "rgba(245,179,1,0.3)",
-    blood: "rgba(220,38,38,0.3)",
-    sky: "rgba(74,144,217,0.3)",
-    emerald: "rgba(52,211,153,0.3)"
-  }[rim];
+  const rimColor = rim ? RIMS[rim] : undefined;
   return /*#__PURE__*/React.createElement("section", _extends({
     style: {
       background: "var(--surface-card)",
       border: `1px solid ${rimColor || "var(--border-default)"}`,
       borderRadius: "var(--radius-lg)",
-      boxShadow: "var(--shadow-1), var(--edge-inset)",
+      boxShadow: "var(--shadow-1)",
       overflow: "hidden",
       ...style
     }
@@ -696,12 +241,11 @@ function Panel({
       background: "rgba(0,0,0,0.18)"
     }
   }, /*#__PURE__*/React.createElement("span", {
+    className: "wl-title",
     style: {
-      fontFamily: "var(--font-display)",
       fontSize: title ? "13px" : "10px",
-      fontWeight: "var(--fw-semibold)",
+      fontWeight: 600,
       letterSpacing: "0.1em",
-      textTransform: "uppercase",
       color: accent ? "var(--amber-text)" : "var(--text-secondary)"
     }
   }, title || label), headerRight), /*#__PURE__*/React.createElement("div", {
@@ -713,73 +257,9 @@ function Panel({
 Object.assign(__ds_scope, { Panel });
 })(); } catch (e) { __ds_ns.__errors.push({ path: "components/core/Panel.jsx", error: String((e && e.message) || e) }); }
 
-// components/core/Stat.jsx
+// components/core/ProgressBar.jsx
 try { (() => {
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
-/**
- * WARLANDS Stat — a labelled numeric readout, as used in the top resource bar.
- * Micro uppercase label + a mono, tabular value tinted by accent. Numbers are
- * ALWAYS monospace in WARLANDS (resource counts, prices, timers, power).
- */
-const ACCENTS = {
-  amber: "var(--amber-text)",
-  blood: "var(--blood-text)",
-  sky: "var(--sky-text)",
-  emerald: "var(--emerald-text)",
-  violet: "var(--violet-text)",
-  teal: "var(--teal-text)",
-  neutral: "var(--text-secondary)"
-};
-function Stat({
-  label,
-  value,
-  accent = "neutral",
-  align = "row",
-  size = "md",
-  style,
-  ...rest
-}) {
-  const valueSize = size === "lg" ? "18px" : size === "sm" ? "12px" : "14px";
-  const isStacked = align === "stack";
-  return /*#__PURE__*/React.createElement("div", _extends({
-    style: {
-      display: "flex",
-      flexDirection: isStacked ? "column" : "row",
-      alignItems: isStacked ? "flex-start" : "baseline",
-      gap: isStacked ? "2px" : "6px",
-      ...style
-    }
-  }, rest), /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: "10px",
-      fontWeight: "var(--fw-semibold)",
-      letterSpacing: "0.08em",
-      textTransform: "uppercase",
-      color: "var(--text-muted)",
-      whiteSpace: "nowrap"
-    }
-  }, label), /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontFamily: "var(--font-mono)",
-      fontVariantNumeric: "tabular-nums",
-      fontWeight: "var(--fw-semibold)",
-      fontSize: valueSize,
-      color: ACCENTS[accent] || ACCENTS.neutral,
-      lineHeight: 1.1
-    }
-  }, value));
-}
-Object.assign(__ds_scope, { Stat });
-})(); } catch (e) { __ds_ns.__errors.push({ path: "components/core/Stat.jsx", error: String((e && e.message) || e) }); }
-
-// components/game/ProgressBar.jsx
-try { (() => {
-function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
-/**
- * WARLANDS ProgressBar — season timer, upkeep, defense, build queue.
- * Thin track on a sunken surface; fill tinted by tone. Optional label row
- * with a mono value (e.g. "62%" or "48s remaining").
- */
 const TONES = {
   amber: "var(--amber)",
   blood: "var(--danger-strong)",
@@ -787,6 +267,8 @@ const TONES = {
   emerald: "var(--success)",
   violet: "var(--violet)"
 };
+
+/** Thin progress track — season timer, upkeep, defense %, build / train queue. */
 function ProgressBar({
   value = 0,
   max = 100,
@@ -803,25 +285,18 @@ function ProgressBar({
       width: "100%",
       ...style
     }
-  }, rest), (label || valueText) && /*#__PURE__*/React.createElement("div", {
+  }, rest), (label != null || valueText != null) && /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       justifyContent: "space-between",
       alignItems: "baseline",
       marginBottom: "5px"
     }
-  }, label && /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: "10px",
-      fontWeight: "var(--fw-semibold)",
-      letterSpacing: "0.08em",
-      textTransform: "uppercase",
-      color: "var(--text-muted)"
-    }
+  }, label != null && /*#__PURE__*/React.createElement("span", {
+    className: "wl-label"
   }, label), valueText != null && /*#__PURE__*/React.createElement("span", {
+    className: "wl-num",
     style: {
-      fontFamily: "var(--font-mono)",
-      fontVariantNumeric: "tabular-nums",
       fontSize: "11px",
       color: "var(--text-secondary)"
     }
@@ -842,24 +317,34 @@ function ProgressBar({
     style: {
       height: "100%",
       width: `${pct}%`,
-      background: TONES[tone] || TONES.amber,
+      background: TONES[tone],
       borderRadius: "var(--radius-pill)",
       transition: "width var(--dur) var(--ease-out)"
     }
   })));
 }
 Object.assign(__ds_scope, { ProgressBar });
-})(); } catch (e) { __ds_ns.__errors.push({ path: "components/game/ProgressBar.jsx", error: String((e && e.message) || e) }); }
+})(); } catch (e) { __ds_ns.__errors.push({ path: "components/core/ProgressBar.jsx", error: String((e && e.message) || e) }); }
 
-// components/game/ResourceChip.jsx
+// components/core/ResourceChip.jsx
 try { (() => {
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
-/**
- * WARLANDS ResourceChip — an icon + name + mono amount, the atom of the
- * stockpile, recipes, loot and order-book. Tier sets a frame treatment:
- * raw = plain, intermediate = bracketed (hairline), finished = badged
- * (amber edge). Never rely on color alone — the emoji icon carries identity.
- */
+const FRAMES = {
+  raw: {
+    border: "1px solid var(--hairline)",
+    background: "rgba(255,255,255,0.03)"
+  },
+  intermediate: {
+    border: "1px solid var(--border-strong)",
+    background: "var(--surface-raised)"
+  },
+  finished: {
+    border: "1px solid rgba(245,179,1,0.35)",
+    background: "rgba(245,179,1,0.06)"
+  }
+};
+
+/** Resource pill — icon + name + mono amount. The atom of stockpile / recipes / loot. */
 function ResourceChip({
   icon,
   name,
@@ -869,34 +354,18 @@ function ResourceChip({
   style,
   ...rest
 }) {
-  const frames = {
-    raw: {
-      border: "1px solid var(--hairline)",
-      background: "rgba(255,255,255,0.03)"
-    },
-    intermediate: {
-      border: "1px solid var(--border-strong)",
-      background: "var(--surface-raised)"
-    },
-    finished: {
-      border: "1px solid rgba(245,179,1,0.35)",
-      background: "rgba(245,179,1,0.06)"
-    }
-  };
-  const pad = size === "sm" ? "3px 7px" : "5px 9px";
-  const fs = size === "sm" ? "11px" : "12px";
   return /*#__PURE__*/React.createElement("span", _extends({
     style: {
       display: "inline-flex",
       alignItems: "center",
       justifyContent: "space-between",
       gap: "8px",
-      padding: pad,
+      padding: size === "sm" ? "3px 7px" : "5px 9px",
       borderRadius: "var(--radius-sm)",
       fontFamily: "var(--font-ui)",
-      fontSize: fs,
+      fontSize: size === "sm" ? "11px" : "12px",
       color: "var(--text-secondary)",
-      ...(frames[tier] || frames.raw),
+      ...FRAMES[tier],
       ...style
     }
   }, rest), /*#__PURE__*/React.createElement("span", {
@@ -909,34 +378,82 @@ function ResourceChip({
   }, /*#__PURE__*/React.createElement("span", {
     "aria-hidden": "true",
     style: {
-      fontSize: "1.05em"
+      fontSize: "1.05em",
+      display: "inline-flex",
+      alignItems: "center"
     }
-  }, icon), name && /*#__PURE__*/React.createElement("span", {
+  }, icon), name != null && /*#__PURE__*/React.createElement("span", {
     style: {
       color: "var(--text-primary)"
     }
   }, name)), amount != null && /*#__PURE__*/React.createElement("span", {
+    className: "wl-num",
     style: {
-      fontFamily: "var(--font-mono)",
-      fontVariantNumeric: "tabular-nums",
       color: "var(--text-hi)",
-      fontWeight: "var(--fw-medium)"
+      fontWeight: 500
     }
   }, amount));
 }
 Object.assign(__ds_scope, { ResourceChip });
-})(); } catch (e) { __ds_ns.__errors.push({ path: "components/game/ResourceChip.jsx", error: String((e && e.message) || e) }); }
+})(); } catch (e) { __ds_ns.__errors.push({ path: "components/core/ResourceChip.jsx", error: String((e && e.message) || e) }); }
 
-// components/game/Tabs.jsx
+// components/core/Stat.jsx
 try { (() => {
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
-/**
- * WARLANDS Tabs — the primary view switcher (World · Market · Allegiance ·
- * Season). Active tab is solid amber with near-black text; inactive tabs are
- * muted and lift on hover. Tabs carry an emoji icon.
- */
+const ACCENTS = {
+  amber: "var(--amber-text)",
+  blood: "var(--blood-text)",
+  sky: "var(--sky-text)",
+  emerald: "var(--emerald-text)",
+  violet: "var(--violet-text)",
+  teal: "var(--teal-text)",
+  neutral: "var(--text-secondary)"
+};
+
+/** Labelled mono numeric readout for the resource bar & dashboards. */
+function Stat({
+  label,
+  value,
+  accent = "neutral",
+  align = "row",
+  size = "md",
+  style,
+  ...rest
+}) {
+  const valueSize = size === "lg" ? "18px" : size === "sm" ? "12px" : "14px";
+  const stacked = align === "stack";
+  return /*#__PURE__*/React.createElement("div", _extends({
+    style: {
+      display: "flex",
+      flexDirection: stacked ? "column" : "row",
+      alignItems: stacked ? "flex-start" : "baseline",
+      gap: stacked ? "2px" : "6px",
+      ...style
+    }
+  }, rest), /*#__PURE__*/React.createElement("span", {
+    className: "wl-label",
+    style: {
+      whiteSpace: "nowrap"
+    }
+  }, label), /*#__PURE__*/React.createElement("span", {
+    className: "wl-num",
+    style: {
+      fontWeight: 600,
+      fontSize: valueSize,
+      color: ACCENTS[accent],
+      lineHeight: 1.1
+    }
+  }, value));
+}
+Object.assign(__ds_scope, { Stat });
+})(); } catch (e) { __ds_ns.__errors.push({ path: "components/core/Stat.jsx", error: String((e && e.message) || e) }); }
+
+// components/core/Tabs.jsx
+try { (() => {
+function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
+/** Primary view switcher — active tab is solid amber on near-black. */
 function Tabs({
-  tabs = [],
+  tabs,
   value,
   onChange,
   style,
@@ -950,6 +467,7 @@ function Tabs({
       padding: "6px 12px",
       borderBottom: "1px solid var(--border-default)",
       background: "var(--bg-app)",
+      overflowX: "auto",
       ...style
     }
   }, rest), tabs.map(t => {
@@ -957,7 +475,7 @@ function Tabs({
     const isHover = hover === t.id && !active;
     return /*#__PURE__*/React.createElement("button", {
       key: t.id,
-      onClick: () => onChange && onChange(t.id),
+      onClick: () => onChange?.(t.id),
       onMouseEnter: () => setHover(t.id),
       onMouseLeave: () => setHover(null),
       style: {
@@ -969,661 +487,709 @@ function Tabs({
         borderRadius: "var(--radius-sm)",
         fontFamily: "var(--font-ui)",
         fontSize: "12px",
-        fontWeight: "var(--fw-semibold)",
+        fontWeight: 600,
         cursor: "pointer",
         whiteSpace: "nowrap",
-        color: active ? "#0c0a04" : isHover ? "var(--text-primary)" : "var(--text-secondary)",
-        background: active ? "var(--amber)" : isHover ? "var(--surface-raised)" : "transparent",
+        color: active ? "var(--cta-fg)" : isHover ? "var(--text-primary)" : "var(--text-secondary)",
+        background: active ? "var(--cta-bg)" : isHover ? "var(--surface-raised)" : "transparent",
         transition: "background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out)"
       }
-    }, t.icon && /*#__PURE__*/React.createElement("span", {
+    }, t.icon != null && /*#__PURE__*/React.createElement("span", {
       "aria-hidden": "true"
     }, t.icon), t.label);
   }));
 }
 Object.assign(__ds_scope, { Tabs });
-})(); } catch (e) { __ds_ns.__errors.push({ path: "components/game/Tabs.jsx", error: String((e && e.message) || e) }); }
+})(); } catch (e) { __ds_ns.__errors.push({ path: "components/core/Tabs.jsx", error: String((e && e.message) || e) }); }
 
-// ui_kits/warlands-game/App.jsx
+// ui_kits/warroom/app.js
 try { (() => {
-/* WARLANDS UI kit — game shell orchestrator. */
-const R = 4;
-function GameShell() {
-  const {
-    TERRAIN,
-    BUILD,
-    RES,
-    fmt
-  } = window.WL;
-  const hexes = React.useMemo(() => window.WL.buildWorld(R), []);
-  const [view, setView] = React.useState("map");
-  const [selected, setSelected] = React.useState(null);
-  const [plots, setPlots] = React.useState({});
-  const [defeated, setDefeated] = React.useState({});
-  const [war, setWar] = React.useState(85000);
-  const [staked, setStaked] = React.useState(0);
-  const [burned, setBurned] = React.useState(0);
-  const [pool, setPool] = React.useState(4200);
-  const [tick, setTick] = React.useState(128);
-  const [log, setLog] = React.useState(["Welcome, Commander. Claim your first plot to begin.", "Hostile camps seeded toward the Crucible (💀)."]);
-  const push = line => setLog(l => [line, ...l].slice(0, 30));
+// WARLANDS War Room — root shell: state, toasts, resource tick, tab routing.
+const DSr = window.WARLANDSDesignSystem_2e7699;
+const {
+  Tabs: TabsR
+} = DSr;
+const {
+  TopBar,
+  HexMap
+} = window.WL_SCREENS;
+const {
+  PlotPanel,
+  MarketPanel,
+  ArmyPanel,
+  PlaceholderPanel
+} = window.WL_PANELS;
+const {
+  buildWorld,
+  TERRAIN: TT,
+  BUILDINGS: BB
+} = window.WL_DATA;
+const {
+  useState: uS,
+  useEffect: uE,
+  useMemo: uM,
+  useRef: uR
+} = React;
+const TABS = [{
+  id: "map",
+  label: "World",
+  icon: "🗺️"
+}, {
+  id: "market",
+  label: "Market",
+  icon: "💱"
+}, {
+  id: "army",
+  label: "Army",
+  icon: "🎖️"
+}, {
+  id: "allegiance",
+  label: "Allegiance",
+  icon: "🤝"
+}, {
+  id: "season",
+  label: "Season",
+  icon: "🏆"
+}, {
+  id: "shop",
+  label: "Shop",
+  icon: "🔗"
+}];
+function WarRoom() {
+  const hexes0 = uM(() => {
+    const hs = buildWorld(4);
+    // mark a couple inner hexes hostile
+    const enemyKeys = new Set(["1,-2", "-1,1", "2,0"]);
+    hs.forEach(h => {
+      if (enemyKeys.has(h.key)) h.enemy = true;
+    });
+    return hs;
+  }, []);
 
-  // gentle tick so the HUD feels alive
-  React.useEffect(() => {
-    const id = setInterval(() => setTick(t => t + 1), 2200);
+  // starting owned cluster on the safe outer rings
+  const startPlots = uM(() => {
+    const ring3 = hexes0.filter(h => h.ring === 3 && !h.enemy).slice(0, 2);
+    const out = {};
+    ring3.forEach((h, i) => {
+      out[h.key] = {
+        terrain: h.terrain,
+        buildings: i === 0 ? [{
+          id: "farm",
+          level: 2
+        }, {
+          id: "lumberCamp",
+          level: 1
+        }] : [{
+          id: "ironMine",
+          level: 1
+        }],
+        resources: i === 0 ? {
+          food: 340,
+          wood: 120
+        } : {
+          iron: 86
+        },
+        defensePct: i === 0 ? 72 : 48
+      };
+    });
+    return out;
+  }, [hexes0]);
+  const [war, setWar] = uS(80000);
+  const [staked, setStaked] = uS(45000);
+  const [burned, setBurned] = uS(6540);
+  const [pool] = uS(312900);
+  const [plots, setPlots] = uS(startPlots);
+  const [army, setArmy] = uS({
+    infantry: 12,
+    tanks: 3
+  });
+  const [selected, setSelected] = uS(Object.keys(startPlots)[0] || null);
+  const [view, setView] = uS("map");
+  const [toast, setToast] = uS(null);
+  const flash = (msg, tone = "amber") => {
+    setToast({
+      msg,
+      tone
+    });
+    clearTimeout(window.__wlt);
+    window.__wlt = setTimeout(() => setToast(null), 2200);
+  };
+
+  // resource tick — collectors fill up (juice)
+  uE(() => {
+    const id = setInterval(() => {
+      setPlots(p => {
+        const next = {
+          ...p
+        };
+        for (const k of Object.keys(next)) {
+          const pl = next[k];
+          if (!pl.buildings.length) continue;
+          const res = {
+            ...pl.resources
+          };
+          pl.buildings.forEach(b => {
+            const bd = BB.find(x => x.id === b.id);
+            if (bd && bd.makes) res[bd.makes] = Math.min(2000, (res[bd.makes] || 0) + b.level * 1.5);
+          });
+          next[k] = {
+            ...pl,
+            resources: res
+          };
+        }
+        return next;
+      });
+    }, 1200);
     return () => clearInterval(id);
   }, []);
-  const hex = selected ? hexes.find(h => h.key === selected) : null;
-  const plot = selected ? plots[selected] : null;
-  function claim(h) {
-    const def = TERRAIN[h.terrain];
+  const selHex = hexes0.find(h => h.key === selected);
+  const selPlot = selected ? plots[selected] : null;
+  const claim = hex => {
+    const def = TT[hex.terrain];
     if (war < def.stake) return;
     setWar(w => w - def.stake);
     setStaked(s => s + def.stake);
     setPlots(p => ({
       ...p,
-      [h.key]: {
-        terrain: h.terrain,
-        name: `${def.name.split(" ")[0]} Outpost`,
-        claimIndex: Object.keys(p).length + 1,
-        defense: Math.round(def.def * 60),
-        buildings: ["camp"],
-        stock: {
-          food: 120,
-          wood: 80
-        }
+      [hex.key]: {
+        terrain: hex.terrain,
+        buildings: [],
+        resources: {},
+        defensePct: 50
       }
     }));
-    push(`🏕️ Claimed ${def.name} at (${h.q}, ${h.r}) — staked ${fmt(def.stake)} $WAR.`);
-  }
-  function buildOn(key, id) {
-    if (war < BUILD[id].cost) return;
-    setWar(w => w - BUILD[id].cost);
+    flash(`Claimed ${def.name} · staked ${Math.floor(def.stake).toLocaleString()} $WAR`);
+  };
+  const build = (key, bd) => {
+    if (war < bd.cost) return;
+    setWar(w => w - bd.cost);
+    setBurned(b => b + Math.round(bd.cost * 0.2));
     setPlots(p => ({
       ...p,
       [key]: {
         ...p[key],
-        buildings: [...p[key].buildings, id]
+        buildings: [...p[key].buildings, {
+          id: bd.id,
+          level: 1
+        }]
       }
     }));
-    push(`🔨 Built ${BUILD[id].n}.`);
-  }
-  function unstake(key) {
-    const def = TERRAIN[plots[key].terrain];
-    const ret = Math.round(def.stake * 0.97);
-    const fee = def.stake - ret;
-    setWar(w => w + ret);
-    setStaked(s => s - def.stake);
-    setBurned(b => b + Math.round(fee / 2));
-    setPool(p => p + Math.round(fee / 2));
+    flash(`Built ${bd.name}`, "emerald");
+  };
+  const upgrade = (key, i) => {
     setPlots(p => {
-      const n = {
-        ...p
+      const pl = p[key];
+      const b = pl.buildings[i];
+      const bd = BB.find(x => x.id === b.id);
+      const cost = Math.round(bd.cost * Math.pow(1.6, b.level));
+      if (war < cost) return p;
+      setWar(w => w - cost);
+      setBurned(x => x + Math.round(cost * 0.2));
+      const buildings = pl.buildings.map((x, j) => j === i ? {
+        ...x,
+        level: x.level + 1
+      } : x);
+      flash(`Upgraded ${bd.name} → L${b.level + 1}`, "sky");
+      return {
+        ...p,
+        [key]: {
+          ...pl,
+          buildings
+        }
       };
-      delete n[key];
-      return n;
     });
-    setSelected(key);
-    push(`↩️ Unstaked plot — ${fmt(ret)} $WAR returned (3% fee).`);
-  }
-  function scout() {
-    if (war < 50) return;
-    setWar(w => w - 50);
-    setBurned(b => b + 25);
-    setPool(p => p + 25);
-    push("🔭 Scouted hostile camp — garrison revealed.");
-  }
-  function raid() {
-    if (!hex) return;
-    setDefeated(d => ({
-      ...d,
-      [hex.key]: true
+  };
+  const collect = key => {
+    let gained = 0;
+    setPlots(p => {
+      const pl = p[key];
+      gained = Object.values(pl.resources).reduce((a, b) => a + b, 0);
+      return {
+        ...p,
+        [key]: {
+          ...pl,
+          resources: {}
+        }
+      };
+    });
+    flash(`Collected ${Math.floor(gained).toLocaleString()} resources`, "emerald");
+  };
+  const train = id => {
+    const u = window.WL_DATA.UNITS[id];
+    if (war < u.war) return;
+    setWar(w => w - u.war);
+    setArmy(a => ({
+      ...a,
+      [id]: (a[id] || 0) + 1
     }));
-    push(`⚔️ VICTORY — hostile camp at (${hex.q}, ${hex.r}) cleared. Loot hauled back.`);
-  }
-  function trade(verb, item, qty, price) {
-    const gross = qty * price;
-    const fee = Math.round(gross * 0.04);
-    if (verb === "Bought") setWar(w => w - Math.round(gross) - fee);else setWar(w => w + Math.round(gross) - fee);
-    setBurned(b => b + Math.round(fee / 2));
-    setPool(p => p + Math.round(fee / 2));
-    push(`💱 ${verb} ${qty} ${RES[item].i} ${RES[item].n} @ ${price.toFixed(2)} (fee ${fee} $WAR).`);
-  }
-  const TABS = [{
-    id: "map",
-    label: "World",
-    icon: "🗺️"
-  }, {
-    id: "market",
-    label: "Market",
-    icon: "💱"
-  }, {
-    id: "allegiance",
-    label: "Allegiance",
-    icon: "🤝"
-  }, {
-    id: "season",
-    label: "Season",
-    icon: "🏆"
-  }];
+    flash(`Trained 1× ${u.name}`, "amber");
+  };
   return /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       flexDirection: "column",
-      height: "100dvh",
+      height: "100vh",
       background: "var(--panel-void)",
-      color: "var(--text-hi)"
+      color: "var(--text-hi)",
+      overflow: "hidden"
     }
   }, /*#__PURE__*/React.createElement(TopBar, {
     war: war,
     staked: staked,
     burned: burned,
     pool: pool,
-    plots: Object.keys(plots).length,
-    tick: tick
-  }), /*#__PURE__*/React.createElement(Tabs, {
+    plots: Object.keys(plots).length
+  }), /*#__PURE__*/React.createElement(TabsR, {
     tabs: TABS,
     value: view,
     onChange: setView
   }), /*#__PURE__*/React.createElement("div", {
     style: {
-      display: "flex",
+      flex: 1,
       minHeight: 0,
-      flex: 1
+      display: "flex",
+      flexDirection: "row"
     }
-  }, view === "map" ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("main", {
+  }, view === "map" && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("main", {
     style: {
       position: "relative",
-      minWidth: 0,
-      flex: 1
+      flex: 1,
+      minWidth: 0
     }
   }, /*#__PURE__*/React.createElement(HexMap, {
-    hexes: hexes,
+    hexes: hexes0,
     plots: plots,
     selected: selected,
-    onSelect: setSelected,
-    defeated: defeated,
-    R: R
+    onSelect: setSelected
   })), /*#__PURE__*/React.createElement("aside", {
     style: {
-      display: "flex",
-      flexDirection: "column",
       width: 360,
+      flexShrink: 0,
       borderLeft: "1px solid var(--hairline)",
-      background: "var(--panel)"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      minHeight: 0,
-      flex: 1,
+      background: "var(--panel)",
       overflowY: "auto"
     }
   }, /*#__PURE__*/React.createElement(PlotPanel, {
-    hex: hex,
-    plot: plot,
+    hex: selHex,
+    plot: selPlot,
     war: war,
-    defeated: defeated,
     onClaim: claim,
-    onBuild: buildOn,
-    onScout: scout,
-    onRaid: raid,
-    onUnstake: unstake
-  })), /*#__PURE__*/React.createElement(EventLog, {
-    log: log
-  }))) : /*#__PURE__*/React.createElement("div", {
+    onBuild: build,
+    onCollect: collect,
+    onUpgrade: upgrade
+  }))), view === "market" && /*#__PURE__*/React.createElement("div", {
     style: {
-      minHeight: 0,
       flex: 1,
       overflowY: "auto"
     }
-  }, view === "market" && /*#__PURE__*/React.createElement(MarketPanel, {
+  }, /*#__PURE__*/React.createElement(MarketPanel, null)), view === "army" && /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      overflowY: "auto"
+    }
+  }, /*#__PURE__*/React.createElement(ArmyPanel, {
     war: war,
-    onTrade: trade
-  }), view === "season" && /*#__PURE__*/React.createElement(SeasonPanel, {
-    pool: pool,
-    burned: burned,
-    plots: plots,
-    war: war
-  }), view === "allegiance" && /*#__PURE__*/React.createElement(AllegianceStub, null))));
-}
-function AllegianceStub() {
-  const {
-    Panel,
-    Badge,
-    Button
-  } = window.WARLANDSDesignSystem_e0d283;
-  const orgs = [{
-    name: "Iron Concord",
-    gov: "council",
-    members: 13,
-    treasury: "32,000",
-    b: "🏛️ 🏰"
-  }, {
-    name: "Crimson Pact",
-    gov: "weighted",
-    members: 9,
-    treasury: "44,000",
-    b: "🏛️ 🔬 📡"
-  }, {
-    name: "Desert Wolves",
-    gov: "democracy",
-    members: 11,
-    treasury: "20,000",
-    b: "🏛️ 🏰"
-  }, {
-    name: "Northern Vanguard",
-    gov: "founder",
-    members: 7,
-    treasury: "56,000",
-    b: "🏛️ 🔬 📡"
-  }];
-  return /*#__PURE__*/React.createElement("div", {
+    army: army,
+    onTrain: train
+  })), view === "allegiance" && /*#__PURE__*/React.createElement("div", {
     style: {
-      maxWidth: 760,
-      margin: "0 auto",
-      padding: 22
+      flex: 1
     }
-  }, /*#__PURE__*/React.createElement("h2", {
+  }, /*#__PURE__*/React.createElement(PlaceholderPanel, {
+    icon: "\uD83E\uDD1D",
+    title: "Allegiance",
+    note: "Found or join an Allegiance to pool treasury, build shared buffs, and govern territory together."
+  })), view === "season" && /*#__PURE__*/React.createElement("div", {
     style: {
-      fontFamily: "var(--font-display)",
-      fontSize: 22,
-      fontWeight: 700,
-      textTransform: "uppercase",
-      color: "var(--amber)",
-      margin: "0 0 4px"
+      flex: 1
     }
-  }, "Allegiances"), /*#__PURE__*/React.createElement("p", {
+  }, /*#__PURE__*/React.createElement(PlaceholderPanel, {
+    icon: "\uD83C\uDFC6",
+    title: "Season 4",
+    note: "18d 04h remaining. Ranked rewards funded entirely by sinks \u2014 payouts never exceed what was collected."
+  })), view === "shop" && /*#__PURE__*/React.createElement("div", {
     style: {
-      fontSize: 12,
-      color: "var(--text-muted)",
-      margin: "0 0 18px"
+      flex: 1
     }
-  }, "Political/military/economic orgs. Pool specialization, treasury & defense. Buildings grant region-wide buffs (GDD \xA710\u201311)."), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement(PlaceholderPanel, {
+    icon: "\uD83D\uDD17",
+    title: "$WAR Shop",
+    note: "Buy builders, instant-finishes, shield extensions and cosmetics. Earn $WAR from raids and league finishes."
+  }))), toast && /*#__PURE__*/React.createElement("div", {
     style: {
-      display: "flex",
-      flexDirection: "column",
-      gap: 10
-    }
-  }, orgs.map(a => /*#__PURE__*/React.createElement("div", {
-    key: a.name,
-    style: {
+      position: "fixed",
+      bottom: 20,
+      left: "50%",
+      transform: "translateX(-50%)",
+      zIndex: 50,
       display: "flex",
       alignItems: "center",
-      justifyContent: "space-between",
-      border: "1px solid var(--hairline)",
-      borderRadius: "var(--radius-lg)",
-      background: "var(--panel)",
-      padding: "14px 16px"
-    }
-  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 14,
-      fontWeight: 700
-    }
-  }, a.name, " ", /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: 10,
-      textTransform: "uppercase",
-      color: "var(--text-muted)",
-      letterSpacing: "0.06em"
-    }
-  }, a.gov)), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 12,
-      color: "var(--text-muted)",
-      marginTop: 2
-    }
-  }, a.members, " members \xB7 treasury ", a.treasury, " $WAR \xB7 ", a.b)), /*#__PURE__*/React.createElement(Button, {
-    variant: "info",
-    size: "sm"
-  }, "Join")))));
-}
-ReactDOM.createRoot(document.getElementById("root")).render(/*#__PURE__*/React.createElement(GameShell, null));
-})(); } catch (e) { __ds_ns.__errors.push({ path: "ui_kits/warlands-game/App.jsx", error: String((e && e.message) || e) }); }
-
-// ui_kits/warlands-game/HexMap.jsx
-try { (() => {
-/* WARLANDS UI kit — interactive SVG hex world map. */
-const {
-  useMemo,
-  useRef,
-  useState,
-  useCallback
-} = React;
-function hexPoints(cx, cy, size) {
-  const pts = [];
-  for (let i = 0; i < 6; i++) {
-    const a = Math.PI / 180 * (60 * i - 90); // pointy-top
-    pts.push((cx + size * Math.cos(a)).toFixed(1) + "," + (cy + size * Math.sin(a)).toFixed(1));
-  }
-  return pts.join(" ");
-}
-function HexMap({
-  hexes,
-  plots,
-  selected,
-  onSelect,
-  defeated,
-  R
-}) {
-  const {
-    TERRAIN,
-    SIZE,
-    zoneOf
-  } = window.WL;
-  const [view, setView] = useState({
-    x: 0,
-    y: 0,
-    scale: 1
-  });
-  const [drag, setDrag] = useState(false);
-  const dref = useRef(null);
-  const bounds = useMemo(() => {
-    let minX = Infinity,
-      minY = Infinity,
-      maxX = -Infinity,
-      maxY = -Infinity;
-    hexes.forEach(h => {
-      minX = Math.min(minX, h.x);
-      minY = Math.min(minY, h.y);
-      maxX = Math.max(maxX, h.x);
-      maxY = Math.max(maxY, h.y);
-    });
-    return {
-      minX,
-      minY,
-      maxX,
-      maxY
-    };
-  }, [hexes]);
-  const width = bounds.maxX - bounds.minX + SIZE * 4;
-  const height = bounds.maxY - bounds.minY + SIZE * 4;
-  const offX = -bounds.minX + SIZE * 2;
-  const offY = -bounds.minY + SIZE * 2;
-  const onWheel = useCallback(e => {
-    setView(v => ({
-      ...v,
-      scale: Math.min(2.2, Math.max(0.55, v.scale - e.deltaY * 0.0012))
-    }));
-  }, []);
-  const onDown = e => {
-    dref.current = {
-      sx: e.clientX,
-      sy: e.clientY,
-      ox: view.x,
-      oy: view.y
-    };
-    setDrag(true);
-  };
-  const onMove = e => {
-    if (!dref.current) return;
-    const d = dref.current;
-    setView(v => ({
-      ...v,
-      x: d.ox + (e.clientX - d.sx),
-      y: d.oy + (e.clientY - d.sy)
-    }));
-  };
-  const onUp = () => {
-    dref.current = null;
-    setDrag(false);
-  };
-  return /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: "relative",
-      height: "100%",
-      width: "100%",
-      overflow: "hidden",
-      background: "var(--panel-void)"
-    },
-    onWheel: onWheel,
-    onMouseDown: onDown,
-    onMouseMove: onMove,
-    onMouseUp: onUp,
-    onMouseLeave: onUp
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: "absolute",
-      inset: 0,
-      background: "radial-gradient(circle at 50% 50%, rgba(156,43,43,0.22), transparent 42%)",
-      pointerEvents: "none"
-    }
-  }), /*#__PURE__*/React.createElement("svg", {
-    width: "100%",
-    height: "100%",
-    viewBox: `0 0 ${width} ${height}`,
-    style: {
-      transform: `translate(${view.x}px,${view.y}px) scale(${view.scale})`,
-      cursor: drag ? "grabbing" : "grab"
-    }
-  }, hexes.map(h => {
-    const owned = plots[h.key];
-    const npcActive = h.npc && !defeated[h.key];
-    const def = TERRAIN[h.terrain];
-    const isSel = selected === h.key;
-    const zone = zoneOf(h.ring, R);
-    const cx = h.x + offX,
-      cy = h.y + offY;
-    let stroke = "#1c2433",
-      sw = 1;
-    if (isSel) {
-      stroke = "#ffd24a";
-      sw = 3;
-    } else if (owned) {
-      stroke = "#facc15";
-      sw = 2;
-    } else if (npcActive) {
-      stroke = "#dc2626";
-      sw = 2;
-    }
-    return /*#__PURE__*/React.createElement("g", {
-      key: h.key,
-      onClick: e => {
-        e.stopPropagation();
-        onSelect(h.key);
-      },
-      style: {
-        cursor: "pointer"
-      }
-    }, /*#__PURE__*/React.createElement("polygon", {
-      points: hexPoints(cx, cy, SIZE - 1),
-      fill: def.color,
-      fillOpacity: owned ? 1 : 0.6,
-      stroke: stroke,
-      strokeWidth: sw,
-      style: {
-        transition: "fill-opacity .15s"
-      }
-    }), owned && /*#__PURE__*/React.createElement("text", {
-      x: cx,
-      y: cy + 5,
-      textAnchor: "middle",
-      fontSize: 15,
-      style: {
-        pointerEvents: "none"
-      }
-    }, "\uD83C\uDFD5\uFE0F"), !owned && npcActive && /*#__PURE__*/React.createElement("text", {
-      x: cx,
-      y: cy + 5,
-      textAnchor: "middle",
-      fontSize: 13,
-      style: {
-        pointerEvents: "none"
-      }
-    }, "\uD83D\uDC80"), zone === "crucible" && !owned && !npcActive && /*#__PURE__*/React.createElement("text", {
-      x: cx,
-      y: cy + 4,
-      textAnchor: "middle",
-      fontSize: 11,
-      fill: "#fff",
-      fillOpacity: 0.45,
-      style: {
-        pointerEvents: "none"
-      }
-    }, "\u2694"));
-  })), /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: "absolute",
-      left: 12,
-      top: 12,
-      pointerEvents: "none",
-      background: "rgba(0,0,0,0.6)",
+      gap: 8,
+      padding: "10px 16px",
       borderRadius: "var(--radius-md)",
-      padding: "8px 11px",
-      border: "1px solid var(--hairline)"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontFamily: "var(--font-display)",
-      fontSize: 11,
-      letterSpacing: "0.1em",
-      textTransform: "uppercase",
-      color: "var(--amber-text)",
-      fontWeight: 600
-    }
-  }, "Live World Map"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 11,
-      color: "var(--text-lo)",
-      marginTop: 2
-    }
-  }, "Drag to pan \xB7 scroll to zoom \xB7 click a hex"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 10,
-      color: "var(--text-muted)",
-      marginTop: 5,
-      display: "flex",
-      gap: 10
-    }
-  }, /*#__PURE__*/React.createElement("span", null, "\u2694 Crucible \u2014 center, high risk"), /*#__PURE__*/React.createElement("span", null, "edge = newbie ring"))));
-}
-window.HexMap = HexMap;
-})(); } catch (e) { __ds_ns.__errors.push({ path: "ui_kits/warlands-game/HexMap.jsx", error: String((e && e.message) || e) }); }
-
-// ui_kits/warlands-game/Panels.jsx
-try { (() => {
-/* WARLANDS UI kit — HUD panels. Compose the design-system primitives. */
-const DS = window.WARLANDSDesignSystem_e0d283;
-const {
-  Button,
-  Badge,
-  Stat,
-  Panel,
-  ResourceChip,
-  ProgressBar,
-  Tabs
-} = DS;
-
-/* ---------------- Top resource bar ---------------- */
-function TopBar({
-  war,
-  staked,
-  burned,
-  pool,
-  plots,
-  tick
-}) {
-  return /*#__PURE__*/React.createElement("header", {
-    style: {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      padding: "9px 16px",
-      borderBottom: "1px solid var(--hairline)",
-      background: "var(--panel-void)"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      alignItems: "center",
-      gap: 9
+      background: "var(--panel-2)",
+      border: "1px solid var(--border-strong)",
+      boxShadow: "var(--shadow-2)",
+      animation: "wl-toast 0.2s var(--ease-snap)"
     }
   }, /*#__PURE__*/React.createElement("span", {
     style: {
-      fontFamily: "var(--font-display)",
-      fontWeight: 700,
-      fontSize: 19,
-      letterSpacing: "-0.01em",
-      textTransform: "uppercase",
-      color: "var(--amber)"
+      height: 8,
+      width: 8,
+      borderRadius: 999,
+      background: `var(--${toast.tone === "emerald" ? "success" : toast.tone === "sky" ? "sky" : toast.tone === "blood" ? "danger-strong" : "amber"})`
     }
-  }, "WARLANDS"), /*#__PURE__*/React.createElement(Badge, {
-    tone: "blood",
-    variant: "solid"
-  }, "Prototype")), /*#__PURE__*/React.createElement("div", {
+  }), /*#__PURE__*/React.createElement("span", {
     style: {
-      display: "flex",
-      alignItems: "center",
-      gap: 18
+      fontSize: 13,
+      color: "var(--text-hi)"
     }
-  }, /*#__PURE__*/React.createElement(Stat, {
-    label: "$WAR",
-    value: window.WL.fmt(war),
-    accent: "amber"
-  }), /*#__PURE__*/React.createElement(Stat, {
-    label: "Staked",
-    value: window.WL.fmt(staked),
-    accent: "sky"
-  }), /*#__PURE__*/React.createElement(Stat, {
-    label: "Burned",
-    value: window.WL.fmt(burned),
-    accent: "blood"
-  }), /*#__PURE__*/React.createElement(Stat, {
-    label: "Pool",
-    value: window.WL.fmt(pool),
-    accent: "emerald"
-  }), /*#__PURE__*/React.createElement(Stat, {
-    label: "Plots",
-    value: String(plots),
-    accent: "emerald"
-  }), /*#__PURE__*/React.createElement(Stat, {
-    label: "S3\xB7t",
-    value: String(tick),
-    accent: "neutral"
-  })));
+  }, toast.msg)));
+}
+ReactDOM.createRoot(document.getElementById("root")).render(/*#__PURE__*/React.createElement(WarRoom, null));
+})(); } catch (e) { __ds_ns.__errors.push({ path: "ui_kits/warroom/app.js", error: String((e && e.message) || e) }); }
+
+// ui_kits/warroom/data.js
+try { (() => {
+// WARLANDS War Room — game data (mirrors src/game/* from the codebase, trimmed for the kit).
+// Exposed on window for the babel screen scripts.
+
+const TERRAIN = {
+  plains: {
+    name: "Basic Plot",
+    stake: 10000,
+    color: "var(--terrain-plains)",
+    def: 1.0,
+    reward: 1.0,
+    blurb: "Balanced starter land. +5% build speed."
+  },
+  forest: {
+    name: "Forest Plot",
+    stake: 12500,
+    color: "var(--terrain-forest)",
+    def: 1.1,
+    reward: 1.1,
+    blurb: "+15% wood, defender ambush bonus."
+  },
+  river: {
+    name: "River Plot",
+    stake: 15000,
+    color: "var(--terrain-river)",
+    def: 1.0,
+    reward: 1.15,
+    blurb: "+20% food, +15% water, −10% market fees."
+  },
+  mountain: {
+    name: "Mountain Plot",
+    stake: 20000,
+    color: "var(--terrain-mountain)",
+    def: 1.3,
+    reward: 1.25,
+    blurb: "+25% iron, +20% stone, +30% defense."
+  },
+  desert: {
+    name: "Oil Desert Plot",
+    stake: 25000,
+    color: "var(--terrain-desert)",
+    def: 0.9,
+    reward: 1.3,
+    blurb: "+30% oil, exposed (weak natural defense)."
+  },
+  coastal: {
+    name: "Coastal Trade Plot",
+    stake: 30000,
+    color: "var(--terrain-coastal)",
+    def: 1.0,
+    reward: 1.4,
+    blurb: "−20% transport cost, sea routes, trade hub."
+  },
+  industrial: {
+    name: "Industrial Plot",
+    stake: 40000,
+    color: "var(--terrain-industrial)",
+    def: 1.0,
+    reward: 1.6,
+    blurb: "+25% factory efficiency, +1 factory slot."
+  },
+  techRuins: {
+    name: "Technology Ruins Plot",
+    stake: 50000,
+    color: "var(--terrain-techruins)",
+    def: 1.0,
+    reward: 1.8,
+    blurb: "+30% research, unlocks rare blueprints."
+  },
+  warzone: {
+    name: "Warzone Plot",
+    stake: 60000,
+    color: "var(--terrain-warzone)",
+    def: 0.9,
+    reward: 2.5,
+    blurb: "+40% all yields, season ×2.5. No protection."
+  }
+};
+const R = id => `../../assets/resources/${id}.svg`;
+const B = id => `../../assets/buildings/${id}.svg`;
+const U = id => `../../assets/units/${id}.svg`;
+const RESOURCES = {
+  food: {
+    name: "Food",
+    tier: "raw",
+    art: R("food")
+  },
+  water: {
+    name: "Water",
+    tier: "raw",
+    art: R("water")
+  },
+  wood: {
+    name: "Wood",
+    tier: "raw",
+    art: R("wood")
+  },
+  stone: {
+    name: "Stone",
+    tier: "raw",
+    art: R("stone")
+  },
+  iron: {
+    name: "Iron",
+    tier: "raw",
+    art: R("iron")
+  },
+  oil: {
+    name: "Oil",
+    tier: "raw",
+    art: R("oil")
+  },
+  fuel: {
+    name: "Fuel",
+    tier: "intermediate",
+    art: R("fuel")
+  },
+  steel: {
+    name: "Steel",
+    tier: "intermediate",
+    art: R("steel")
+  },
+  electronics: {
+    name: "Electronics",
+    tier: "intermediate",
+    art: R("electronics")
+  },
+  rifles: {
+    name: "Rifles",
+    tier: "finished",
+    art: R("rifles")
+  },
+  tanks: {
+    name: "Tanks",
+    tier: "finished",
+    art: R("tanks")
+  },
+  aircraft: {
+    name: "Aircraft",
+    tier: "finished",
+    art: R("aircraft")
+  }
+};
+
+// Buildings buildable on a generic plot (subset; full set gated by terrain in the real game).
+const BUILDINGS = [{
+  id: "farm",
+  name: "Farm",
+  cost: 200,
+  art: B("farm"),
+  makes: "food",
+  kind: "extractor"
+}, {
+  id: "lumberCamp",
+  name: "Lumber Camp",
+  cost: 200,
+  art: B("lumberCamp"),
+  makes: "wood",
+  kind: "extractor"
+}, {
+  id: "quarry",
+  name: "Quarry",
+  cost: 250,
+  art: B("quarry"),
+  makes: "stone",
+  kind: "extractor"
+}, {
+  id: "ironMine",
+  name: "Iron Mine",
+  cost: 400,
+  art: B("ironMine"),
+  makes: "iron",
+  kind: "extractor"
+}, {
+  id: "oilDerrick",
+  name: "Oil Derrick",
+  cost: 800,
+  art: B("oilDerrick"),
+  makes: "oil",
+  kind: "extractor"
+}, {
+  id: "refinery",
+  name: "Refinery",
+  cost: 1000,
+  art: B("refinery"),
+  makes: "fuel",
+  kind: "factory"
+}, {
+  id: "foundry",
+  name: "Foundry",
+  cost: 1400,
+  art: B("foundry"),
+  makes: "steel",
+  kind: "factory"
+}, {
+  id: "armsFactory",
+  name: "Arms Factory",
+  cost: 2200,
+  art: B("armsFactory"),
+  makes: "rifles",
+  kind: "factory"
+}, {
+  id: "warehouse",
+  name: "Warehouse",
+  cost: 500,
+  art: B("warehouse"),
+  makes: null,
+  kind: "storage"
+}];
+const UNITS = {
+  infantry: {
+    name: "Infantry",
+    art: U("infantry"),
+    atk: 10,
+    def: 12,
+    war: 20,
+    desc: "Cheap, durable garrison. Strong vs Engineers."
+  },
+  tanks: {
+    name: "Tanks",
+    art: U("tanks"),
+    atk: 32,
+    def: 26,
+    war: 120,
+    desc: "Armored spearhead. Strong vs Infantry/Turrets."
+  },
+  artillery: {
+    name: "Artillery",
+    art: U("artillery"),
+    atk: 40,
+    def: 8,
+    war: 110,
+    desc: "Siege & area damage. Strong vs Tanks/Structures."
+  },
+  aircraft: {
+    name: "Aircraft",
+    art: U("aircraft"),
+    atk: 38,
+    def: 14,
+    war: 200,
+    desc: "Fast strike. Strong vs ground; weak vs Drones."
+  },
+  drones: {
+    name: "Drones",
+    art: U("drones"),
+    atk: 22,
+    def: 10,
+    war: 90,
+    desc: "Interceptor / recon. Strong vs Aircraft."
+  },
+  engineers: {
+    name: "Engineers",
+    art: U("engineers"),
+    atk: 6,
+    def: 8,
+    war: 50,
+    desc: "Sabotage, repair, traps. Strong vs Structures."
+  }
+};
+
+// ---- Build a small pointy-top hex world (axial coords, ring-based terrain) ----
+const HEX_SIZE = 30;
+function axialToPixel(q, r, size) {
+  return {
+    x: size * Math.sqrt(3) * (q + r / 2),
+    y: size * 1.5 * r
+  };
+}
+function hexRing(q, r) {
+  return (Math.abs(q) + Math.abs(r) + Math.abs(-q - r)) / 2;
 }
 
-/* ---------------- Event log ---------------- */
-function EventLog({
-  log
-}) {
-  return /*#__PURE__*/React.createElement("div", {
-    style: {
-      borderTop: "1px solid var(--hairline)",
-      background: "rgba(8,11,17,0.8)",
-      padding: "9px 14px"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontFamily: "var(--font-display)",
-      fontSize: 10,
-      fontWeight: 600,
-      letterSpacing: "0.1em",
-      textTransform: "uppercase",
-      color: "var(--text-muted)",
-      marginBottom: 5
-    }
-  }, "Event Log"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      maxHeight: 88,
-      overflowY: "auto",
-      display: "flex",
-      flexDirection: "column",
-      gap: 2
-    }
-  }, log.map((line, i) => /*#__PURE__*/React.createElement("div", {
-    key: i,
-    style: {
-      fontSize: 12,
-      color: i === 0 ? "var(--text-hi)" : "var(--text-lo)"
-    }
-  }, line))));
+// Deterministic pseudo-random from coords
+function rng(q, r) {
+  const s = Math.sin(q * 127.1 + r * 311.7) * 43758.5453;
+  return s - Math.floor(s);
 }
+function buildWorld(radius) {
+  const hexes = [];
+  for (let q = -radius; q <= radius; q++) {
+    for (let r = Math.max(-radius, -q - radius); r <= Math.min(radius, -q + radius); r++) {
+      const ring = hexRing(q, r);
+      const v = rng(q, r);
+      // inner rings = higher-tier / more hostile terrain
+      let terrain;
+      if (ring >= radius - 0) terrain = v < 0.5 ? "plains" : "forest";else if (ring >= 3) terrain = v < 0.3 ? "river" : v < 0.6 ? "forest" : "mountain";else if (ring === 2) terrain = v < 0.3 ? "mountain" : v < 0.55 ? "desert" : v < 0.8 ? "coastal" : "industrial";else if (ring === 1) terrain = v < 0.4 ? "industrial" : v < 0.75 ? "techRuins" : "warzone";else terrain = "warzone";
+      const {
+        x,
+        y
+      } = axialToPixel(q, r, HEX_SIZE);
+      hexes.push({
+        key: `${q},${r}`,
+        q,
+        r,
+        x,
+        y,
+        ring,
+        terrain
+      });
+    }
+  }
+  return hexes;
+}
+window.WL_DATA = {
+  TERRAIN,
+  RESOURCES,
+  BUILDINGS,
+  UNITS,
+  HEX_SIZE,
+  axialToPixel,
+  buildWorld
+};
+})(); } catch (e) { __ds_ns.__errors.push({ path: "ui_kits/warroom/data.js", error: String((e && e.message) || e) }); }
 
-/* ---------------- Plot inspector / claim ---------------- */
+// ui_kits/warroom/panels.js
+try { (() => {
+// WARLANDS War Room — side-rail panels (Plot management, Market, Army).
+const DSp = window.WARLANDSDesignSystem_2e7699;
+const {
+  Button: Btn,
+  Badge: Bdg,
+  Stat: St,
+  Panel: Pnl,
+  ProgressBar: Prog,
+  ResourceChip: Chip
+} = DSp;
+const {
+  TERRAIN: T,
+  RESOURCES: RES,
+  BUILDINGS: BLD,
+  UNITS: UN
+} = window.WL_DATA;
+const {
+  Icon: Ic,
+  fmt: f
+} = window.WL_SCREENS;
 function Row({
   label,
-  value
+  value,
+  valColor
 }) {
   return /*#__PURE__*/React.createElement("div", {
     style: {
@@ -1637,7 +1203,7 @@ function Row({
     }
   }, label), /*#__PURE__*/React.createElement("span", {
     style: {
-      color: "var(--text-hi)"
+      color: valColor || "var(--text-primary)"
     }
   }, value));
 }
@@ -1645,91 +1211,110 @@ function PlotPanel({
   hex,
   plot,
   war,
-  defeated,
   onClaim,
   onBuild,
-  onScout,
-  onRaid,
-  onUnstake,
-  claimIndex
+  onCollect,
+  onUpgrade
 }) {
-  const {
-    TERRAIN,
-    BUILD,
-    RES,
-    fmt
-  } = window.WL;
-  if (!hex) {
+  if (!hex) return /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: 16,
+      fontSize: 13,
+      color: "var(--text-lo)"
+    }
+  }, "Select a hex on the map to inspect or claim it.");
+  const def = T[hex.terrain];
+
+  // Enemy hex
+  if (hex.enemy && !plot) {
     return /*#__PURE__*/React.createElement("div", {
       style: {
-        padding: 18,
-        fontSize: 13,
+        padding: 16,
+        display: "flex",
+        flexDirection: "column",
+        gap: 12
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between"
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "wl-title",
+      style: {
+        fontSize: 18,
+        color: def.color
+      }
+    }, def.name), /*#__PURE__*/React.createElement(Bdg, {
+      tone: "blood",
+      variant: "solid"
+    }, "Hostile")), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 12,
         color: "var(--text-lo)"
       }
-    }, "Select a hex on the map to inspect or claim it.");
+    }, "Hex (", hex.q, ", ", hex.r, ") \xB7 ring ", hex.ring, " \xB7 held by Iron Syndicate"), /*#__PURE__*/React.createElement(Pnl, {
+      label: "Scouted defenses",
+      rim: "blood",
+      padding: "12px"
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "flex",
+        flexDirection: "column",
+        gap: 6
+      }
+    }, /*#__PURE__*/React.createElement(Row, {
+      label: "Est. lootable Gold",
+      value: `${f(4200)} $WAR`,
+      valColor: "var(--amber-text)"
+    }), /*#__PURE__*/React.createElement(Row, {
+      label: "Defense power",
+      value: "2,840"
+    }), /*#__PURE__*/React.createElement(Row, {
+      label: "Garrison",
+      value: "Infantry \xD718 \xB7 Tanks \xD74"
+    }))), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "flex",
+        gap: 8
+      }
+    }, /*#__PURE__*/React.createElement(Btn, {
+      variant: "secondary",
+      full: true,
+      icon: "\uD83D\uDD2D"
+    }, "Scout"), /*#__PURE__*/React.createElement(Btn, {
+      variant: "danger",
+      full: true,
+      icon: "\u2694\uFE0F"
+    }, "Siege")));
   }
-  const def = TERRAIN[hex.terrain];
-  const npcActive = hex.npc && !defeated[hex.key];
+
+  // Unclaimed
   if (!plot) {
     const canAfford = war >= def.stake;
     return /*#__PURE__*/React.createElement("div", {
       style: {
+        padding: 16,
         display: "flex",
         flexDirection: "column",
-        gap: 12,
-        padding: 16
+        gap: 12
       }
-    }, npcActive && /*#__PURE__*/React.createElement(Panel, {
-      label: "\u2694 Hostile Camp",
-      rim: "blood",
-      padding: "12px",
-      headerRight: /*#__PURE__*/React.createElement(Badge, {
-        tone: "blood"
-      }, "Tier ", hex.npcTier)
-    }, /*#__PURE__*/React.createElement("p", {
+    }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+      className: "wl-title",
       style: {
-        fontSize: 12,
-        color: "var(--text-lo)",
-        margin: "0 0 10px"
-      }
-    }, "Unknown strength. Scout first (50 $WAR) to reveal the garrison."), /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: "flex",
-        gap: 6
-      }
-    }, /*#__PURE__*/React.createElement(Button, {
-      variant: "info",
-      size: "sm",
-      icon: "\uD83D\uDD2D",
-      onClick: onScout
-    }, "Scout (50$)"), /*#__PURE__*/React.createElement(Button, {
-      variant: "primary",
-      size: "sm",
-      icon: "\uD83D\uDDE1\uFE0F",
-      onClick: onRaid
-    }, "Raid"), /*#__PURE__*/React.createElement(Button, {
-      variant: "danger",
-      size: "sm",
-      icon: "\uD83C\uDFF0",
-      onClick: onRaid
-    }, "Siege"))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontFamily: "var(--font-display)",
-        fontSize: 19,
-        fontWeight: 700,
-        textTransform: "uppercase",
-        letterSpacing: "0.01em",
+        fontSize: 18,
         color: def.color
       }
     }, def.name), /*#__PURE__*/React.createElement("div", {
       style: {
-        fontSize: 11,
-        color: "var(--text-muted)"
+        fontSize: 12,
+        color: "var(--text-lo)"
       }
     }, "Hex (", hex.q, ", ", hex.r, ") \xB7 ring ", hex.ring)), /*#__PURE__*/React.createElement("p", {
       style: {
-        fontSize: 13,
-        color: "var(--text-lo)",
+        fontSize: 14,
+        color: "var(--text-secondary)",
         margin: 0,
         lineHeight: 1.5
       }
@@ -1737,14 +1322,14 @@ function PlotPanel({
       style: {
         display: "flex",
         flexDirection: "column",
-        gap: 4,
-        background: "rgba(26,32,48,0.5)",
+        gap: 5,
+        padding: 12,
         borderRadius: "var(--radius-md)",
-        padding: 12
+        background: "rgba(26,32,48,0.5)"
       }
     }, /*#__PURE__*/React.createElement(Row, {
       label: "Stake to claim",
-      value: `${fmt(def.stake)} $WAR`
+      value: `${f(def.stake)} $WAR`
     }), /*#__PURE__*/React.createElement(Row, {
       label: "Defense mult",
       value: `×${def.def}`
@@ -1754,13 +1339,13 @@ function PlotPanel({
     }), /*#__PURE__*/React.createElement(Row, {
       label: "Protection",
       value: hex.terrain === "warzone" ? "never (warzone)" : "eligible"
-    })), /*#__PURE__*/React.createElement(Button, {
+    })), /*#__PURE__*/React.createElement(Btn, {
       variant: "primary",
       full: true,
-      disabled: !canAfford,
       icon: "\u2694\uFE0F",
+      disabled: !canAfford,
       onClick: () => onClaim(hex)
-    }, canAfford ? `Stake ${fmt(def.stake)} $WAR & Claim` : "Insufficient $WAR"), /*#__PURE__*/React.createElement("p", {
+    }, canAfford ? `Stake ${f(def.stake)} $WAR & Claim` : "Insufficient $WAR"), /*#__PURE__*/React.createElement("p", {
       style: {
         fontSize: 11,
         color: "var(--text-muted)",
@@ -1769,19 +1354,21 @@ function PlotPanel({
       }
     }, "Staked $WAR is ", /*#__PURE__*/React.createElement("span", {
       style: {
-        color: "var(--text-lo)"
+        color: "var(--text-secondary)"
       }
-    }, "locked, never spent"), ". You get it back on unstake (minus a small fee). It can never be looted."));
+    }, "locked, never spent"), ". Returned on unstake minus a 3% fee. Never lootable."));
   }
 
   // Owned
-  const slotCap = 5;
+  const slotCap = 6;
+  const used = plot.buildings.length;
+  const ready = Object.values(plot.resources).some(v => v > 1);
   return /*#__PURE__*/React.createElement("div", {
     style: {
+      padding: 16,
       display: "flex",
       flexDirection: "column",
-      gap: 16,
-      padding: 16
+      gap: 16
     }
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -1790,897 +1377,761 @@ function PlotPanel({
       justifyContent: "space-between"
     }
   }, /*#__PURE__*/React.createElement("div", {
+    className: "wl-title",
     style: {
-      fontFamily: "var(--font-display)",
       fontSize: 18,
-      fontWeight: 700,
-      textTransform: "uppercase",
       color: def.color
     }
-  }, plot.name), /*#__PURE__*/React.createElement(Badge, {
+  }, def.name), /*#__PURE__*/React.createElement(Bdg, {
     tone: "amber"
   }, "Owned")), /*#__PURE__*/React.createElement("div", {
     style: {
-      fontSize: 11,
-      color: "var(--text-muted)",
-      marginTop: 2
-    }
-  }, def.name, " \xB7 staked ", fmt(def.stake), " $WAR \xB7 plot #", plot.claimIndex), /*#__PURE__*/React.createElement("div", {
-    style: {
       fontSize: 12,
-      marginTop: 4,
       color: "var(--text-lo)"
     }
-  }, "Defense: ", /*#__PURE__*/React.createElement("span", {
+  }, "staked ", f(def.stake), " $WAR \xB7 ring ", hex.ring), /*#__PURE__*/React.createElement("div", {
     style: {
-      color: "var(--emerald-text)"
+      marginTop: 8
     }
-  }, plot.defense, "%"))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement(Prog, {
+    value: plot.defensePct,
+    max: 100,
+    tone: plot.defensePct < 60 ? "blood" : "emerald",
+    label: "Defense",
+    valueText: `${plot.defensePct}%`
+  }))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "wl-label",
     style: {
-      fontFamily: "var(--font-display)",
-      fontSize: 10,
-      fontWeight: 600,
-      letterSpacing: "0.1em",
-      textTransform: "uppercase",
-      color: "var(--text-muted)",
-      marginBottom: 7
+      marginBottom: 6,
+      display: "flex",
+      justifyContent: "space-between"
     }
-  }, "Stockpile"), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("span", null, "Stockpile \xB7 cap 2,000"), ready && /*#__PURE__*/React.createElement(Btn, {
+    variant: "success",
+    size: "sm",
+    onClick: () => onCollect(hex.key)
+  }, "Collect")), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
       gridTemplateColumns: "1fr 1fr",
       gap: 6
     }
-  }, Object.entries(plot.stock).map(([r, v]) => /*#__PURE__*/React.createElement(ResourceChip, {
-    key: r,
-    icon: RES[r].i,
-    name: RES[r].n,
-    amount: fmt(v),
-    tier: RES[r].t,
+  }, Object.entries(plot.resources).filter(([, v]) => v > 0.01).map(([id, v]) => /*#__PURE__*/React.createElement(Chip, {
+    key: id,
+    icon: /*#__PURE__*/React.createElement(Ic, {
+      src: RES[id].art,
+      size: 15
+    }),
+    name: RES[id].name,
+    amount: f(v),
+    tier: RES[id].tier,
     size: "sm"
-  })))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+  })), Object.keys(plot.resources).length === 0 && /*#__PURE__*/React.createElement("div", {
     style: {
+      fontSize: 12,
+      color: "var(--text-muted)",
+      gridColumn: "1/3"
+    }
+  }, "Empty \u2014 build an extractor to start production."))), plot.buildings.length > 0 && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "wl-label",
+    style: {
+      marginBottom: 6,
       display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      marginBottom: 7
+      justifyContent: "space-between"
     }
-  }, /*#__PURE__*/React.createElement("span", {
+  }, /*#__PURE__*/React.createElement("span", null, "Buildings"), /*#__PURE__*/React.createElement("span", {
     style: {
-      fontFamily: "var(--font-display)",
-      fontSize: 10,
-      fontWeight: 600,
-      letterSpacing: "0.1em",
-      textTransform: "uppercase",
       color: "var(--text-muted)"
     }
-  }, "Buildings"), /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: 11,
-      color: "var(--text-muted)"
-    }
-  }, "slots ", plot.buildings.length, "/", slotCap)), /*#__PURE__*/React.createElement("div", {
+  }, "slots ", used, "/", slotCap)), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       flexDirection: "column",
-      gap: 4
+      gap: 6
     }
-  }, plot.buildings.map((b, i) => /*#__PURE__*/React.createElement("div", {
-    key: i,
+  }, plot.buildings.map((b, i) => {
+    const bd = BLD.find(x => x.id === b.id);
+    const cost = Math.round(bd.cost * Math.pow(1.6, b.level));
+    return /*#__PURE__*/React.createElement("div", {
+      key: i,
+      style: {
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: 8,
+        borderRadius: "var(--radius-sm)",
+        background: "rgba(26,32,48,0.5)",
+        fontSize: 12
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6
+      }
+    }, /*#__PURE__*/React.createElement(Ic, {
+      src: bd.art,
+      size: 18
+    }), " ", bd.name, " ", /*#__PURE__*/React.createElement("span", {
+      style: {
+        color: "var(--text-muted)"
+      }
+    }, "L", b.level)), /*#__PURE__*/React.createElement(Btn, {
+      variant: "info",
+      size: "sm",
+      disabled: war < cost,
+      onClick: () => onUpgrade(hex.key, i)
+    }, "\u2B06 ", f(cost)));
+  }))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "wl-label",
     style: {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      background: "rgba(26,32,48,0.5)",
-      borderRadius: "var(--radius-sm)",
-      padding: "7px 9px",
-      fontSize: 12
-    }
-  }, /*#__PURE__*/React.createElement("span", null, BUILD[b].i, " ", BUILD[b].n, " ", /*#__PURE__*/React.createElement("span", {
-    style: {
-      color: "var(--text-muted)"
-    }
-  }, "L1")), /*#__PURE__*/React.createElement(Badge, {
-    tone: "sky"
-  }, "Active"))))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontFamily: "var(--font-display)",
-      fontSize: 10,
-      fontWeight: 600,
-      letterSpacing: "0.1em",
-      textTransform: "uppercase",
-      color: "var(--text-muted)",
-      marginBottom: 7
+      marginBottom: 6
     }
   }, "Construct"), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       flexDirection: "column",
-      gap: 4
+      gap: 5
     }
-  }, def.build.filter(id => !plot.buildings.includes(id)).map(id => {
-    const blocked = plot.buildings.length >= slotCap || war < BUILD[id].cost;
+  }, BLD.map(bd => {
+    const blocked = used >= slotCap || war < bd.cost;
     return /*#__PURE__*/React.createElement("button", {
-      key: id,
+      key: bd.id,
+      onClick: () => !blocked && onBuild(hex.key, bd),
       disabled: blocked,
-      onClick: () => onBuild(hex.key, id),
       style: {
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        background: "rgba(26,32,48,0.6)",
-        border: "1px solid var(--hairline)",
+        padding: "7px 8px",
+        textAlign: "left",
         borderRadius: "var(--radius-sm)",
-        padding: "7px 9px",
+        border: "1px solid var(--hairline)",
+        background: "rgba(26,32,48,0.6)",
         fontSize: 12,
         color: "var(--text-hi)",
         cursor: blocked ? "not-allowed" : "pointer",
-        opacity: blocked ? 0.4 : 1,
-        fontFamily: "var(--font-ui)"
+        opacity: blocked ? 0.4 : 1
       }
-    }, /*#__PURE__*/React.createElement("span", null, BUILD[id].i, " ", BUILD[id].n), /*#__PURE__*/React.createElement("span", {
+    }, /*#__PURE__*/React.createElement("span", {
       style: {
-        fontFamily: "var(--font-mono)",
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6
+      }
+    }, /*#__PURE__*/React.createElement(Ic, {
+      src: bd.art,
+      size: 18
+    }), " ", bd.name), /*#__PURE__*/React.createElement("span", {
+      className: "wl-num",
+      style: {
         fontSize: 10,
         color: "var(--text-lo)"
       }
-    }, BUILD[id].cost, "$"));
-  }))), /*#__PURE__*/React.createElement(Button, {
-    variant: "outline",
-    full: true,
-    size: "sm",
-    onClick: () => onUnstake(hex.key)
-  }, "Unstake plot (return ", fmt(def.stake * 0.97), " $WAR \xB7 3% fee)"));
+    }, f(bd.cost), " $WAR"));
+  }))));
 }
-
-/* ---------------- Marketplace ---------------- */
-function MarketPanel({
-  war,
-  onTrade
-}) {
-  const {
-    RES,
-    REF,
-    fmt
-  } = window.WL;
-  const [tab, setTab] = React.useState("raw");
-  const [qty, setQty] = React.useState(50);
-  const items = Object.keys(RES).filter(r => RES[r].t === tab);
+function MarketPanel() {
+  const orders = [{
+    side: "BUY",
+    res: "steel",
+    qty: 240,
+    px: 12,
+    who: "Vanguard"
+  }, {
+    side: "SELL",
+    res: "oil",
+    qty: 600,
+    px: 7,
+    who: "Cartel-9"
+  }, {
+    side: "SELL",
+    res: "rifles",
+    qty: 80,
+    px: 34,
+    who: "you"
+  }, {
+    side: "BUY",
+    res: "electronics",
+    qty: 120,
+    px: 41,
+    who: "TechRuin DAO"
+  }, {
+    side: "SELL",
+    res: "iron",
+    qty: 1200,
+    px: 4,
+    who: "Northwall"
+  }];
   return /*#__PURE__*/React.createElement("div", {
     style: {
+      padding: 16,
       maxWidth: 760,
       margin: "0 auto",
-      padding: 22
+      display: "flex",
+      flexDirection: "column",
+      gap: 14
+    }
+  }, /*#__PURE__*/React.createElement(Pnl, {
+    title: "Player Marketplace",
+    accent: true,
+    headerRight: /*#__PURE__*/React.createElement(Bdg, {
+      tone: "teal"
+    }, "P2P order book")
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      flexDirection: "column",
+      gap: 6
+    }
+  }, orders.map((o, i) => /*#__PURE__*/React.createElement("div", {
+    key: i,
+    style: {
+      display: "grid",
+      gridTemplateColumns: "56px 1fr auto auto",
+      alignItems: "center",
+      gap: 10,
+      padding: "8px 10px",
+      borderRadius: "var(--radius-sm)",
+      background: "rgba(26,32,48,0.5)"
+    }
+  }, /*#__PURE__*/React.createElement(Bdg, {
+    tone: o.side === "BUY" ? "emerald" : "blood",
+    variant: "solid"
+  }, o.side), /*#__PURE__*/React.createElement("span", {
+    style: {
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 6,
+      fontSize: 13,
+      color: "var(--text-hi)"
+    }
+  }, /*#__PURE__*/React.createElement(Ic, {
+    src: RES[o.res] ? RES[o.res].art : RES.iron.art,
+    size: 16
+  }), " ", RES[o.res] ? RES[o.res].name : o.res, " ", /*#__PURE__*/React.createElement("span", {
+    className: "wl-num",
+    style: {
+      color: "var(--text-muted)",
+      fontSize: 11
+    }
+  }, "\xD7", o.qty)), /*#__PURE__*/React.createElement("span", {
+    className: "wl-num",
+    style: {
+      fontSize: 13,
+      color: "var(--amber-text)"
+    }
+  }, o.px, " $WAR"), /*#__PURE__*/React.createElement(Btn, {
+    variant: o.who === "you" ? "ghost" : "secondary",
+    size: "sm"
+  }, o.who === "you" ? "Cancel" : "Fill"))))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: "var(--text-muted)"
+    }
+  }, "Market fees are a token sink \u2014 every fill burns a slice of $WAR."));
+}
+function ArmyPanel({
+  war,
+  army,
+  onTrain
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: 16,
+      maxWidth: 760,
+      margin: "0 auto",
+      display: "flex",
+      flexDirection: "column",
+      gap: 14
+    }
+  }, /*#__PURE__*/React.createElement(Pnl, {
+    title: "Barracks \xB7 Train Units",
+    accent: true,
+    headerRight: /*#__PURE__*/React.createElement(St, {
+      label: "Housing",
+      value: `${Object.values(army).reduce((a, b) => a + b, 0)}/120`,
+      accent: "amber"
+    })
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fill,minmax(220px,1fr))",
+      gap: 10
+    }
+  }, Object.entries(UN).map(([id, u]) => /*#__PURE__*/React.createElement("div", {
+    key: id,
+    style: {
+      padding: 12,
+      borderRadius: "var(--radius-md)",
+      border: "1px solid var(--hairline)",
+      background: "rgba(26,32,48,0.5)",
+      display: "flex",
+      flexDirection: "column",
+      gap: 8
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       alignItems: "center",
-      justifyContent: "space-between",
-      marginBottom: 4
+      gap: 8
     }
-  }, /*#__PURE__*/React.createElement("h2", {
+  }, /*#__PURE__*/React.createElement(Ic, {
+    src: u.art,
+    size: 32
+  }), /*#__PURE__*/React.createElement("div", {
     style: {
-      fontFamily: "var(--font-display)",
-      fontSize: 22,
-      fontWeight: 700,
-      textTransform: "uppercase",
-      color: "var(--amber)",
-      margin: 0
+      flex: 1
     }
-  }, "Open Marketplace"), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "wl-title",
+    style: {
+      fontSize: 14
+    }
+  }, u.name), /*#__PURE__*/React.createElement("div", {
+    className: "wl-num",
+    style: {
+      fontSize: 11,
+      color: "var(--text-muted)"
+    }
+  }, "ATK ", u.atk, " \xB7 DEF ", u.def)), /*#__PURE__*/React.createElement(Bdg, {
+    tone: "neutral"
+  }, "\xD7", army[id] || 0)), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: "var(--text-secondary)",
+      lineHeight: 1.4,
+      minHeight: 30
+    }
+  }, u.desc), /*#__PURE__*/React.createElement(Btn, {
+    variant: "primary",
+    size: "sm",
+    full: true,
+    icon: "\uD83C\uDF96\uFE0F",
+    disabled: war < u.war,
+    onClick: () => onTrain(id)
+  }, "Train \xB7 ", f(u.war), " $WAR"))))));
+}
+function PlaceholderPanel({
+  icon,
+  title,
+  note
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "grid",
+      placeItems: "center",
+      height: "100%",
+      textAlign: "center",
+      padding: 32
+    }
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 40,
+      opacity: 0.5
+    }
+  }, icon), /*#__PURE__*/React.createElement("div", {
+    className: "wl-title",
+    style: {
+      fontSize: 20,
+      marginTop: 10
+    }
+  }, title), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 13,
+      color: "var(--text-muted)",
+      marginTop: 6,
+      maxWidth: 320
+    }
+  }, note)));
+}
+window.WL_PANELS = {
+  PlotPanel,
+  MarketPanel,
+  ArmyPanel,
+  PlaceholderPanel
+};
+})(); } catch (e) { __ds_ns.__errors.push({ path: "ui_kits/warroom/panels.js", error: String((e && e.message) || e) }); }
+
+// ui_kits/warroom/shell.js
+try { (() => {
+// WARLANDS War Room — interactive game shell.
+// Recreates GameShell + TopBar + HexMap + PlotPanel from the codebase using DS primitives.
+const DS = window.WARLANDSDesignSystem_2e7699;
+const {
+  Button,
+  Badge,
+  Stat,
+  Tabs,
+  Panel,
+  ProgressBar,
+  ResourceChip
+} = DS;
+const {
+  TERRAIN,
+  RESOURCES,
+  BUILDINGS,
+  UNITS,
+  HEX_SIZE,
+  buildWorld
+} = window.WL_DATA;
+const {
+  useState,
+  useMemo,
+  useRef,
+  useEffect
+} = React;
+const fmt = n => Math.floor(n).toLocaleString();
+const Icon = ({
+  src,
+  size = 16
+}) => /*#__PURE__*/React.createElement("img", {
+  src: src,
+  width: size,
+  height: size,
+  alt: "",
+  style: {
+    display: "block"
+  }
+});
+function hexPoints(cx, cy, size) {
+  const pts = [];
+  for (let i = 0; i < 6; i++) {
+    const a = Math.PI / 180 * (60 * i - 90);
+    pts.push(`${cx + size * Math.cos(a)},${cy + size * Math.sin(a)}`);
+  }
+  return pts.join(" ");
+}
+
+// ---------------- Top HUD ----------------
+function TopBar({
+  war,
+  staked,
+  burned,
+  pool,
+  plots
+}) {
+  return /*#__PURE__*/React.createElement("header", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 12,
+      padding: "8px 14px",
+      borderBottom: "1px solid var(--hairline)",
+      background: "var(--panel-void)"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       alignItems: "center",
       gap: 8,
-      fontSize: 12,
-      color: "var(--text-muted)"
+      flexShrink: 0
     }
-  }, /*#__PURE__*/React.createElement("span", null, "Trade size"), /*#__PURE__*/React.createElement("input", {
-    type: "number",
-    value: qty,
-    min: 1,
-    onChange: e => setQty(Math.max(1, Number(e.target.value) || 1)),
+  }, /*#__PURE__*/React.createElement("span", {
     style: {
-      width: 72,
-      background: "var(--panel-2)",
-      border: "1px solid var(--hairline)",
-      borderRadius: "var(--radius-sm)",
-      padding: "5px 8px",
-      textAlign: "right",
-      fontFamily: "var(--font-mono)",
-      color: "var(--text-hi)"
+      display: "grid",
+      placeItems: "center",
+      height: 24,
+      width: 24,
+      background: "var(--amber)",
+      color: "#000",
+      fontFamily: "var(--font-display)",
+      fontWeight: 800,
+      fontSize: 15
     }
-  }))), /*#__PURE__*/React.createElement("p", {
+  }, "W"), /*#__PURE__*/React.createElement("span", {
+    className: "wl-title",
     style: {
-      fontSize: 12,
-      color: "var(--text-muted)",
-      margin: "0 0 16px"
+      fontSize: 17,
+      color: "var(--amber)",
+      letterSpacing: "0.04em"
     }
-  }, "Player-driven order book. 4% transaction fee + 5 $WAR listing fee are token sinks (\xBD burned, \xBD to the season reward pool)."), /*#__PURE__*/React.createElement("div", {
+  }, "WARLANDS"), /*#__PURE__*/React.createElement("span", {
     style: {
-      marginBottom: 12
-    }
-  }, /*#__PURE__*/React.createElement(Tabs, {
-    tabs: [{
-      id: "raw",
-      label: "Raw"
-    }, {
-      id: "intermediate",
-      label: "Intermediate"
-    }, {
-      id: "finished",
-      label: "Finished"
-    }],
-    value: tab,
-    onChange: setTab,
+      display: "none"
+    },
+    className: "sm-show"
+  }, /*#__PURE__*/React.createElement(Badge, {
+    tone: "blood",
+    variant: "solid"
+  }, "Prototype"))), /*#__PURE__*/React.createElement("div", {
+    className: "no-scrollbar",
     style: {
-      border: "1px solid var(--hairline)",
-      borderRadius: "var(--radius-md)",
-      display: "inline-flex"
+      display: "flex",
+      minWidth: 0,
+      flex: 1,
+      alignItems: "center",
+      gap: 16,
+      overflowX: "auto"
     }
+  }, /*#__PURE__*/React.createElement(Stat, {
+    label: "$WAR",
+    value: fmt(war),
+    accent: "amber"
+  }), /*#__PURE__*/React.createElement(Stat, {
+    label: "Staked",
+    value: fmt(staked),
+    accent: "sky"
+  }), /*#__PURE__*/React.createElement(Stat, {
+    label: "Burned",
+    value: fmt(burned),
+    accent: "blood"
+  }), /*#__PURE__*/React.createElement(Stat, {
+    label: "Pool",
+    value: fmt(pool),
+    accent: "emerald"
+  }), /*#__PURE__*/React.createElement(Stat, {
+    label: "Plots",
+    value: String(plots),
+    accent: "emerald"
+  }), /*#__PURE__*/React.createElement(Stat, {
+    label: "S4\xB7t",
+    value: "14,920",
+    accent: "neutral"
   })), /*#__PURE__*/React.createElement("div", {
-    style: {
-      border: "1px solid var(--hairline)",
-      borderRadius: "var(--radius-lg)",
-      overflow: "hidden"
-    }
-  }, /*#__PURE__*/React.createElement("table", {
-    style: {
-      width: "100%",
-      borderCollapse: "collapse",
-      fontSize: 13
-    }
-  }, /*#__PURE__*/React.createElement("thead", {
-    style: {
-      background: "var(--panel)"
-    }
-  }, /*#__PURE__*/React.createElement("tr", {
-    style: {
-      fontSize: 10,
-      textTransform: "uppercase",
-      letterSpacing: "0.06em",
-      color: "var(--text-muted)"
-    }
-  }, /*#__PURE__*/React.createElement("th", {
-    style: {
-      textAlign: "left",
-      padding: "9px 12px"
-    }
-  }, "Item"), /*#__PURE__*/React.createElement("th", {
-    style: {
-      textAlign: "right",
-      padding: "9px 8px"
-    }
-  }, "Bid"), /*#__PURE__*/React.createElement("th", {
-    style: {
-      textAlign: "right",
-      padding: "9px 8px"
-    }
-  }, "Ref"), /*#__PURE__*/React.createElement("th", {
-    style: {
-      textAlign: "right",
-      padding: "9px 8px"
-    }
-  }, "Ask"), /*#__PURE__*/React.createElement("th", {
-    style: {
-      textAlign: "right",
-      padding: "9px 12px"
-    }
-  }, "Trade"))), /*#__PURE__*/React.createElement("tbody", null, items.map(it => {
-    const ref = REF[it];
-    return /*#__PURE__*/React.createElement("tr", {
-      key: it,
-      style: {
-        borderTop: "1px solid var(--hairline)"
-      }
-    }, /*#__PURE__*/React.createElement("td", {
-      style: {
-        padding: "9px 12px"
-      }
-    }, RES[it].i, " ", RES[it].n), /*#__PURE__*/React.createElement("td", {
-      style: {
-        padding: "9px 8px",
-        textAlign: "right",
-        fontFamily: "var(--font-mono)",
-        color: "var(--emerald-text)"
-      }
-    }, (ref * 0.97).toFixed(2)), /*#__PURE__*/React.createElement("td", {
-      style: {
-        padding: "9px 8px",
-        textAlign: "right",
-        fontFamily: "var(--font-mono)",
-        color: "var(--text-muted)"
-      }
-    }, ref.toFixed(2)), /*#__PURE__*/React.createElement("td", {
-      style: {
-        padding: "9px 8px",
-        textAlign: "right",
-        fontFamily: "var(--font-mono)",
-        color: "var(--blood-text)"
-      }
-    }, (ref * 1.04).toFixed(2)), /*#__PURE__*/React.createElement("td", {
-      style: {
-        padding: "9px 12px"
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: "flex",
-        justifyContent: "flex-end",
-        gap: 5
-      }
-    }, /*#__PURE__*/React.createElement(Button, {
-      variant: "success",
-      size: "sm",
-      onClick: () => onTrade("Bought", it, qty, ref * 1.04)
-    }, "Buy"), /*#__PURE__*/React.createElement(Button, {
-      variant: "danger",
-      size: "sm",
-      onClick: () => onTrade("Sold", it, qty, ref * 0.97)
-    }, "Sell"))));
-  })))), /*#__PURE__*/React.createElement("p", {
-    style: {
-      fontSize: 11,
-      color: "var(--text-muted)",
-      marginTop: 12
-    }
-  }, "Buy fills the cheapest asks; Sell hits the best bids. Prices drift each tick and AI liquidity refreshes \u2014 in the full game these orders are other players (GDD \xA77)."));
-}
-
-/* ---------------- Season ---------------- */
-function SeasonPanel({
-  pool,
-  burned,
-  plots,
-  war
-}) {
-  const {
-    fmt
-  } = window.WL;
-  const territory = Object.values(plots).reduce((s, p) => s + Math.round(window.WL.TERRAIN[p.terrain].reward * 100), 0);
-  const score = {
-    econ: 2840,
-    military: 1200,
-    territory,
-    allegiance: 640
-  };
-  const total = score.econ + score.military + score.territory + score.allegiance;
-  return /*#__PURE__*/React.createElement("div", {
-    style: {
-      maxWidth: 640,
-      margin: "0 auto",
-      padding: 22
-    }
-  }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       alignItems: "center",
-      justifyContent: "space-between",
-      marginBottom: 4
+      gap: 6,
+      flexShrink: 0
     }
-  }, /*#__PURE__*/React.createElement("h2", {
+  }, /*#__PURE__*/React.createElement("button", {
     style: {
-      fontFamily: "var(--font-display)",
-      fontSize: 22,
-      fontWeight: 700,
-      textTransform: "uppercase",
-      color: "var(--amber)",
-      margin: 0
-    }
-  }, "Season 3"), /*#__PURE__*/React.createElement("span", {
-    style: {
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 6,
+      padding: "5px 10px",
+      borderRadius: "var(--radius-sm)",
+      border: "1px solid rgba(245,179,1,0.4)",
+      background: "rgba(245,179,1,0.08)",
+      color: "var(--amber-text)",
       fontSize: 12,
-      color: "var(--text-muted)"
+      fontWeight: 600,
+      fontFamily: "var(--font-ui)",
+      cursor: "pointer"
     }
-  }, "148s remaining")), /*#__PURE__*/React.createElement("p", {
+  }, /*#__PURE__*/React.createElement("span", {
     style: {
+      height: 6,
+      width: 6,
+      borderRadius: 999,
+      background: "var(--success)"
+    }
+  }), "7a3f\u20269c2b"), /*#__PURE__*/React.createElement("button", {
+    "aria-label": "Settings",
+    style: {
+      background: "none",
+      border: "none",
+      color: "var(--text-lo)",
+      fontSize: 17,
+      cursor: "pointer",
+      minWidth: 32
+    }
+  }, "\u2699\uFE0F")));
+}
+
+// ---------------- Hex world map ----------------
+function HexMap({
+  hexes,
+  plots,
+  selected,
+  onSelect
+}) {
+  const [view, setView] = useState({
+    x: 0,
+    y: 0,
+    scale: 1
+  });
+  const drag = useRef(null);
+  const bounds = useMemo(() => {
+    let a = Infinity,
+      b = Infinity,
+      c = -Infinity,
+      d = -Infinity;
+    hexes.forEach(h => {
+      a = Math.min(a, h.x);
+      b = Math.min(b, h.y);
+      c = Math.max(c, h.x);
+      d = Math.max(d, h.y);
+    });
+    return {
+      minX: a,
+      minY: b,
+      maxX: c,
+      maxY: d
+    };
+  }, [hexes]);
+  const W = bounds.maxX - bounds.minX + HEX_SIZE * 4;
+  const H = bounds.maxY - bounds.minY + HEX_SIZE * 4;
+  const offX = -bounds.minX + HEX_SIZE * 2;
+  const offY = -bounds.minY + HEX_SIZE * 2;
+  const down = e => {
+    drag.current = {
+      sx: e.clientX,
+      sy: e.clientY,
+      ox: view.x,
+      oy: view.y,
+      moved: false
+    };
+  };
+  const move = e => {
+    if (!drag.current) return;
+    const dx = e.clientX - drag.current.sx,
+      dy = e.clientY - drag.current.sy;
+    if (Math.abs(dx) + Math.abs(dy) > 4) drag.current.moved = true;
+    setView(v => ({
+      ...v,
+      x: drag.current.ox + dx,
+      y: drag.current.oy + dy
+    }));
+  };
+  const up = () => {
+    drag.current = null;
+  };
+  const zoom = f => setView(v => ({
+    ...v,
+    scale: Math.min(2.4, Math.max(0.55, v.scale * f))
+  }));
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "relative",
+      height: "100%",
+      width: "100%",
+      overflow: "hidden",
+      background: "var(--panel-void)",
+      cursor: drag.current ? "grabbing" : "grab",
+      touchAction: "none"
+    },
+    onMouseDown: down,
+    onMouseMove: move,
+    onMouseUp: up,
+    onMouseLeave: up
+  }, /*#__PURE__*/React.createElement("svg", {
+    width: "100%",
+    height: "100%",
+    viewBox: `0 0 ${W} ${H}`,
+    style: {
+      transform: `translate(${view.x}px,${view.y}px) scale(${view.scale})`,
+      transition: "transform 60ms linear"
+    }
+  }, hexes.map(h => {
+    const owned = plots[h.key];
+    const isSel = selected === h.key;
+    const enemy = h.enemy;
+    const cx = h.x + offX,
+      cy = h.y + offY;
+    const stroke = isSel ? "var(--rim-selected)" : owned ? "var(--rim-owned)" : enemy ? "var(--rim-enemy)" : "var(--rim-neutral)";
+    const sw = isSel ? 3 : owned || enemy ? 2 : 1;
+    return /*#__PURE__*/React.createElement("g", {
+      key: h.key,
+      onClick: e => {
+        e.stopPropagation();
+        if (!drag.current?.moved) onSelect(h.key);
+      },
+      style: {
+        cursor: "pointer"
+      }
+    }, /*#__PURE__*/React.createElement("polygon", {
+      points: hexPoints(cx, cy, HEX_SIZE - 1),
+      style: {
+        fill: TERRAIN[h.terrain].color,
+        fillOpacity: owned ? 1 : enemy ? 0.85 : 0.62,
+        stroke,
+        strokeWidth: sw,
+        filter: isSel ? "drop-shadow(0 0 6px rgba(255,210,74,0.7))" : "none"
+      }
+    }), owned && /*#__PURE__*/React.createElement("text", {
+      x: cx,
+      y: cy + 6,
+      textAnchor: "middle",
+      fontSize: 17,
+      style: {
+        pointerEvents: "none"
+      }
+    }, "\uD83C\uDFD5\uFE0F"), enemy && /*#__PURE__*/React.createElement("text", {
+      x: cx,
+      y: cy + 5,
+      textAnchor: "middle",
+      fontSize: 14,
+      style: {
+        pointerEvents: "none"
+      }
+    }, "\uD83D\uDC80"), !owned && !enemy && h.ring <= 1 && /*#__PURE__*/React.createElement("text", {
+      x: cx,
+      y: cy + 4,
+      textAnchor: "middle",
       fontSize: 12,
-      color: "var(--text-muted)",
-      margin: "0 0 18px"
-    }
-  }, "Rewards are redistributed sinks \u2014 payouts can never exceed what the season's sinks collected (GDD \xA712.2)."), /*#__PURE__*/React.createElement("div", {
-    style: {
-      marginBottom: 18
-    }
-  }, /*#__PURE__*/React.createElement(ProgressBar, {
-    value: 62,
-    tone: "amber"
+      fill: "#fff",
+      fillOpacity: 0.45,
+      style: {
+        pointerEvents: "none"
+      }
+    }, "\u2694"));
   })), /*#__PURE__*/React.createElement("div", {
     style: {
-      display: "grid",
-      gridTemplateColumns: "1fr 1fr",
-      gap: 12,
-      marginBottom: 16
+      position: "absolute",
+      left: 12,
+      top: 12,
+      padding: "8px 12px",
+      borderRadius: "var(--radius-md)",
+      background: "rgba(0,0,0,0.6)",
+      pointerEvents: "none"
     }
-  }, /*#__PURE__*/React.createElement(Panel, {
-    padding: "14px"
-  }, /*#__PURE__*/React.createElement(Stat, {
-    label: "Season Reward Pool (sink-funded)",
-    value: `${fmt(pool)} $WAR`,
-    accent: "emerald",
-    align: "stack",
-    size: "lg"
-  })), /*#__PURE__*/React.createElement(Panel, {
-    padding: "14px"
-  }, /*#__PURE__*/React.createElement(Stat, {
-    label: "Total $WAR Burned (all sinks)",
-    value: `${fmt(burned)} $WAR`,
-    accent: "blood",
-    align: "stack",
-    size: "lg"
-  }))), /*#__PURE__*/React.createElement(Panel, {
-    title: "Your Season Score"
-  }, [["w₁", "Economic output (goods sold)", score.econ], ["w₂", "Military (raids & sieges won)", score.military], ["w₃", "Territory (control × reward mult)", score.territory], ["w₄", "Allegiance contribution (CS)", score.allegiance]].map(([w, l, v]) => /*#__PURE__*/React.createElement("div", {
-    key: w,
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "wl-title",
     style: {
-      display: "flex",
-      justifyContent: "space-between",
-      padding: "5px 0",
-      fontSize: 12
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      color: "var(--text-lo)"
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      color: "var(--text-muted)"
-    }
-  }, w), " ", l), /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontFamily: "var(--font-mono)",
-      color: "var(--text-hi)"
-    }
-  }, fmt(v)))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      justifyContent: "space-between",
-      borderTop: "1px solid var(--hairline)",
-      marginTop: 8,
-      paddingTop: 9,
-      fontWeight: 700,
-      fontSize: 14
-    }
-  }, /*#__PURE__*/React.createElement("span", null, "Total Score"), /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontFamily: "var(--font-mono)",
+      fontSize: 13,
       color: "var(--amber-text)"
     }
-  }, fmt(total)))));
+  }, "Live World Map"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      color: "var(--text-secondary)"
+    }
+  }, "Drag to explore \xB7 click a hex"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 4,
+      fontSize: 10,
+      color: "var(--text-muted)"
+    }
+  }, "\u2694 Crucible (center, high risk) \xB7 edge = newbie ring")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "absolute",
+      bottom: 12,
+      left: 12,
+      display: "flex",
+      flexDirection: "column",
+      gap: 6
+    }
+  }, [["＋", () => zoom(1.3)], ["－", () => zoom(1 / 1.3)], ["⟳", () => setView({
+    x: 0,
+    y: 0,
+    scale: 1
+  })]].map(([t, fn]) => /*#__PURE__*/React.createElement("button", {
+    key: t,
+    onClick: fn,
+    style: {
+      width: 38,
+      height: 38,
+      display: "grid",
+      placeItems: "center",
+      borderRadius: "var(--radius-md)",
+      background: "rgba(0,0,0,0.62)",
+      border: "1px solid var(--hairline)",
+      color: "var(--amber-text)",
+      fontSize: 18,
+      fontWeight: 700,
+      cursor: "pointer"
+    }
+  }, t))));
 }
-Object.assign(window, {
+window.WL_SCREENS = {
   TopBar,
-  EventLog,
-  PlotPanel,
-  MarketPanel,
-  SeasonPanel
-});
-})(); } catch (e) { __ds_ns.__errors.push({ path: "ui_kits/warlands-game/Panels.jsx", error: String((e && e.message) || e) }); }
-
-// ui_kits/warlands-game/data.js
-try { (() => {
-/* WARLANDS UI kit — game content & world gen.
-   Names, icons, stakes, terrain colors and recipes are lifted verbatim from
-   the WARLANDS prototype (src/game/*). Plain globals on window.WL. */
-(function () {
-  // ---- Terrain (GDD §4) ----
-  const TERRAIN = {
-    plains: {
-      name: "Basic Plot",
-      stake: 10000,
-      color: "#7c8a4f",
-      icon: "🌾",
-      reward: 1.0,
-      def: 1.0,
-      blurb: "Balanced starter land. +5% build speed.",
-      build: ["farm", "lumberCamp", "quarry"]
-    },
-    forest: {
-      name: "Forest Plot",
-      stake: 12500,
-      color: "#2f5d3a",
-      icon: "🌲",
-      reward: 1.1,
-      def: 1.1,
-      blurb: "+15% wood, early growth, defender ambush bonus.",
-      build: ["lumberCamp", "farm", "well"]
-    },
-    river: {
-      name: "River Plot",
-      stake: 15000,
-      color: "#2c6f8c",
-      icon: "💧",
-      reward: 1.15,
-      def: 1.0,
-      blurb: "+20% food, +15% water, −10% market fees.",
-      build: ["farm", "well", "lumberCamp"]
-    },
-    mountain: {
-      name: "Mountain Plot",
-      stake: 20000,
-      color: "#6b6f78",
-      icon: "⛰️",
-      reward: 1.25,
-      def: 1.3,
-      blurb: "+25% iron, +20% stone, +30% defense.",
-      build: ["ironMine", "quarry"]
-    },
-    desert: {
-      name: "Oil Desert Plot",
-      stake: 25000,
-      color: "#c9a14a",
-      icon: "🛢️",
-      reward: 1.3,
-      def: 0.9,
-      blurb: "+30% oil, exposed (weak natural defense).",
-      build: ["oilDerrick", "mineralMine"]
-    },
-    coastal: {
-      name: "Coastal Trade Plot",
-      stake: 30000,
-      color: "#3f9aa6",
-      icon: "⚓",
-      reward: 1.4,
-      def: 1.0,
-      blurb: "−20% transport cost, sea routes, trade hub.",
-      build: ["farm", "well", "mineralMine"]
-    },
-    industrial: {
-      name: "Industrial Plot",
-      stake: 40000,
-      color: "#8a5a3c",
-      icon: "🏭",
-      reward: 1.6,
-      def: 1.0,
-      blurb: "+25% factory efficiency, +1 factory slot.",
-      build: ["quarry", "ironMine"]
-    },
-    techRuins: {
-      name: "Technology Ruins Plot",
-      stake: 50000,
-      color: "#5b4b8a",
-      icon: "🛸",
-      reward: 1.8,
-      def: 1.0,
-      blurb: "+30% research, +data chips, rare blueprints.",
-      build: ["dataExcavator", "mineralMine"]
-    },
-    warzone: {
-      name: "Warzone Plot",
-      stake: 60000,
-      color: "#9c2b2b",
-      icon: "⚔️",
-      reward: 2.5,
-      def: 0.9,
-      blurb: "+40% all yields, season-point ×2.5. No protection.",
-      build: ["oilDerrick", "ironMine", "mineralMine"]
-    }
-  };
-
-  // ---- Resources (GDD §5) ----
-  const RES = {
-    food: {
-      n: "Food",
-      i: "🌾",
-      t: "raw"
-    },
-    water: {
-      n: "Water",
-      i: "💧",
-      t: "raw"
-    },
-    wood: {
-      n: "Wood",
-      i: "🪵",
-      t: "raw"
-    },
-    stone: {
-      n: "Stone",
-      i: "🪨",
-      t: "raw"
-    },
-    iron: {
-      n: "Iron",
-      i: "⛓️",
-      t: "raw"
-    },
-    rareMinerals: {
-      n: "Rare Minerals",
-      i: "💎",
-      t: "raw"
-    },
-    oil: {
-      n: "Oil",
-      i: "🛢️",
-      t: "raw"
-    },
-    dataChips: {
-      n: "Data Chips",
-      i: "💽",
-      t: "raw"
-    },
-    fuel: {
-      n: "Fuel",
-      i: "⛽",
-      t: "intermediate"
-    },
-    steel: {
-      n: "Steel",
-      i: "🔩",
-      t: "intermediate"
-    },
-    electronics: {
-      n: "Electronics",
-      i: "🔌",
-      t: "intermediate"
-    },
-    machineParts: {
-      n: "Machine Parts",
-      i: "⚙️",
-      t: "intermediate"
-    },
-    ammunition: {
-      n: "Ammunition",
-      i: "🧨",
-      t: "intermediate"
-    },
-    chemicals: {
-      n: "Chemicals",
-      i: "🧪",
-      t: "intermediate"
-    },
-    rifles: {
-      n: "Rifles",
-      i: "🔫",
-      t: "finished"
-    },
-    tanks: {
-      n: "Tanks",
-      i: "🛡️",
-      t: "finished"
-    },
-    drones: {
-      n: "Drones",
-      i: "🛸",
-      t: "finished"
-    },
-    aircraft: {
-      n: "Aircraft",
-      i: "✈️",
-      t: "finished"
-    },
-    turrets: {
-      n: "Turrets",
-      i: "🗼",
-      t: "finished"
-    },
-    buildingComponents: {
-      n: "Building Components",
-      i: "🧱",
-      t: "finished"
-    }
-  };
-
-  // ---- Buildings (GDD §6) ----
-  const BUILD = {
-    farm: {
-      n: "Farm",
-      i: "🌾",
-      cost: 200
-    },
-    well: {
-      n: "Water Well",
-      i: "💧",
-      cost: 200
-    },
-    lumberCamp: {
-      n: "Lumber Camp",
-      i: "🪵",
-      cost: 200
-    },
-    quarry: {
-      n: "Quarry",
-      i: "🪨",
-      cost: 250
-    },
-    ironMine: {
-      n: "Iron Mine",
-      i: "⛓️",
-      cost: 400
-    },
-    mineralMine: {
-      n: "Mineral Mine",
-      i: "💎",
-      cost: 700
-    },
-    oilDerrick: {
-      n: "Oil Derrick",
-      i: "🛢️",
-      cost: 800
-    },
-    dataExcavator: {
-      n: "Data Excavator",
-      i: "💽",
-      cost: 1200
-    },
-    refinery: {
-      n: "Refinery",
-      i: "🏭",
-      cost: 1000
-    },
-    foundry: {
-      n: "Foundry",
-      i: "⚒️",
-      cost: 1400
-    },
-    armsFactory: {
-      n: "Arms Factory",
-      i: "🔫",
-      cost: 2200
-    },
-    heavyWorks: {
-      n: "Heavy Works",
-      i: "🛠️",
-      cost: 3500
-    },
-    electronicsLab: {
-      n: "Electronics Lab",
-      i: "🔬",
-      cost: 4000
-    },
-    warehouse: {
-      n: "Warehouse",
-      i: "📦",
-      cost: 500
-    }
-  };
-
-  // ---- Units (GDD §8) ----
-  const UNITS = {
-    infantry: {
-      n: "Infantry",
-      i: "🪖",
-      a: 10,
-      d: 12,
-      war: 20
-    },
-    tanks: {
-      n: "Tanks",
-      i: "🛡️",
-      a: 32,
-      d: 26,
-      war: 120
-    },
-    artillery: {
-      n: "Artillery",
-      i: "💥",
-      a: 40,
-      d: 8,
-      war: 110
-    },
-    aircraft: {
-      n: "Aircraft",
-      i: "✈️",
-      a: 38,
-      d: 14,
-      war: 200
-    },
-    drones: {
-      n: "Drones",
-      i: "🛸",
-      a: 22,
-      d: 10,
-      war: 90
-    },
-    engineers: {
-      n: "Engineers",
-      i: "🔧",
-      a: 6,
-      d: 8,
-      war: 50
-    }
-  };
-
-  // ---- Market reference prices ----
-  const REF = {
-    food: 1.2,
-    water: 1.0,
-    wood: 1.4,
-    stone: 1.5,
-    iron: 3.1,
-    rareMinerals: 8.4,
-    oil: 4.6,
-    dataChips: 11.2,
-    fuel: 7.0,
-    steel: 9.5,
-    electronics: 18.0,
-    machineParts: 14.0,
-    ammunition: 6.5,
-    chemicals: 9.0,
-    rifles: 22.0,
-    tanks: 120.0,
-    drones: 64.0,
-    aircraft: 180.0,
-    turrets: 40.0,
-    buildingComponents: 16.0
-  };
-
-  // ---- World generation (pointy-top hex, radius R) ----
-  const SIZE = 26;
-  function axialToPixel(q, r) {
-    return {
-      x: SIZE * Math.sqrt(3) * (q + r / 2),
-      y: SIZE * 1.5 * r
-    };
-  }
-  function ringOf(q, r) {
-    return (Math.abs(q) + Math.abs(r) + Math.abs(q + r)) / 2;
-  }
-  // deterministic pseudo-random
-  function rng(seed) {
-    let s = seed * 9301 + 49297;
-    return (s % 233280 / 233280 + 1) % 1;
-  }
-  function terrainForRing(ring, R, seed) {
-    const t = ring / R; // 0 center → 1 edge
-    const v = rng(seed);
-    if (t > 0.78) return v < 0.6 ? "plains" : v < 0.85 ? "forest" : "river";
-    if (t > 0.55) return v < 0.4 ? "forest" : v < 0.65 ? "river" : v < 0.85 ? "mountain" : "plains";
-    if (t > 0.32) return v < 0.3 ? "mountain" : v < 0.55 ? "desert" : v < 0.78 ? "coastal" : "industrial";
-    if (t > 0.12) return v < 0.35 ? "industrial" : v < 0.6 ? "techRuins" : v < 0.8 ? "desert" : "warzone";
-    return v < 0.7 ? "warzone" : "techRuins";
-  }
-  function buildWorld(R) {
-    const hexes = [];
-    let seed = 1;
-    for (let q = -R; q <= R; q++) {
-      for (let r = -R; r <= R; r++) {
-        if (Math.abs(q + r) > R) continue;
-        const ring = ringOf(q, r);
-        seed += 7;
-        const terrain = terrainForRing(ring, R, seed);
-        const {
-          x,
-          y
-        } = axialToPixel(q, r);
-        // NPC hostile camps: more common toward center
-        const npc = ring < R && rng(seed * 3) < 0.06 + (1 - ring / R) * 0.16;
-        hexes.push({
-          key: q + "," + r,
-          q,
-          r,
-          ring,
-          terrain,
-          x,
-          y,
-          npc,
-          npcTier: Math.max(1, Math.round((1 - ring / R) * 4))
-        });
-      }
-    }
-    return hexes;
-  }
-  function zoneOf(ring, R) {
-    const t = ring / R;
-    if (t < 0.2) return "crucible";
-    if (t > 0.8) return "newbie";
-    return "mid";
-  }
-  window.WL = {
-    TERRAIN,
-    RES,
-    BUILD,
-    UNITS,
-    REF,
-    SIZE,
-    axialToPixel,
-    buildWorld,
-    zoneOf,
-    ringOf,
-    fmt: n => Math.floor(n).toLocaleString()
-  };
-})();
-})(); } catch (e) { __ds_ns.__errors.push({ path: "ui_kits/warlands-game/data.js", error: String((e && e.message) || e) }); }
+  HexMap,
+  Icon,
+  fmt
+};
+})(); } catch (e) { __ds_ns.__errors.push({ path: "ui_kits/warroom/shell.js", error: String((e && e.message) || e) }); }
 
 __ds_ns.Badge = __ds_scope.Badge;
 
@@ -2688,11 +2139,11 @@ __ds_ns.Button = __ds_scope.Button;
 
 __ds_ns.Panel = __ds_scope.Panel;
 
-__ds_ns.Stat = __ds_scope.Stat;
-
 __ds_ns.ProgressBar = __ds_scope.ProgressBar;
 
 __ds_ns.ResourceChip = __ds_scope.ResourceChip;
+
+__ds_ns.Stat = __ds_scope.Stat;
 
 __ds_ns.Tabs = __ds_scope.Tabs;
 

@@ -1,0 +1,25 @@
+<!-- @dsCard group="Colors" viewport="700x150" name="State & Status" subtitle="Success · warning · error · disabled + accent text" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  body { margin: 0; background: var(--panel-void); padding: 20px; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .sw { width: 124px; }
+  .chip { height: 48px; border-radius: var(--radius-md); }
+  .nm { font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; color: var(--text-hi); margin-top: 8px; }
+  .hx { font-family: var(--font-mono); font-size: 10px; color: var(--text-lo); margin-top: 2px; }
+</style>
+</head>
+<body>
+  <div class="row">
+    <div class="sw"><div class="chip" style="background:var(--success)"></div><div class="nm">Success</div><div class="hx">#34D399 · safe/shield</div></div>
+    <div class="sw"><div class="chip" style="background:var(--warning)"></div><div class="nm">Warning</div><div class="hx">#FBBF24 · timer</div></div>
+    <div class="sw"><div class="chip" style="background:var(--error)"></div><div class="nm">Error</div><div class="hx">#EF4444 · attack</div></div>
+    <div class="sw"><div class="chip" style="background:var(--violet)"></div><div class="nm">Violet</div><div class="hx">#8B5CF6 · rare</div></div>
+    <div class="sw"><div class="chip" style="background:var(--disabled)"></div><div class="nm">Disabled</div><div class="hx">#3A4150</div></div>
+  </div>
+</body>
+</html>

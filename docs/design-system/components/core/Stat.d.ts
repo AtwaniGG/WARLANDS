@@ -1,17 +1,25 @@
 import * as React from "react";
 
+export type StatAccent =
+  | "amber"
+  | "blood"
+  | "sky"
+  | "emerald"
+  | "violet"
+  | "teal"
+  | "neutral";
+
 export interface StatProps extends React.HTMLAttributes<HTMLDivElement> {
-  /** Micro uppercase label, e.g. "$WAR", "Staked", "Pool". */
   label: React.ReactNode;
-  /** The readout — rendered mono + tabular. Pre-format numbers (e.g. "12,480"). */
+  /** The readout — rendered mono + tabular via `.wl-num`. Pre-format numbers. */
   value: React.ReactNode;
-  /** Value tint. @default "neutral" */
-  accent?: "amber" | "blood" | "sky" | "emerald" | "violet" | "teal" | "neutral";
+  /** @default "neutral" */
+  accent?: StatAccent;
   /** row = inline (HUD bar); stack = label above value (cards). @default "row" */
   align?: "row" | "stack";
   /** @default "md" */
   size?: "sm" | "md" | "lg";
 }
 
-/** Labelled mono numeric readout for the resource bar & dashboards. */
+/** Labelled mono numeric readout for the top resource bar & dashboards. */
 export function Stat(props: StatProps): JSX.Element;

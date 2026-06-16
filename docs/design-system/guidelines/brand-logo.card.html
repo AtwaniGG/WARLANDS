@@ -1,0 +1,36 @@
+<!-- @dsCard group="Brand" viewport="700x200" name="Logo & Wordmark" subtitle="Amber mark + Oswald wordmark" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  body { margin: 0; background: var(--panel-void); padding: 26px; color: var(--text-hi); }
+  .stack { display: flex; flex-direction: column; gap: 22px; }
+  .lockup { display: flex; align-items: center; gap: 12px; }
+  .mark { display: grid; place-items: center; font-family: var(--font-display); font-weight: 800; color: #000; background: var(--amber); }
+  .word { font-family: var(--font-display); font-weight: 700; letter-spacing: 0.2em; }
+  .row { display: flex; align-items: center; gap: 36px; }
+  .meta { font-family: var(--font-mono); font-size: 10px; color: var(--text-lo); }
+  .onlight { background: var(--amber); color: #000; padding: 14px 18px; border-radius: var(--radius-md); }
+</style>
+</head>
+<body>
+  <div class="stack">
+    <div class="lockup">
+      <span class="mark" style="height:40px;width:40px;font-size:24px">W</span>
+      <span class="word" style="font-size:30px;color:var(--text-hi)">WARLANDS</span>
+    </div>
+    <div class="row">
+      <div class="lockup">
+        <span class="mark" style="height:24px;width:24px;font-size:15px">W</span>
+        <span class="word" style="font-size:18px;color:var(--amber)">WARLANDS</span>
+      </div>
+      <div class="onlight">
+        <span class="word" style="font-size:18px">WARLANDS</span>
+      </div>
+      <span class="meta">Mark = "W" on amber · wordmark = Oswald 700, 0.2em tracking</span>
+    </div>
+  </div>
+</body>
+</html>

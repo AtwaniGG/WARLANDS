@@ -1,8 +1,9 @@
-Dark bordered surface framing a group of controls. Optional ALL-CAPS header and accent `rim`.
+Dark bordered surface that frames a group of HUD controls — the base card of every panel in the War Room.
 
 ```jsx
-<Panel title="Stockpile" accent>…resource chips…</Panel>
-<Panel label="Hostile Camp" rim="blood">…raid planner…</Panel>
+<Panel title="Stockpile" accent headerRight={<Badge tone="amber">Owned</Badge>}>
+  …rows…
+</Panel>
 ```
 
-Use `rim="amber"` for the player's own panels, `rim="blood"` for hostile/danger contexts. `headerRight` pins a slot count or badge to the header.
+`title` (13px caps) or `label` (10px caps) for the header; omit both for a header-less surface. `accent` tints the title amber; `rim="blood|sky|emerald|amber"` colors the border for status. Control body inset with `padding`.

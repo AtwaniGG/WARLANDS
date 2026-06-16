@@ -1,378 +1,532 @@
 "use client";
-import { useState, useRef } from "react";
-import { useWorldSocket } from "@/lib/useWorldSocket";
-import { PLOT_TYPES } from "@/game/plotTypes";
+import { useState, type CSSProperties } from "react";
+import { useBaseSocket } from "@/lib/useBaseSocket";
 import { axialToPixel } from "@/game/world";
-import { BUILDINGS, isBuildingAllowedOnTerrain, type BuildingId } from "@/game/buildings";
-import { RESOURCES, type ResourceId } from "@/game/resources";
-import { UNITS, UNIT_IDS, armySize, type Army } from "@/game/units";
-import { upgradeCost } from "@/game/formulas";
-import { ALLEGIANCE_BUILDINGS, type AllegianceBuildingId } from "@/game/allegiance";
+import { Badge, Button, Panel, ProgressBar, Stat } from "@/components/ui";
+import { BaseTutorial } from "@/components/BaseTutorial";
+import {
+  BUILDINGS, LOOT_PCT, MAX_BUILDERS, UNITS, UNIT_IDS, WALL, builderCost, ccTier, finishCost, housingCap, housingUsed, levelDef, maxLevelOf, maxWallLevel,
+  type Army, type BattleReport, type CocBase, type CocBuildingId, type CocResource, type CocUnitId, type CocWorld, type PlacedBuilding,
+} from "@/sim/coc";
 
 const SERVER_URL = process.env.NEXT_PUBLIC_GAME_SERVER_URL ?? "ws://localhost:8080";
 const SIZE = 16;
+const ICON: Record<CocBuildingId, string> = {
+  commandCenter: "🏛️", goldCollector: "⛏️", elixirCollector: "🛢️", goldStorage: "🏦", elixirStorage: "🛍️",
+  cannon: "🔫", mortar: "💣", airDefense: "🛰️", barracks: "🏰", armyCamp: "⛺",
+};
+const UNIT_ICON: Record<CocUnitId, string> = { grunt: "🪖", marksman: "🎯", breacher: "🧨", juggernaut: "🛡️", gunship: "🚁" };
 
-const OFFER: BuildingId[] = [
-  "farm", "well", "lumberCamp", "quarry", "ironMine", "mineralMine", "oilDerrick", "dataExcavator",
-  "refinery", "foundry", "armsFactory", "heavyWorks", "electronicsLab", "warehouse",
-];
-
-function fmtArmy(a: Army): string {
-  return UNIT_IDS.filter((id) => (a[id] ?? 0) > 0).map((id) => `${UNITS[id].icon}${a[id]}`).join(" ") || "—";
+function ccLevelOf(base: CocBase): number { return base.buildings[base.centerKey]?.level ?? 1; }
+function storageCapOf(base: CocBase, res: CocResource): number {
+  let cap = 1000;
+  for (const b of Object.values(base.buildings)) {
+    const def = BUILDINGS[b.id];
+    if (def.stores === res && b.level >= 1) cap += def.levels[b.level - 1]?.storageCap ?? 0;
+  }
+  return cap;
 }
+function terrainFill(t: string): string { return `var(--terrain-${t.toLowerCase()})`; }
+function num(n: number): string { return Math.floor(n).toLocaleString(); }
+function center(key: string): { x: number; y: number } {
+  const [q, r] = key.split(",").map(Number);
+  return axialToPixel(q, r, SIZE);
+}
+function armyTotal(a: Army): number { return UNIT_IDS.reduce((s, u) => s + (a[u] ?? 0), 0); }
 
 export default function WorldPage() {
-  const { state, playerId, connected, error, report, send, clearReport } = useWorldSocket(SERVER_URL);
+  const { state, playerId, connected, error, report, send, clearReport } = useBaseSocket(SERVER_URL);
   const [sel, setSel] = useState<string | null>(null);
-
-  // map pan/zoom (mouse + touch + wheel)
-  const [wv, setWv] = useState({ x: 0, y: 0, s: 1 });
-  const wdrag = useRef<{ sx: number; sy: number; ox: number; oy: number } | null>(null);
-  const wtouch = useRef<{ mode: "pan" | "pinch"; sx: number; sy: number; ox: number; oy: number; d0: number; s0: number } | null>(null);
-  const clampS = (s: number) => Math.min(3, Math.max(1, s));
-  const wZoom = (f: number) => setWv((v) => ({ ...v, s: clampS(v.s * f) }));
-  const wReset = () => setWv({ x: 0, y: 0, s: 1 });
-  const wWheel = (e: React.WheelEvent) => setWv((v) => ({ ...v, s: clampS(v.s - e.deltaY * 0.0015) }));
-  const wDown = (e: React.MouseEvent) => { wdrag.current = { sx: e.clientX, sy: e.clientY, ox: wv.x, oy: wv.y }; };
-  const wMove = (e: React.MouseEvent) => { const d = wdrag.current; if (!d) return; setWv((v) => ({ ...v, x: d.ox + (e.clientX - d.sx), y: d.oy + (e.clientY - d.sy) })); };
-  const wUp = () => { wdrag.current = null; };
-  const wtd = (a: React.Touch, b: React.Touch) => Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
-  const wTStart = (e: React.TouchEvent) => {
-    if (e.touches.length === 1) { const t = e.touches[0]; wtouch.current = { mode: "pan", sx: t.clientX, sy: t.clientY, ox: wv.x, oy: wv.y, d0: 0, s0: wv.s }; }
-    else if (e.touches.length === 2) { wtouch.current = { mode: "pinch", sx: 0, sy: 0, ox: wv.x, oy: wv.y, d0: wtd(e.touches[0], e.touches[1]), s0: wv.s }; }
-  };
-  const wTMove = (e: React.TouchEvent) => {
-    const t = wtouch.current; if (!t) return;
-    if (t.mode === "pan" && e.touches.length === 1) { const p = e.touches[0]; setWv((v) => ({ ...v, x: t.ox + (p.clientX - t.sx), y: t.oy + (p.clientY - t.sy) })); }
-    else if (t.mode === "pinch" && e.touches.length === 2) { const d = wtd(e.touches[0], e.touches[1]); setWv((v) => ({ ...v, s: clampS(t.s0 * (d / (t.d0 || 1))) })); }
-  };
-  const wTEnd = (e: React.TouchEvent) => { if (e.touches.length === 0) wtouch.current = null; };
+  const [selWall, setSelWall] = useState<string | null>(null);
+  const [wallMode, setWallMode] = useState(false);
+  const [wallFrom, setWallFrom] = useState<string | null>(null);
+  const [armyOpen, setArmyOpen] = useState(false);
+  const [clanOpen, setClanOpen] = useState(false);
+  const [raidTarget, setRaidTarget] = useState<string | null>(null);
+  const [deploy, setDeploy] = useState<Army>({});
 
   if (!state) {
-    return <main style={page}>{connected ? "Loading world…" : `Connecting to ${SERVER_URL}…`}</main>;
+    return (
+      <main style={page}>
+        <div className="wl-title" style={{ fontSize: 20 }}>{connected ? "LOADING WORLD…" : "ESTABLISHING UPLINK…"}</div>
+        <div style={{ color: "var(--text-secondary)", fontSize: 12, marginTop: 6 }}>{SERVER_URL}</div>
+      </main>
+    );
   }
 
-  const me = playerId ? state.players[playerId] : null;
-  const myPlots = Object.entries(state.plots).filter(([, p]) => p.owner === playerId);
-  const selPlot = sel ? state.plots[sel] : null;
-  const selHex = sel ? state.hexes[sel] : null;
+  const myBase: CocBase | null = playerId ? state.bases[playerId] ?? null : null;
+  const me = playerId ? state.players[playerId] ?? null : null;
+  const tier = myBase ? ccTier(ccLevelOf(myBase)) : null;
+  const freeBuilders = myBase ? myBase.builders - myBase.jobs.length : 0;
+  const jobByHex = new Map(myBase?.jobs.map((j) => [j.hexKey, j]) ?? []);
+  const selBuilding = myBase && sel ? myBase.buildings[sel] : null;
 
-  // strongest owned plot with an army = default raid origin
-  const origin = myPlots
-    .map(([k, p]) => ({ k, size: armySize(p.army ?? {}) }))
-    .filter((x) => x.size > 0)
-    .sort((a, b) => b.size - a.size)[0];
+  function onHexClick(key: string, q: number, r: number) {
+    if (!myBase) { send({ type: "claimBase", q, r }); return; }
+    const owner = state!.claimedHexes[key];
+    if (owner && owner !== playerId) { setSel(null); setSelWall(null); setRaidTarget(owner); setDeploy({}); return; }
+    if (!myBase.ownedHexes.includes(key)) return;
+    if (wallMode) {
+      if (!wallFrom) { setWallFrom(key); return; }
+      if (wallFrom === key) { setWallFrom(null); return; }
+      send({ type: "placeWall", aKey: wallFrom, bKey: key });
+      setWallFrom(null);
+      return;
+    }
+    setSelWall(null);
+    setSel(key);
+  }
 
-  // where market purchases / cancellations deposit goods: selected owned plot, else first owned plot
-  const destKey: string | null = selPlot?.owner === playerId ? sel : myPlots[0]?.[0] ?? null;
+  const buildable: CocBuildingId[] = tier ? (Object.keys(tier.caps) as CocBuildingId[]) : [];
+  const resourceBuildings = buildable.filter((id) => ["collector", "storage"].includes(BUILDINGS[id].category));
+  const defenseBuildings = buildable.filter((id) => BUILDINGS[id].category === "defense");
+  const armyBuildings = buildable.filter((id) => BUILDINGS[id].category === "army");
 
   return (
     <main style={page}>
-      <h1 style={{ margin: "0 0 8px", fontSize: 20 }}>WARLANDS · Live World</h1>
-      <div style={{ fontSize: 13, opacity: 0.85 }}>
-        {connected ? "🟢 connected" : "🔴 offline"} · tick {state.tick} · players{" "}
-        {Object.keys(state.players).length} · burned {Math.round(state.burned ?? 0).toLocaleString()} ·{" "}
-        you: {me ? `${Math.round(me.war).toLocaleString()} $WAR · ${myPlots.length} plots` : "—"}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+        <span className="wl-title" style={{ fontSize: 22 }}>LIVE WORLD MAP</span>
+        <Badge tone={connected ? "emerald" : "blood"} variant="soft">{connected ? "● ONLINE" : "● OFFLINE"}</Badge>
+        <span className="wl-num" style={{ fontSize: 11, color: "var(--text-secondary)" }}>TICK {state.tick} · {Object.keys(state.players).length} CMDR</span>
+        {myBase && <Button size="sm" variant="outline" icon="⚔️" onClick={() => setArmyOpen(true)}>ARMY ({armyTotal(myBase.army)})</Button>}
+        {myBase && <Button size="sm" variant="outline" icon="🤝" onClick={() => setClanOpen(true)}>CLAN</Button>}
+        {myBase && (
+          <Button size="sm" variant={wallMode ? "primary" : "outline"} icon="🧱"
+            onClick={() => { setWallMode((w) => !w); setWallFrom(null); setSel(null); setSelWall(null); }}>
+            {wallMode ? "WALL MODE: ON" : "WALL MODE"}
+          </Button>
+        )}
       </div>
-      {error && <div style={{ color: "#ff6b6b", fontSize: 12, marginTop: 4 }}>⚠ {error}</div>}
+      {error && <div style={{ marginTop: 8 }}><Badge tone="blood" variant="soft" icon="⚠">{error}</Badge></div>}
 
-      <div
-        style={{ position: "relative", marginTop: 12, width: "100%", maxWidth: 540, aspectRatio: "1 / 1", background: "#11141b", borderRadius: 8, overflow: "hidden", touchAction: "none", cursor: "grab" }}
-        onWheel={wWheel}
-        onMouseDown={wDown}
-        onMouseMove={wMove}
-        onMouseUp={wUp}
-        onMouseLeave={wUp}
-        onTouchStart={wTStart}
-        onTouchMove={wTMove}
-        onTouchEnd={wTEnd}
-      >
-        <svg viewBox="-180 -180 360 360" style={{ width: "100%", height: "100%", display: "block", transform: `translate(${wv.x}px,${wv.y}px) scale(${wv.s})`, transformOrigin: "center", transition: wtouch.current || wdrag.current ? "none" : "transform .08s linear" }}>
+      {myBase ? (
+        <Panel label="HEADQUARTERS" accent padding="10px 14px" style={{ marginTop: 12 }}
+          headerRight={<Button size="sm" variant="primary" icon="📥" onClick={() => send({ type: "collect" })}>COLLECT</Button>}>
+          <div style={{ display: "flex", gap: 18, flexWrap: "wrap", alignItems: "center" }}>
+            <Stat label="🪙 GOLD" value={`${num(myBase.gold)} / ${num(storageCapOf(myBase, "gold"))}`} accent="amber" />
+            <Stat label="🧪 ELIXIR" value={`${num(myBase.elixir)} / ${num(storageCapOf(myBase, "elixir"))}`} accent="violet" />
+            <Stat label="💎 $WAR" value={num(me?.war ?? 0)} accent="amber" />
+            <Stat label="🏆 TROPHIES" value={`${myBase.trophies}`} accent="amber" />
+            <Stat label="CMD CENTER" value={`L${ccLevelOf(myBase)}`} accent="sky" />
+            <Stat label="BUILDERS" value={`${freeBuilders}/${myBase.builders}`} accent={freeBuilders > 0 ? "emerald" : "neutral"} />
+            <Stat label="ARMY" value={`${housingUsed(myBase)}/${housingCap(myBase)}`} accent="blood" />
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
+            {myBase.builders < MAX_BUILDERS && (
+              <Button size="sm" variant="outline" icon="🔨" onClick={() => send({ type: "buyBuilder" })}>
+                +BUILDER · 💎{num(builderCost(myBase.builders))}
+              </Button>
+            )}
+            <Button size="sm" variant="outline" icon="🛡️" onClick={() => send({ type: "extendShield", hours: 2 })}>
+              +2h SHIELD · 💎1,000
+            </Button>
+            {myBase.shieldUntil > state.tick && (
+              <Badge tone="emerald" variant="soft">SHIELDED {Math.ceil((myBase.shieldUntil - state.tick) / 3600)}h</Badge>
+            )}
+          </div>
+        </Panel>
+      ) : (
+        <Panel title="CLAIM YOUR GROUND" rim="amber" padding="12px 14px" style={{ marginTop: 12 }}>
+          <p style={{ margin: 0, fontSize: 13, color: "var(--text-secondary)" }}>
+            Tap an unclaimed hex with all six neighbours free to stake your Command Center and the ring around it.
+          </p>
+        </Panel>
+      )}
+      {wallMode && <div style={{ marginTop: 8 }}><Badge tone="amber" variant="soft" icon="🧱">{wallFrom ? `WALL FROM ${wallFrom} — tap an adjacent hex` : "TAP TWO ADJACENT OWNED HEXES"}</Badge></div>}
+      {myBase && <div style={{ marginTop: 8, fontSize: 11, color: "var(--text-muted)" }}>Tip: tap another commander&apos;s territory to scout &amp; raid.</div>}
+
+      {/* Map */}
+      <div style={mapWrap}>
+        <div className="wl-hexgrid" style={{ position: "absolute", inset: 0, opacity: 0.5, pointerEvents: "none" }} />
+        <div className="wl-scanline" />
+        <svg viewBox="-260 -260 520 520" style={{ width: "100%", height: "100%", display: "block", position: "relative" }}>
           {Object.values(state.hexes).map((h) => {
             const key = `${h.q},${h.r}`;
             const { x, y } = axialToPixel(h.q, h.r, SIZE);
-            const plot = state.plots[key];
-            const owned = plot?.owner === playerId;
-            const enemy = plot && !owned;
+            const owner = state.claimedHexes[key];
+            const mine = owner && owner === playerId;
+            const active = mine && (sel === key || wallFrom === key);
+            const isTarget = !!owner && owner === raidTarget;
+            const b = mine ? myBase!.buildings[key] : undefined;
+            const job = mine ? jobByHex.get(key) : undefined;
+            const fill = mine ? "var(--panel-2)" : owner ? "var(--panel)" : terrainFill(h.terrain);
+            const rim = active || isTarget ? "var(--rim-selected)" : mine ? "var(--rim-owned)" : owner ? "var(--rim-enemy)" : "var(--rim-neutral)";
             return (
-              <circle key={key} cx={x} cy={y} r={SIZE * 0.62}
-                fill={PLOT_TYPES[h.terrain].color}
-                stroke={owned ? "#ffffff" : enemy ? "#ff5252" : sel === key ? "#ffd54f" : "#00000088"}
-                strokeWidth={owned || enemy || sel === key ? 2 : 0.5}
-                onClick={() => setSel(key)} style={{ cursor: "pointer" }} />
+              <g key={key} transform={`translate(${x},${y})`} onClick={() => onHexClick(key, h.q, h.r)}
+                style={{ cursor: "pointer", filter: active || isTarget ? "drop-shadow(0 0 4px rgba(245,179,1,0.6))" : undefined }}>
+                <polygon points={hexPoints(SIZE)} fill={fill} stroke={rim} strokeWidth={mine || owner ? 1.4 : 0.5} />
+                {b && <text textAnchor="middle" dy="3" fontSize="11">{ICON[b.id]}</text>}
+                {b && b.level >= 1 && <text textAnchor="middle" dy="13" fontSize="6" fill="var(--amber-text)" style={{ fontFamily: "var(--font-mono)" }}>L{b.level}</text>}
+                {job && <text textAnchor="middle" dy="-7" fontSize="6" fill="var(--warning)" style={{ fontFamily: "var(--font-mono)" }}>{Math.max(0, job.finishesAtTick - state.tick)}s</text>}
+              </g>
+            );
+          })}
+          {myBase && Object.entries(myBase.walls).map(([ek, level]) => {
+            const [aK, bK] = ek.split("|");
+            const a = center(aK), b = center(bK);
+            const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+            const dx = b.x - a.x, dy = b.y - a.y;
+            const len = Math.hypot(dx, dy) || 1;
+            const px = -dy / len, py = dx / len;
+            const half = SIZE * 0.5;
+            return (
+              <g key={ek} onClick={() => { setSel(null); setSelWall(ek); }} style={{ cursor: "pointer" }}>
+                <line x1={mx + px * half} y1={my + py * half} x2={mx - px * half} y2={my - py * half} stroke="transparent" strokeWidth={10} />
+                <line x1={mx + px * half} y1={my + py * half} x2={mx - px * half} y2={my - py * half} stroke={selWall === ek ? "var(--rim-selected)" : "var(--concrete)"} strokeWidth={2 + level * 1.5} strokeLinecap="round" />
+              </g>
             );
           })}
         </svg>
-        <div style={{ position: "absolute", bottom: 8, left: 8, display: "flex", flexDirection: "column", gap: 6 }}>
-          <button onClick={() => wZoom(1.3)} aria-label="Zoom in" style={zoomBtn}>＋</button>
-          <button onClick={() => wZoom(1 / 1.3)} aria-label="Zoom out" style={zoomBtn}>－</button>
-          <button onClick={wReset} aria-label="Reset view" style={{ ...zoomBtn, fontSize: 15 }}>⟳</button>
-        </div>
-        <div style={{ position: "absolute", top: 8, right: 10, fontSize: 10, color: "#6b7280", pointerEvents: "none" }}>drag · pinch · ＋－</div>
       </div>
 
-      {selHex && (
-        <div style={{ marginTop: 12, fontSize: 13, maxWidth: 560 }}>
-          <div style={{ marginBottom: 6 }}>
-            Selected <b>{sel}</b> · {PLOT_TYPES[selHex.terrain].name} · stake {PLOT_TYPES[selHex.terrain].stake.toLocaleString()} $WAR
-          </div>
-
-          {!selPlot && (
-            <button onClick={() => { const [q, r] = sel!.split(",").map(Number); send({ type: "stake", q, r }); }} style={btn}>
-              Stake this plot
-            </button>
-          )}
-
-          {/* ---- OWNED PLOT ---- */}
-          {selPlot?.owner === playerId && (
-            <div>
-              <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 4 }}>
-                {Object.entries(selPlot.resources).filter(([, v]) => (v ?? 0) > 0.5)
-                  .map(([k, v]) => `${RESOURCES[k as ResourceId]?.icon ?? ""}${Math.round(v ?? 0)}`).join("  ") || "no resources yet"}
-              </div>
-              <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 8 }}>
-                🛡 defense {Math.round((selPlot.defensePct ?? 1) * 100)}% · army {fmtArmy(selPlot.army ?? {})}
-                {selPlot.trainQueue.length > 0 && ` · training ${selPlot.trainQueue.map((o) => UNITS[o.unit].icon + o.ticksLeft).join(" ")}`}
-              </div>
-
-              {/* buildings */}
-              <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 8 }}>
-                {selPlot.buildings.map((b, i) => {
-                  const def = BUILDINGS[b.id];
-                  const cost = upgradeCost(def.baseCost || 200, b.level + 1);
-                  const maxed = b.level >= def.maxLevel;
-                  return (
-                    <div key={i} style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
-                      <span style={{ minWidth: 150 }}>{def.icon} {def.name} L{b.level}</span>
-                      <button onClick={() => send({ type: "upgrade", key: sel!, index: i })} style={btnSm} disabled={maxed}>
-                        {maxed ? "max" : `↑ (${cost.toLocaleString()})`}
-                      </button>
-                      {def.kind === "factory" && def.makes && (
-                        <select value={b.activeProduct ?? def.makes[0]} style={select}
-                          onChange={(e) => send({ type: "setProduct", key: sel!, index: i, product: e.target.value as ResourceId })}>
-                          {def.makes.map((p) => <option key={p} value={p}>{RESOURCES[p].name}</option>)}
-                        </select>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* build */}
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
-                {OFFER.filter((id) => isBuildingAllowedOnTerrain(BUILDINGS[id], PLOT_TYPES[selPlot.terrain].produces)).map((id) => (
-                  <button key={id} onClick={() => send({ type: "build", key: sel!, buildingId: id })} style={btnSm}>
-                    + {BUILDINGS[id].name} ({BUILDINGS[id].baseCost})
-                  </button>
-                ))}
-              </div>
-
-              {/* train */}
-              <div style={{ fontSize: 11, opacity: 0.7, marginBottom: 2 }}>Train units:</div>
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
-                {UNIT_IDS.map((id) => (
-                  <button key={id} onClick={() => send({ type: "train", key: sel!, unit: id })} style={btnSm}
-                    title={UNITS[id].desc}>
-                    {UNITS[id].icon} {UNITS[id].name} ({UNITS[id].costWar})
-                  </button>
-                ))}
-              </div>
-
-              {/* sell on market */}
-              {Object.entries(selPlot.resources).some(([, v]) => (v ?? 0) >= 10) && (
-                <>
-                  <div style={{ fontSize: 11, opacity: 0.7, marginBottom: 2 }}>Sell on market (lists 50 @ ref price):</div>
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
-                    {(Object.keys(selPlot.resources) as ResourceId[])
-                      .filter((it) => (selPlot.resources[it] ?? 0) >= 10)
-                      .map((it) => {
-                        const qty = Math.min(50, Math.floor(selPlot.resources[it] ?? 0));
-                        const price = state.market.refPrices[it] ?? 1;
-                        return (
-                          <button key={it} style={btnSm}
-                            onClick={() => send({ type: "list", key: sel!, item: it, qty, price })}>
-                            {RESOURCES[it].icon} ×{qty} @{price}
-                          </button>
-                        );
-                      })}
-                  </div>
-                </>
-              )}
-
-              <button onClick={() => { send({ type: "unstake", key: sel! }); setSel(null); }} style={btnDanger}>Unstake (3% fee)</button>
-            </div>
-          )}
-
-          {/* ---- ENEMY PLOT: raid ---- */}
-          {selPlot && selPlot.owner !== playerId && (
-            <div>
-              <div style={{ color: "#ff8a80", marginBottom: 6 }}>
-                Enemy plot · 🛡 {Math.round((selPlot.defensePct ?? 1) * 100)}% · garrison {fmtArmy(selPlot.army ?? {})}
-              </div>
-              {origin ? (
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                  <span style={{ fontSize: 12, opacity: 0.8 }}>Attack from {origin.k} ({fmtArmy(state.plots[origin.k].army)}):</span>
-                  <button style={btn} onClick={() => send({ type: "raid", fromKey: origin.k, targetKey: sel!, army: state.plots[origin.k].army, intent: "raid" })}>⚔ Raid</button>
-                  <button style={btn} onClick={() => send({ type: "raid", fromKey: origin.k, targetKey: sel!, army: state.plots[origin.k].army, intent: "siege" })}>🏰 Siege</button>
-                </div>
-              ) : (
-                <div style={{ fontSize: 12, opacity: 0.7 }}>Train an army on one of your plots to raid.</div>
-              )}
-            </div>
-          )}
-        </div>
+      {/* Wall panel */}
+      {myBase && selWall && (
+        <Panel title="WALL" accent padding="12px 14px" style={{ marginTop: 12 }} headerRight={<button onClick={() => setSelWall(null)} style={closeBtn}>✕</button>}>
+          <WallInfo base={myBase} ek={selWall} onUpgrade={() => send({ type: "upgradeWall", edgeKey: selWall })} />
+        </Panel>
       )}
 
-      {/* ---- MARKETPLACE ---- */}
-      <div style={{ marginTop: 16, maxWidth: 560 }}>
-        <div style={{ fontSize: 13, marginBottom: 4 }}>🏪 Marketplace {destKey ? "" : "(stake a plot to trade)"}</div>
-        {state.market.book.length === 0 ? (
-          <div style={{ fontSize: 12, opacity: 0.6 }}>No listings yet — sell something from one of your plots.</div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-            {[...state.market.book].sort((a, b) => a.item.localeCompare(b.item) || a.price - b.price).slice(0, 16).map((o) => {
-              const mine = o.owner === playerId;
-              return (
-                <div key={o.id} style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 12 }}>
-                  <span style={{ minWidth: 150 }}>{RESOURCES[o.item].icon} {RESOURCES[o.item].name} ×{o.qty} @ {o.price} $WAR</span>
-                  {mine ? (
-                    <button style={btnSm} disabled={!destKey} onClick={() => send({ type: "cancel", orderId: o.id, toKey: destKey! })}>Cancel</button>
-                  ) : (
-                    <button style={btnSm} disabled={!destKey} onClick={() => send({ type: "buy", item: o.item, qty: o.qty, toKey: destKey! })}>
-                      Buy ×{o.qty}
-                    </button>
-                  )}
-                  <span style={{ fontSize: 11, opacity: 0.5 }}>{mine ? "yours" : ""}</span>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* ---- ALLEGIANCES ---- */}
-      <div style={{ marginTop: 16, maxWidth: 560 }}>
-        <div style={{ fontSize: 13, marginBottom: 4 }}>🤝 Allegiances</div>
-        {(() => {
-          const myAllyId = me?.allegianceId ?? null;
-          const myAlly = myAllyId ? state.allegiances[myAllyId] : null;
-          if (myAlly) {
-            const isFounder = myAlly.founder === playerId;
-            const owned = new Set(myAlly.buildings);
-            return (
-              <div style={{ fontSize: 12 }}>
-                <div style={{ marginBottom: 4 }}>
-                  <b>{myAlly.name}</b> · {myAlly.members.length} members · treasury {Math.round(myAlly.treasuryWar).toLocaleString()} $WAR ·
-                  your contribution {Math.round(myAlly.contributions[playerId!] ?? 0).toLocaleString()}
-                </div>
-                <div style={{ marginBottom: 6, opacity: 0.85 }}>
-                  buildings: {myAlly.buildings.map((b) => `${ALLEGIANCE_BUILDINGS[b].icon}${ALLEGIANCE_BUILDINGS[b].name}`).join(", ")}
-                </div>
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 6 }}>
-                  {[1000, 5000].map((amt) => (
-                    <button key={amt} style={btnSm} onClick={() => send({ type: "contribute", amount: amt })}>Contribute {amt.toLocaleString()}</button>
-                  ))}
-                  <button style={btnDanger} onClick={() => send({ type: "leaveAllegiance" })}>Leave</button>
-                </div>
-                {isFounder && (
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 6 }}>
-                    <span style={{ fontSize: 11, opacity: 0.6, alignSelf: "center" }}>founder build:</span>
-                    {(["fortress", "research", "tradeHub", "radar", "factory", "shield"] as AllegianceBuildingId[])
-                      .filter((b) => !owned.has(b))
-                      .map((b) => (
-                        <button key={b} style={btnSm} disabled={myAlly.treasuryWar < ALLEGIANCE_BUILDINGS[b].cost}
-                          title={ALLEGIANCE_BUILDINGS[b].benefit}
-                          onClick={() => send({ type: "allegianceBuild", buildingId: b })}>
-                          + {ALLEGIANCE_BUILDINGS[b].icon}{ALLEGIANCE_BUILDINGS[b].name} ({ALLEGIANCE_BUILDINGS[b].cost.toLocaleString()})
-                        </button>
-                      ))}
-                  </div>
-                )}
-
-                {/* governance: propose + vote (any member) */}
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 6 }}>
-                  <span style={{ fontSize: 11, opacity: 0.6, alignSelf: "center" }}>propose:</span>
-                  {(["fortress", "research", "tradeHub", "radar", "factory", "shield"] as AllegianceBuildingId[])
-                    .filter((b) => !owned.has(b) && !myAlly.proposals.some((p) => !p.resolved && p.buildingId === b))
-                    .map((b) => (
-                      <button key={b} style={btnSm} title={ALLEGIANCE_BUILDINGS[b].benefit}
-                        onClick={() => send({ type: "propose", buildingId: b })}>
-                        🗳 {ALLEGIANCE_BUILDINGS[b].icon}{ALLEGIANCE_BUILDINGS[b].name}
-                      </button>
-                    ))}
-                </div>
-                {myAlly.proposals.filter((p) => !p.resolved).map((p) => {
-                  const voted = p.for.includes(playerId!) || p.against.includes(playerId!);
-                  return (
-                    <div key={p.id} style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 3 }}>
-                      <span style={{ minWidth: 170 }}>
-                        🗳 {ALLEGIANCE_BUILDINGS[p.buildingId].name} · {p.for.length}✓/{p.against.length}✗ · closes t{p.closesAtTick}
-                      </span>
-                      {!voted ? (
-                        <>
-                          <button style={btnSm} onClick={() => send({ type: "vote", proposalId: p.id, support: true })}>For</button>
-                          <button style={btnSm} onClick={() => send({ type: "vote", proposalId: p.id, support: false })}>Against</button>
-                        </>
-                      ) : <span style={{ fontSize: 11, opacity: 0.5 }}>voted</span>}
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          }
-          // not in an allegiance: found or join
-          const others = Object.values(state.allegiances);
-          return (
-            <div style={{ fontSize: 12 }}>
-              <button style={btn} disabled={!me || me.war < 5000}
-                onClick={() => { const name = window.prompt("Allegiance name?"); if (name) send({ type: "found", name }); }}>
-                Found an allegiance (5,000 $WAR)
-              </button>
-              {others.length > 0 && (
-                <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 3 }}>
-                  {others.map((a) => (
-                    <div key={a.id} style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                      <span style={{ minWidth: 180 }}>{a.name} · {a.members.length} members · {a.buildings.length} bldgs</span>
-                      <button style={btnSm} onClick={() => send({ type: "joinAllegiance", id: a.id })}>Join</button>
-                    </div>
-                  ))}
-                </div>
-              )}
+      {/* Build/Upgrade panel */}
+      {myBase && sel && (
+        <Panel title={selBuilding ? BUILDINGS[selBuilding.id].name : `HEX ${sel}`} accent={!!selBuilding} padding="12px 14px" style={{ marginTop: 12 }}
+          headerRight={<button onClick={() => setSel(null)} style={closeBtn}>✕</button>}>
+          {selBuilding ? (
+            <BuildingInfo base={myBase} building={selBuilding} job={jobByHex.get(sel)} tick={state.tick} freeBuilders={freeBuilders}
+              war={me?.war ?? 0}
+              onUpgrade={() => send({ type: "upgradeBuilding", hexKey: sel })}
+              onFinish={() => send({ type: "finishNow", hexKey: sel })} />
+          ) : (
+            <div style={{ display: "grid", gap: 12 }}>
+              <BuildGroup label="RESOURCES" ids={resourceBuildings} base={myBase} tier={tier!} freeBuilders={freeBuilders} onBuild={(id) => send({ type: "placeBuilding", hexKey: sel, buildingId: id })} />
+              <BuildGroup label="DEFENSE" ids={defenseBuildings} base={myBase} tier={tier!} freeBuilders={freeBuilders} onBuild={(id) => send({ type: "placeBuilding", hexKey: sel, buildingId: id })} />
+              <BuildGroup label="ARMY" ids={armyBuildings} base={myBase} tier={tier!} freeBuilders={freeBuilders} onBuild={(id) => send({ type: "placeBuilding", hexKey: sel, buildingId: id })} />
+              <ExpandRow base={myBase} state={state} onExpand={(q, r) => send({ type: "expandCluster", q, r })} />
             </div>
-          );
-        })()}
-      </div>
+          )}
+        </Panel>
+      )}
 
-      {/* ---- BATTLE REPORT ---- */}
+      {/* Army / training */}
+      {myBase && armyOpen && (
+        <Overlay onClose={() => setArmyOpen(false)}>
+          <ArmyPanel base={myBase} onTrain={(u) => send({ type: "trainTroop", unit: u })} onClose={() => setArmyOpen(false)} />
+        </Overlay>
+      )}
+
+      {/* Scout / attack */}
+      {myBase && raidTarget && state.bases[raidTarget] && (
+        <Overlay onClose={() => setRaidTarget(null)}>
+          <AttackPanel
+            me={myBase} target={state.bases[raidTarget]} tick={state.tick} deploy={deploy} setDeploy={setDeploy}
+            onAttack={() => { send({ type: "raid", targetOwner: raidTarget, army: deploy }); setRaidTarget(null); }}
+            onClose={() => setRaidTarget(null)}
+          />
+        </Overlay>
+      )}
+
+      {/* Clan */}
+      {myBase && clanOpen && playerId && (
+        <Overlay onClose={() => setClanOpen(false)}>
+          <ClanPanel state={state} playerId={playerId} send={send} onClose={() => setClanOpen(false)} />
+        </Overlay>
+      )}
+
+      {/* Result card */}
       {report && (
-        <div onClick={clearReport} style={overlay}>
-          <div onClick={(e) => e.stopPropagation()} style={modal}>
-            <h2 style={{ margin: "0 0 8px", fontSize: 16 }}>
-              {report.result.attackerWins ? "⚔ Victory" : "🛡 Repelled"} — raid on {report.targetKey}
-            </h2>
-            <div style={{ fontSize: 13, marginBottom: 8 }}>{report.result.summary}</div>
-            <div style={{ fontSize: 12, opacity: 0.85 }}>win chance was {Math.round(report.result.winChance * 100)}%</div>
-            <div style={{ fontSize: 12, marginTop: 8 }}>
-              your losses: {fmtArmy(report.result.attackerLosses)} · enemy losses: {fmtArmy(report.result.defenderLosses)}
-            </div>
-            {Object.keys(report.result.loot).length > 0 && (
-              <div style={{ fontSize: 12, marginTop: 8 }}>
-                looted: {Object.entries(report.result.loot).map(([k, v]) => `${RESOURCES[k as ResourceId]?.icon ?? ""}${Math.round(v as number)}`).join("  ")}
-              </div>
-            )}
-            <button onClick={clearReport} style={{ ...btn, marginTop: 12 }}>Close</button>
-          </div>
-        </div>
+        <Overlay onClose={clearReport}>
+          <ResultCard report={report} mine={report.attacker === playerId} onClose={clearReport} />
+        </Overlay>
       )}
+
+      <BaseTutorial base={myBase} />
     </main>
   );
 }
 
-const page: React.CSSProperties = { padding: "14px max(12px, env(safe-area-inset-left)) calc(32px + env(safe-area-inset-bottom))", fontFamily: "monospace", color: "#e8e8e8", background: "#0d0f14", minHeight: "100vh" };
-const btn: React.CSSProperties = { background: "#1f2a44", color: "#e8e8e8", border: "1px solid #2f3e63", borderRadius: 6, padding: "9px 13px", fontFamily: "monospace", fontSize: 13, cursor: "pointer", minHeight: 38, touchAction: "manipulation" };
-const btnSm: React.CSSProperties = { ...btn, padding: "7px 10px", fontSize: 12, minHeight: 34 };
-const btnDanger: React.CSSProperties = { ...btn, background: "#3a1d1d", border: "1px solid #6b2f2f" };
-const select: React.CSSProperties = { background: "#1f2a44", color: "#e8e8e8", border: "1px solid #2f3e63", borderRadius: 6, padding: "6px 8px", fontFamily: "monospace", fontSize: 12, minHeight: 34 };
-const zoomBtn: React.CSSProperties = { width: 38, height: 38, display: "grid", placeItems: "center", borderRadius: 7, background: "rgba(0,0,0,0.6)", border: "1px solid #2f3e63", color: "#ffd54f", fontSize: 19, fontWeight: 700, lineHeight: 1, cursor: "pointer", touchAction: "manipulation" };
-const overlay: React.CSSProperties = { position: "fixed", inset: 0, background: "#000a", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 };
-const modal: React.CSSProperties = { background: "#141821", border: "1px solid #2f3e63", borderRadius: 10, padding: 20, maxWidth: 420, fontFamily: "monospace", color: "#e8e8e8" };
+function Overlay({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
+  return (
+    <div style={overlay} onClick={onClose}>
+      <div style={{ width: "100%", maxWidth: 460 }} onClick={(e) => e.stopPropagation()}>{children}</div>
+    </div>
+  );
+}
+
+function ArmyPanel({ base, onTrain, onClose }: { base: CocBase; onTrain: (u: CocUnitId) => void; onClose: () => void }) {
+  const cap = housingCap(base);
+  const used = housingUsed(base);
+  const hasBarracks = Object.values(base.buildings).some((b) => b.id === "barracks" && b.level >= 1);
+  return (
+    <Panel title="ARMY" accent padding="14px" headerRight={<button onClick={onClose} style={closeBtn}>✕</button>}>
+      <div style={{ display: "flex", gap: 14, marginBottom: 10 }}>
+        <Stat label="HOUSING" value={`${used}/${cap}`} accent="blood" />
+        <Stat label="🧪 ELIXIR" value={num(base.elixir)} accent="violet" />
+      </div>
+      {!hasBarracks && <Badge tone="neutral" variant="soft">Build a Barracks to train troops.</Badge>}
+      <div style={{ display: "grid", gap: 6, marginTop: 8 }}>
+        {UNIT_IDS.map((u) => {
+          const d = UNITS[u];
+          const have = base.army[u] ?? 0;
+          const queued = base.trainQueue.filter((o) => o.unit === u).length;
+          const ok = hasBarracks && base.elixir >= d.cost.elixir && used + d.housing <= cap;
+          return (
+            <Button key={u} variant="secondary" full disabled={!ok} style={rowBtn} onClick={() => onTrain(u)}>
+              <span style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
+                <span aria-hidden>{UNIT_ICON[u]}</span> {d.name}
+                <span style={{ color: "var(--text-muted)", fontSize: 10 }}>{d.role}</span>
+              </span>
+              <span className="wl-num" style={{ fontSize: 11, color: "var(--text-secondary)" }}>
+                ×{have}{queued ? ` (+${queued})` : ""} · 🧪{d.cost.elixir} · ⌂{d.housing}
+              </span>
+            </Button>
+          );
+        })}
+      </div>
+    </Panel>
+  );
+}
+
+function AttackPanel({ me, target, tick, deploy, setDeploy, onAttack, onClose }: {
+  me: CocBase; target: CocBase; tick: number; deploy: Army; setDeploy: (a: Army) => void; onAttack: () => void; onClose: () => void;
+}) {
+  const shielded = target.shieldUntil > tick;
+  const cc = target.buildings[target.centerKey]?.level ?? 1;
+  const estGold = Math.floor(target.gold * LOOT_PCT);
+  const estElixir = Math.floor(target.elixir * LOOT_PCT);
+  const selected = armyTotal(deploy);
+  const set = (u: CocUnitId, n: number) => setDeploy({ ...deploy, [u]: Math.max(0, Math.min(me.army[u] ?? 0, n)) });
+  return (
+    <Panel title="SCOUT & RAID" rim="blood" padding="14px" headerRight={<button onClick={onClose} style={closeBtn}>✕</button>}>
+      <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 10 }}>
+        <Stat label="ENEMY CC" value={`L${cc}`} accent="sky" />
+        <Stat label="EST LOOT" value={`🪙${num(estGold)} 🧪${num(estElixir)}`} accent="amber" />
+        {shielded ? <Badge tone="emerald" variant="soft">SHIELDED</Badge> : <Badge tone="blood" variant="soft">RAIDABLE</Badge>}
+      </div>
+      <span className="wl-label">DEPLOY</span>
+      <div style={{ display: "grid", gap: 6, marginTop: 8 }}>
+        {UNIT_IDS.filter((u) => (me.army[u] ?? 0) > 0).map((u) => (
+          <div key={u} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, background: "var(--surface-raised)", border: "1px solid var(--hairline)", borderRadius: "var(--radius-sm)", padding: "6px 10px" }}>
+            <span style={{ fontSize: 12 }}>{UNIT_ICON[u]} {UNITS[u].name} <span style={{ color: "var(--text-muted)" }}>/{me.army[u]}</span></span>
+            <span style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
+              <button style={step} onClick={() => set(u, (deploy[u] ?? 0) - 1)}>−</button>
+              <span className="wl-num" style={{ minWidth: 24, textAlign: "center" }}>{deploy[u] ?? 0}</span>
+              <button style={step} onClick={() => set(u, (deploy[u] ?? 0) + 1)}>+</button>
+              <button style={{ ...step, width: "auto", padding: "0 8px" }} onClick={() => set(u, me.army[u] ?? 0)}>ALL</button>
+            </span>
+          </div>
+        ))}
+        {armyTotal(me.army) === 0 && <Badge tone="neutral" variant="soft">No troops — train an army first.</Badge>}
+      </div>
+      <div style={{ marginTop: 12 }}>
+        <Button variant="danger" full icon="⚔️" disabled={shielded || selected === 0} onClick={onAttack}>
+          {shielded ? "TARGET SHIELDED" : selected === 0 ? "SELECT TROOPS" : `ATTACK WITH ${selected}`}
+        </Button>
+      </div>
+    </Panel>
+  );
+}
+
+function ClanPanel({ state, playerId, send, onClose }: { state: CocWorld; playerId: string; send: (c: import("@/sim/coc").CocCommand) => void; onClose: () => void }) {
+  const [name, setName] = useState("");
+  const me = state.players[playerId];
+  const myClan = me?.clanId ? state.clans[me.clanId] : null;
+  const myArmy = state.bases[playerId]?.army ?? {};
+  const short = (id: string) => id.slice(0, 6).toUpperCase();
+
+  if (myClan) {
+    const mates = myClan.members.filter((m) => m !== playerId);
+    const myUnits = UNIT_IDS.filter((u) => (myArmy[u] ?? 0) > 0);
+    return (
+      <Panel title={myClan.name} accent padding="14px" headerRight={<button onClick={onClose} style={closeBtn}>✕</button>}>
+        <span className="wl-label">ROSTER ({myClan.members.length})</span>
+        <div style={{ display: "grid", gap: 4, margin: "8px 0 12px" }}>
+          {myClan.members.map((m) => (
+            <div key={m} style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
+              <span className="wl-num">{short(m)}{m === playerId ? " (you)" : ""}</span>
+              {m === myClan.founder && <Badge tone="amber" variant="soft">FOUNDER</Badge>}
+            </div>
+          ))}
+        </div>
+        {mates.length > 0 && myUnits.length > 0 && (
+          <>
+            <span className="wl-label">DONATE A TROOP</span>
+            <div style={{ display: "grid", gap: 6, marginTop: 8 }}>
+              {mates.map((m) => (
+                <div key={m} style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                  <span className="wl-num" style={{ fontSize: 11, minWidth: 56 }}>{short(m)}</span>
+                  {myUnits.map((u) => (
+                    <Button key={u} size="sm" variant="secondary" onClick={() => send({ type: "donateTroops", toOwner: m, army: { [u]: 1 } })}>
+                      🎁{UNIT_ICON[u]}
+                    </Button>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+        <div style={{ marginTop: 14 }}><Button variant="danger" full onClick={() => { send({ type: "leaveClan" }); onClose(); }}>LEAVE CLAN</Button></div>
+      </Panel>
+    );
+  }
+
+  const clans = Object.values(state.clans);
+  return (
+    <Panel title="CLANS" accent padding="14px" headerRight={<button onClick={onClose} style={closeBtn}>✕</button>}>
+      <span className="wl-label">FOUND A CLAN</span>
+      <div style={{ display: "flex", gap: 6, margin: "8px 0 14px" }}>
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Clan name" style={input} />
+        <Button variant="primary" disabled={name.trim().length < 3} onClick={() => { send({ type: "createClan", name }); onClose(); }}>CREATE</Button>
+      </div>
+      <span className="wl-label">JOIN A CLAN</span>
+      <div style={{ display: "grid", gap: 6, marginTop: 8 }}>
+        {clans.length === 0 && <span style={{ fontSize: 12, color: "var(--text-muted)" }}>No clans yet — found the first.</span>}
+        {clans.map((c) => (
+          <Button key={c.id} variant="secondary" full style={rowBtn} onClick={() => { send({ type: "joinClan", clanId: c.id }); onClose(); }}>
+            <span>{c.name}</span>
+            <span className="wl-num" style={{ fontSize: 11, color: "var(--text-secondary)" }}>{c.members.length}/10</span>
+          </Button>
+        ))}
+      </div>
+    </Panel>
+  );
+}
+
+function ResultCard({ report, mine, onClose }: { report: BattleReport; mine: boolean; onClose: () => void }) {
+  return (
+    <Panel title={mine ? "RAID REPORT" : "UNDER ATTACK"} accent padding="16px" headerRight={<button onClick={onClose} style={closeBtn}>✕</button>}>
+      <div style={{ textAlign: "center" }}>
+        <div style={{ fontSize: 40, letterSpacing: 6 }}>
+          {[0, 1, 2].map((i) => <span key={i} style={{ color: i < report.stars ? "var(--amber)" : "var(--disabled)" }}>★</span>)}
+        </div>
+        <div className="wl-num" style={{ fontSize: 28, marginTop: 4 }}>{Math.round(report.destructionPct * 100)}%</div>
+        <div className="wl-label">DESTRUCTION</div>
+      </div>
+      <div style={{ display: "flex", justifyContent: "center", gap: 18, marginTop: 14 }}>
+        <Stat label="🪙 LOOT" value={num(report.loot.gold)} accent="amber" align="stack" />
+        <Stat label="🧪 LOOT" value={num(report.loot.elixir)} accent="violet" align="stack" />
+        <Stat label="🏆" value={`${report.trophies >= 0 ? "+" : ""}${report.trophies}`} accent={report.trophies >= 0 ? "emerald" : "blood"} align="stack" />
+      </div>
+      <div style={{ marginTop: 14 }}><Button variant="primary" full onClick={onClose}>RETURN HOME</Button></div>
+    </Panel>
+  );
+}
+
+function BuildGroup({ label, ids, base, tier, freeBuilders, onBuild }: {
+  label: string; ids: CocBuildingId[]; base: CocBase; tier: ReturnType<typeof ccTier>; freeBuilders: number; onBuild: (id: CocBuildingId) => void;
+}) {
+  if (ids.length === 0) return null;
+  return (
+    <div>
+      <span className="wl-label">{label}</span>
+      <div style={{ display: "grid", gap: 6, marginTop: 8 }}>
+        {ids.map((id) => {
+          const lv = levelDef(id, 1)!;
+          const count = Object.values(base.buildings).filter((x) => x.id === id).length;
+          const cap = tier.caps[id]!;
+          const atCap = count >= cap.maxCount;
+          const afford = base.gold >= (lv.cost.gold ?? 0) && base.elixir >= (lv.cost.elixir ?? 0);
+          const ok = !atCap && afford && freeBuilders > 0;
+          return (
+            <Button key={id} variant="secondary" full disabled={!ok} style={rowBtn} onClick={() => onBuild(id)}>
+              <span style={{ display: "inline-flex", gap: 6, alignItems: "center" }}><span aria-hidden>{ICON[id]}</span> {BUILDINGS[id].name}</span>
+              <span className="wl-num" style={{ fontSize: 11, color: "var(--text-secondary)" }}>{atCap ? "AT LIMIT" : `${costStr(lv.cost)} · ${lv.buildTimeSec}s`}</span>
+            </Button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function BuildingInfo({ base, building, job, tick, freeBuilders, war, onUpgrade, onFinish }: {
+  base: CocBase; building: PlacedBuilding; job?: { toLevel: number; buildingId: CocBuildingId; finishesAtTick: number }; tick: number; freeBuilders: number; war: number; onUpgrade: () => void; onFinish: () => void;
+}) {
+  const def = BUILDINGS[building.id];
+  const next = building.level + 1;
+  const maxed = next > maxLevelOf(building.id);
+  const cap = ccTier(base.buildings[base.centerKey]?.level ?? 1).caps[building.id];
+  const ccBlocked = building.id !== "commandCenter" && (!cap || next > cap.maxLevel);
+  const lv = !maxed ? levelDef(building.id, next) : undefined;
+  const cost = lv?.cost ?? {};
+  const afford = base.gold >= (cost.gold ?? 0) && base.elixir >= (cost.elixir ?? 0);
+  const ok = building.level >= 1 && !job && !maxed && !ccBlocked && afford && freeBuilders > 0;
+  const total = job ? levelDef(job.buildingId, job.toLevel)?.buildTimeSec ?? 1 : 1;
+  const remaining = job ? Math.max(0, job.finishesAtTick - tick) : 0;
+  const stats = levelDef(building.id, Math.max(1, building.level));
+  return (
+    <div style={{ fontSize: 13 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
+        <Badge tone={building.level >= 1 ? "amber" : "sky"} variant="soft">{building.level >= 1 ? `LEVEL ${building.level}` : "UNDER CONSTRUCTION"}</Badge>
+        {def.category === "defense" && stats && (<><Badge tone="blood" variant="soft">DEF {stats.hp}</Badge><Badge tone="teal" variant="soft">RNG {stats.range}</Badge><Badge tone="neutral" variant="soft">{stats.targets?.toUpperCase()}</Badge></>)}
+        {def.category === "army" && building.id === "armyCamp" && stats?.housing && <Badge tone="blood" variant="soft">⌂ {stats.housing}</Badge>}
+        {building.buffer != null && building.level >= 1 && def.category === "collector" && <span className="wl-num" style={{ fontSize: 11, color: "var(--text-secondary)" }}>BUFFER {num(building.buffer)}</span>}
+      </div>
+      {job ? (
+        <div style={{ display: "grid", gap: 8 }}>
+          <ProgressBar tone="amber" label="BUILDING" valueText={`${remaining}s`} value={total - remaining} max={total} />
+          <Button variant="outline" full icon="💎" disabled={war < finishCost(remaining)} onClick={onFinish}>
+            FINISH NOW · 💎{finishCost(remaining).toLocaleString()}
+          </Button>
+        </div>
+      ) : maxed ? <Badge tone="neutral" variant="soft">MAX LEVEL</Badge>
+        : <Button variant="primary" full disabled={!ok} icon="⬆" onClick={onUpgrade}>UPGRADE → L{next} · {costStr(cost)} · {lv?.buildTimeSec}s{ccBlocked ? "  · RAISE CC" : ""}</Button>}
+    </div>
+  );
+}
+
+function WallInfo({ base, ek, onUpgrade }: { base: CocBase; ek: string; onUpgrade: () => void }) {
+  const level = base.walls[ek] ?? 1;
+  const cc = base.buildings[base.centerKey]?.level ?? 1;
+  const next = level + 1;
+  const maxed = next > WALL.levels.length;
+  const ccBlocked = next > maxWallLevel(cc);
+  const cost = !maxed ? WALL.levels[next - 1].cost : {};
+  const afford = base.gold >= (cost.gold ?? 0);
+  const ok = !maxed && !ccBlocked && afford;
+  const stats = WALL.levels[level - 1];
+  return (
+    <div style={{ fontSize: 13 }}>
+      <div style={{ display: "flex", gap: 8, marginBottom: 8 }}><Badge tone="amber" variant="soft">LEVEL {level}</Badge><Badge tone="blood" variant="soft">HP {stats.hp}</Badge></div>
+      {maxed ? <Badge tone="neutral" variant="soft">MAX LEVEL</Badge>
+        : <Button variant="primary" full disabled={!ok} icon="⬆" onClick={onUpgrade}>REINFORCE → L{next} · {costStr(cost)}{ccBlocked ? "  · RAISE CC" : ""}</Button>}
+    </div>
+  );
+}
+
+function ExpandRow({ base, state, onExpand }: { base: CocBase; state: CocWorld; onExpand: (q: number, r: number) => void }) {
+  const tier = ccTier(base.buildings[base.centerKey]?.level ?? 1);
+  if (base.ownedHexes.length >= tier.maxHexes) return null;
+  const dirs = [[1, 0], [1, -1], [0, -1], [-1, 0], [-1, 1], [0, 1]];
+  for (const owned of base.ownedHexes) {
+    const [oq, or] = owned.split(",").map(Number);
+    for (const [dq, dr] of dirs) {
+      const q = oq + dq, r = or + dr, k = `${q},${r}`;
+      if (state.hexes[k] && !state.claimedHexes[k]) {
+        return <Button variant="outline" full icon="➕" style={{ justifyContent: "flex-start" }} onClick={() => onExpand(q, r)}>ANNEX {k} · up to {tier.maxHexes} hexes</Button>;
+      }
+    }
+  }
+  return null;
+}
+
+function hexPoints(size: number): string {
+  const pts: string[] = [];
+  for (let i = 0; i < 6; i++) {
+    const a = (Math.PI / 180) * (60 * i - 30);
+    pts.push(`${(size * Math.cos(a)).toFixed(2)},${(size * Math.sin(a)).toFixed(2)}`);
+  }
+  return pts.join(" ");
+}
+function costStr(cost: Partial<Record<CocResource, number>>): string {
+  const parts: string[] = [];
+  if (cost.gold) parts.push(`🪙${cost.gold}`);
+  if (cost.elixir) parts.push(`🧪${cost.elixir}`);
+  return parts.join(" ") || "FREE";
+}
+
+const page: CSSProperties = { minHeight: "100dvh", background: "var(--bg-app)", color: "var(--text-primary)", padding: "max(16px, env(safe-area-inset-top)) 16px 96px", fontFamily: "var(--font-ui)" };
+const mapWrap: CSSProperties = { position: "relative", marginTop: 12, width: "100%", maxWidth: 560, aspectRatio: "1 / 1", background: "var(--surface-sunken)", borderRadius: "var(--radius-lg)", border: "1px solid var(--hairline)", overflow: "hidden", touchAction: "none" };
+const rowBtn: CSSProperties = { justifyContent: "space-between", textAlign: "left", fontWeight: 500 };
+const closeBtn: CSSProperties = { background: "transparent", color: "var(--text-secondary)", border: 0, cursor: "pointer", fontSize: 14, lineHeight: 1 };
+const overlay: CSSProperties = { position: "fixed", inset: 0, zIndex: 60, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 };
+const step: CSSProperties = { width: 26, height: 26, borderRadius: "var(--radius-sm)", border: "1px solid var(--hairline)", background: "var(--panel-2)", color: "var(--text-primary)", cursor: "pointer", fontSize: 14 };
+const input: CSSProperties = { flex: 1, background: "var(--surface-sunken)", border: "1px solid var(--hairline)", borderRadius: "var(--radius-sm)", color: "var(--text-primary)", padding: "8px 10px", fontSize: 13, fontFamily: "var(--font-ui)" };

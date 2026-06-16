@@ -1,0 +1,24 @@
+<!-- @dsCard group="Spacing" viewport="700x180" name="Elevation" subtitle="3-tier shadows + amber selection glow" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  body { margin: 0; background: var(--panel-void); padding: 26px; }
+  .row { display: flex; gap: 26px; align-items: center; }
+  .sw { text-align: center; }
+  .box { width: 100px; height: 64px; background: var(--panel); border: 1px solid var(--hairline); border-radius: var(--radius-md); }
+  .nm { font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.06em; font-size: 10px; color: var(--text-hi); margin-top: 12px; }
+  .hx { font-family: var(--font-mono); font-size: 9px; color: var(--text-lo); margin-top: 2px; }
+</style>
+</head>
+<body>
+  <div class="row">
+    <div class="sw"><div class="box" style="box-shadow:var(--shadow-1)"></div><div class="nm">Raised</div><div class="hx">shadow-1</div></div>
+    <div class="sw"><div class="box" style="box-shadow:var(--shadow-2)"></div><div class="nm">Floating</div><div class="hx">shadow-2</div></div>
+    <div class="sw"><div class="box" style="box-shadow:var(--shadow-modal)"></div><div class="nm">Modal</div><div class="hx">shadow-modal</div></div>
+    <div class="sw"><div class="box" style="box-shadow:var(--glow-amber)"></div><div class="nm">Selected</div><div class="hx">glow-amber</div></div>
+  </div>
+</body>
+</html>

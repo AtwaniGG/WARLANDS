@@ -1,0 +1,456 @@
+import { hexKey, hexNeighbors } from "@/game/world";
+import { builderCost, BUILDINGS, ccTier, finishCost, levelDef, maxLevelOf, maxWallLevel, MAX_BUILDERS, SHIELD_MAX_SECS, SHIELD_SECS_PER_PCT, STARTING_BUILDERS, STARTING_ELIXIR, STARTING_GOLD, UNITS, WALL, WAR_RAID_REWARD_PER_STAR, WAR_SHIELD_PER_HOUR } from "./config";
+import { ccLevel, edgeKey, freeBuilders, hasBarracks, housingCap, housingUsed, storageCap } from "./world";
+import { resolveRaid } from "./battle";
+import type { Army, Clan, CocBase, CocBuildingId, CocCommand, CocResource, CocUnitId, CocWorld, CommandResult, PlacedBuilding } from "./types";
+
+const CLAN_MAX_MEMBERS = 10;
+
+function fail(state: CocWorld, error: string): CommandResult {
+  return { state, error };
+}
+
+function countOf(base: CocBase, id: CocBuildingId): number {
+  return Object.values(base.buildings).filter((b) => b.id === id).length;
+}
+function hasJobOn(base: CocBase, key: string): boolean {
+  return base.jobs.some((j) => j.hexKey === key);
+}
+function canAfford(base: CocBase, cost: Partial<Record<CocResource, number>>): boolean {
+  return base.gold >= (cost.gold ?? 0) && base.elixir >= (cost.elixir ?? 0);
+}
+function spend(base: CocBase, cost: Partial<Record<CocResource, number>>): { gold: number; elixir: number } {
+  return { gold: base.gold - (cost.gold ?? 0), elixir: base.elixir - (cost.elixir ?? 0) };
+}
+
+function claimBase(state: CocWorld, playerId: string, q: number, r: number): CommandResult {
+  if (!state.players[playerId]) return fail(state, "Unknown player.");
+  if (state.bases[playerId]) return fail(state, "You already have a base.");
+  const centerKey = hexKey(q, r);
+  if (!state.hexes[centerKey]) return fail(state, "No such hex.");
+  const cluster = [centerKey, ...hexNeighbors(q, r).map((n) => hexKey(n.q, n.r))];
+  for (const k of cluster) {
+    if (!state.hexes[k]) return fail(state, "Base must be fully inside the map.");
+    if (state.claimedHexes[k]) return fail(state, "That land is already claimed.");
+  }
+  const base: CocBase = {
+    owner: playerId,
+    centerKey,
+    ownedHexes: cluster,
+    buildings: { [centerKey]: { id: "commandCenter", level: 1 } },
+    walls: {},
+    gold: STARTING_GOLD,
+    elixir: STARTING_ELIXIR,
+    builders: STARTING_BUILDERS,
+    jobs: [],
+    army: {},
+    trainQueue: [],
+    shieldUntil: 0,
+    trophies: 0,
+  };
+  const claimedHexes = { ...state.claimedHexes };
+  for (const k of cluster) claimedHexes[k] = playerId;
+  return { state: { ...state, bases: { ...state.bases, [playerId]: base }, claimedHexes } };
+}
+
+function placeBuilding(state: CocWorld, playerId: string, key: string, buildingId: CocBuildingId): CommandResult {
+  const base = state.bases[playerId];
+  if (!base) return fail(state, "You have no base.");
+  if (buildingId === "commandCenter") return fail(state, "The Command Center cannot be placed.");
+  if (!base.ownedHexes.includes(key)) return fail(state, "That hex is not in your base.");
+  if (base.buildings[key]) return fail(state, "That hex is already occupied.");
+  const cap = ccTier(ccLevel(base)).caps[buildingId];
+  if (!cap) return fail(state, "Locked at this Command Center level.");
+  if (countOf(base, buildingId) >= cap.maxCount) return fail(state, "Build limit reached for this Command Center level.");
+  if (freeBuilders(base) <= 0) return fail(state, "No builder is free.");
+  const lv = levelDef(buildingId, 1)!;
+  if (!canAfford(base, lv.cost)) {
+    const need = lv.cost.gold ? "gold" : "elixir";
+    return fail(state, `Not enough ${need}.`);
+  }
+  const { gold, elixir } = spend(base, lv.cost);
+  const building: PlacedBuilding = { id: buildingId, level: 0, buffer: 0 };
+  const newBase: CocBase = {
+    ...base,
+    gold,
+    elixir,
+    buildings: { ...base.buildings, [key]: building },
+    jobs: [...base.jobs, { hexKey: key, buildingId, kind: "build", toLevel: 1, finishesAtTick: state.tick + lv.buildTimeSec }],
+  };
+  return { state: { ...state, bases: { ...state.bases, [playerId]: newBase } } };
+}
+
+function upgradeBuilding(state: CocWorld, playerId: string, key: string): CommandResult {
+  const base = state.bases[playerId];
+  if (!base) return fail(state, "You have no base.");
+  const b = base.buildings[key];
+  if (!b) return fail(state, "Nothing to upgrade there.");
+  if (b.level < 1) return fail(state, "Still under construction.");
+  if (hasJobOn(base, key)) return fail(state, "That building is busy.");
+  const nextLevel = b.level + 1;
+  if (nextLevel > maxLevelOf(b.id)) return fail(state, "Already at max level.");
+  if (b.id !== "commandCenter") {
+    const cap = ccTier(ccLevel(base)).caps[b.id];
+    if (!cap || nextLevel > cap.maxLevel) return fail(state, "Upgrade the Command Center to raise the level cap.");
+  }
+  if (freeBuilders(base) <= 0) return fail(state, "No builder is free.");
+  const lv = levelDef(b.id, nextLevel)!; // cost/time of the target level
+  if (!canAfford(base, lv.cost)) {
+    const need = lv.cost.gold ? "gold" : "elixir";
+    return fail(state, `Not enough ${need}.`);
+  }
+  const { gold, elixir } = spend(base, lv.cost);
+  const newBase: CocBase = {
+    ...base,
+    gold,
+    elixir,
+    jobs: [...base.jobs, { hexKey: key, buildingId: b.id, kind: "upgrade", toLevel: nextLevel, finishesAtTick: state.tick + lv.buildTimeSec }],
+  };
+  return { state: { ...state, bases: { ...state.bases, [playerId]: newBase } } };
+}
+
+function collect(state: CocWorld, playerId: string): CommandResult {
+  const base = state.bases[playerId];
+  if (!base) return fail(state, "You have no base.");
+  let gold = base.gold;
+  let elixir = base.elixir;
+  const goldCap = storageCap(base, "gold");
+  const elixirCap = storageCap(base, "elixir");
+  const buildings: Record<string, PlacedBuilding> = {};
+  for (const [k, b] of Object.entries(base.buildings)) {
+    const def = BUILDINGS[b.id];
+    if (def.category === "collector" && b.level >= 1 && (b.buffer ?? 0) > 0) {
+      if (def.produces === "gold") {
+        const room = Math.max(0, goldCap - gold);
+        const moved = Math.min(room, b.buffer ?? 0);
+        gold += moved;
+        buildings[k] = { ...b, buffer: (b.buffer ?? 0) - moved };
+      } else {
+        const room = Math.max(0, elixirCap - elixir);
+        const moved = Math.min(room, b.buffer ?? 0);
+        elixir += moved;
+        buildings[k] = { ...b, buffer: (b.buffer ?? 0) - moved };
+      }
+    } else {
+      buildings[k] = b;
+    }
+  }
+  return { state: { ...state, bases: { ...state.bases, [playerId]: { ...base, gold, elixir, buildings } } } };
+}
+
+function expandCluster(state: CocWorld, playerId: string, q: number, r: number): CommandResult {
+  const base = state.bases[playerId];
+  if (!base) return fail(state, "You have no base.");
+  const key = hexKey(q, r);
+  if (!state.hexes[key]) return fail(state, "No such hex.");
+  if (state.claimedHexes[key]) return fail(state, "That land is already claimed.");
+  if (base.ownedHexes.length >= ccTier(ccLevel(base)).maxHexes) {
+    return fail(state, "Upgrade the Command Center to expand your territory.");
+  }
+  const adjacent = hexNeighbors(q, r).some((n) => base.ownedHexes.includes(hexKey(n.q, n.r)));
+  if (!adjacent) return fail(state, "You can only expand onto land next to your base.");
+  const newBase: CocBase = { ...base, ownedHexes: [...base.ownedHexes, key] };
+  return { state: { ...state, bases: { ...state.bases, [playerId]: newBase }, claimedHexes: { ...state.claimedHexes, [key]: playerId } } };
+}
+
+function placeWall(state: CocWorld, playerId: string, aKey: string, bKey: string): CommandResult {
+  const base = state.bases[playerId];
+  if (!base) return fail(state, "You have no base.");
+  if (aKey === bKey) return fail(state, "A wall spans two hexes.");
+  if (!base.ownedHexes.includes(aKey) || !base.ownedHexes.includes(bKey)) {
+    return fail(state, "Both hexes must be in your base.");
+  }
+  const [aq, ar] = aKey.split(",").map(Number);
+  const adjacent = hexNeighbors(aq, ar).some((n) => hexKey(n.q, n.r) === bKey);
+  if (!adjacent) return fail(state, "Walls go between adjacent hexes.");
+  const ek = edgeKey(aKey, bKey);
+  if (base.walls[ek]) return fail(state, "There is already a wall here.");
+  const cost = WALL.levels[0].cost;
+  if (!canAfford(base, cost)) return fail(state, "Not enough gold.");
+  const { gold, elixir } = spend(base, cost);
+  const newBase: CocBase = { ...base, gold, elixir, walls: { ...base.walls, [ek]: 1 } };
+  return { state: { ...state, bases: { ...state.bases, [playerId]: newBase } } };
+}
+
+function upgradeWall(state: CocWorld, playerId: string, ek: string): CommandResult {
+  const base = state.bases[playerId];
+  if (!base) return fail(state, "You have no base.");
+  const level = base.walls[ek];
+  if (!level) return fail(state, "No wall there.");
+  const nextLevel = level + 1;
+  if (nextLevel > maxWallLevel(ccLevel(base))) return fail(state, "Upgrade the Command Center to raise the wall cap.");
+  const cost = WALL.levels[nextLevel - 1].cost;
+  if (!canAfford(base, cost)) return fail(state, "Not enough gold.");
+  const { gold, elixir } = spend(base, cost);
+  const newBase: CocBase = { ...base, gold, elixir, walls: { ...base.walls, [ek]: nextLevel } };
+  return { state: { ...state, bases: { ...state.bases, [playerId]: newBase } } };
+}
+
+function trainTroop(state: CocWorld, playerId: string, unit: CocUnitId): CommandResult {
+  const base = state.bases[playerId];
+  if (!base) return fail(state, "You have no base.");
+  if (!hasBarracks(base)) return fail(state, "Build a Barracks first.");
+  const def = UNITS[unit];
+  if (base.elixir < def.cost.elixir) return fail(state, "Not enough elixir.");
+  if (housingUsed(base) + def.housing > housingCap(base)) return fail(state, "Not enough army housing — build an Army Camp.");
+  const newBase: CocBase = {
+    ...base,
+    elixir: base.elixir - def.cost.elixir,
+    trainQueue: [...base.trainQueue, { unit, finishesAtTick: state.tick + def.trainTimeSec }],
+  };
+  return { state: { ...state, bases: { ...state.bases, [playerId]: newBase } } };
+}
+
+function fnv1a(s: string): number {
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+function raid(state: CocWorld, playerId: string, targetOwner: string, army: Army): CommandResult {
+  const attacker = state.bases[playerId];
+  if (!attacker) return fail(state, "You have no base.");
+  if (targetOwner === playerId) return fail(state, "You cannot raid your own base.");
+  const defender = state.bases[targetOwner];
+  if (!defender) return fail(state, "No such base.");
+  if (defender.shieldUntil > state.tick) return fail(state, "That base is shielded.");
+
+  let total = 0;
+  for (const [u, n] of Object.entries(army)) {
+    if (!n) continue;
+    if (n < 0) return fail(state, "Invalid army.");
+    total += n;
+    if ((attacker.army[u as CocUnitId] ?? 0) < n) return fail(state, "You don't have those troops.");
+  }
+  if (total <= 0) return fail(state, "Select an army to deploy.");
+
+  const seed = ((state.tick + 1) * 2654435761 + fnv1a(playerId) + fnv1a(targetOwner)) >>> 0;
+  const result = resolveRaid(army, defender, seed);
+
+  const lootGold = Math.min(defender.gold, result.loot.gold);
+  const lootElixir = Math.min(defender.elixir, result.loot.elixir);
+
+  const newAttackerArmy: Army = { ...attacker.army };
+  for (const [u, n] of Object.entries(army)) {
+    if (n) newAttackerArmy[u as CocUnitId] = (newAttackerArmy[u as CocUnitId] ?? 0) - n;
+  }
+  const newAttacker: CocBase = {
+    ...attacker,
+    army: newAttackerArmy,
+    gold: attacker.gold + lootGold,
+    elixir: attacker.elixir + lootElixir,
+    trophies: Math.max(0, attacker.trophies + result.trophies),
+  };
+
+  const shieldSecs = Math.min(SHIELD_MAX_SECS, Math.round(result.destructionPct * 100 * SHIELD_SECS_PER_PCT));
+  const newDefender: CocBase = {
+    ...defender,
+    gold: defender.gold - lootGold,
+    elixir: defender.elixir - lootElixir,
+    trophies: Math.max(0, defender.trophies - result.trophies),
+    shieldUntil: result.destructionPct > 0 ? state.tick + shieldSecs : defender.shieldUntil,
+  };
+
+  // $WAR reward for the attacker, scaled by stars (faucet).
+  const warReward = result.stars * WAR_RAID_REWARD_PER_STAR;
+  const attackerPlayer = state.players[playerId];
+  const players = warReward > 0 && attackerPlayer
+    ? { ...state.players, [playerId]: { ...attackerPlayer, war: attackerPlayer.war + warReward } }
+    : state.players;
+
+  return {
+    state: { ...state, players, bases: { ...state.bases, [playerId]: newAttacker, [targetOwner]: newDefender } },
+    report: {
+      attacker: playerId,
+      defender: targetOwner,
+      tick: state.tick,
+      stars: result.stars,
+      destructionPct: result.destructionPct,
+      loot: { gold: lootGold, elixir: lootElixir },
+      trophies: result.trophies,
+      armyUsed: army,
+    },
+  };
+}
+
+function finishNow(state: CocWorld, playerId: string, key: string): CommandResult {
+  const base = state.bases[playerId];
+  const player = state.players[playerId];
+  if (!base || !player) return fail(state, "You have no base.");
+  const job = base.jobs.find((j) => j.hexKey === key);
+  if (!job) return fail(state, "Nothing is building there.");
+  const cost = finishCost(Math.max(0, job.finishesAtTick - state.tick));
+  if (player.war < cost) return fail(state, `Not enough $WAR (need ${cost.toLocaleString()}).`);
+  const buildings = { ...base.buildings };
+  if (buildings[key]) buildings[key] = { ...buildings[key], level: job.toLevel };
+  const newBase: CocBase = { ...base, buildings, jobs: base.jobs.filter((j) => j !== job) };
+  return {
+    state: {
+      ...state,
+      players: { ...state.players, [playerId]: { ...player, war: player.war - cost } },
+      bases: { ...state.bases, [playerId]: newBase },
+    },
+  };
+}
+
+function buyBuilder(state: CocWorld, playerId: string): CommandResult {
+  const base = state.bases[playerId];
+  const player = state.players[playerId];
+  if (!base || !player) return fail(state, "You have no base.");
+  if (base.builders >= MAX_BUILDERS) return fail(state, "You already have the maximum builders.");
+  const cost = builderCost(base.builders);
+  if (player.war < cost) return fail(state, `Not enough $WAR (need ${cost.toLocaleString()}).`);
+  return {
+    state: {
+      ...state,
+      players: { ...state.players, [playerId]: { ...player, war: player.war - cost } },
+      bases: { ...state.bases, [playerId]: { ...base, builders: base.builders + 1 } },
+    },
+  };
+}
+
+function extendShield(state: CocWorld, playerId: string, hours: number): CommandResult {
+  const base = state.bases[playerId];
+  const player = state.players[playerId];
+  if (!base || !player) return fail(state, "You have no base.");
+  if (hours <= 0 || hours > 24) return fail(state, "Pick 1–24 hours.");
+  const cost = Math.round(hours * WAR_SHIELD_PER_HOUR);
+  if (player.war < cost) return fail(state, `Not enough $WAR (need ${cost.toLocaleString()}).`);
+  const from = Math.max(state.tick, base.shieldUntil);
+  return {
+    state: {
+      ...state,
+      players: { ...state.players, [playerId]: { ...player, war: player.war - cost } },
+      bases: { ...state.bases, [playerId]: { ...base, shieldUntil: from + hours * 3600 } },
+    },
+  };
+}
+
+function createClan(state: CocWorld, playerId: string, name: string): CommandResult {
+  const player = state.players[playerId];
+  if (!player) return fail(state, "Unknown player.");
+  if (player.clanId) return fail(state, "Leave your current clan first.");
+  const clean = name.trim();
+  if (clean.length < 3 || clean.length > 24) return fail(state, "Clan name must be 3–24 characters.");
+  const id = `clan${state.nextClanId}`;
+  const clan: Clan = { id, name: clean, founder: playerId, members: [playerId] };
+  return {
+    state: {
+      ...state,
+      clans: { ...state.clans, [id]: clan },
+      nextClanId: state.nextClanId + 1,
+      players: { ...state.players, [playerId]: { ...player, clanId: id } },
+    },
+  };
+}
+
+function joinClan(state: CocWorld, playerId: string, clanId: string): CommandResult {
+  const player = state.players[playerId];
+  if (!player) return fail(state, "Unknown player.");
+  if (player.clanId) return fail(state, "Leave your current clan first.");
+  const clan = state.clans[clanId];
+  if (!clan) return fail(state, "No such clan.");
+  if (clan.members.length >= CLAN_MAX_MEMBERS) return fail(state, "That clan is full.");
+  return {
+    state: {
+      ...state,
+      clans: { ...state.clans, [clanId]: { ...clan, members: [...clan.members, playerId] } },
+      players: { ...state.players, [playerId]: { ...player, clanId } },
+    },
+  };
+}
+
+function leaveClan(state: CocWorld, playerId: string): CommandResult {
+  const player = state.players[playerId];
+  if (!player) return fail(state, "Unknown player.");
+  const clanId = player.clanId;
+  if (!clanId || !state.clans[clanId]) return fail(state, "You are not in a clan.");
+  const clan = state.clans[clanId];
+  const members = clan.members.filter((m) => m !== playerId);
+  const clans = { ...state.clans };
+  if (members.length === 0) delete clans[clanId];
+  else clans[clanId] = { ...clan, members, founder: clan.founder === playerId ? members[0] : clan.founder };
+  return {
+    state: { ...state, clans, players: { ...state.players, [playerId]: { ...player, clanId: null } } },
+  };
+}
+
+function donateTroops(state: CocWorld, playerId: string, toOwner: string, army: Army): CommandResult {
+  const donor = state.bases[playerId];
+  const dp = state.players[playerId];
+  const recip = state.bases[toOwner];
+  const rp = state.players[toOwner];
+  if (!donor || !dp) return fail(state, "You have no base.");
+  if (!recip || !rp) return fail(state, "No such ally.");
+  if (toOwner === playerId) return fail(state, "Donate to a clanmate, not yourself.");
+  if (!dp.clanId || dp.clanId !== rp.clanId) return fail(state, "You can only donate to clanmates.");
+  let housing = 0, total = 0;
+  for (const [u, n] of Object.entries(army)) {
+    if (!n) continue;
+    if (n < 0) return fail(state, "Invalid donation.");
+    if ((donor.army[u as CocUnitId] ?? 0) < n) return fail(state, "You don't have those troops.");
+    housing += UNITS[u as CocUnitId].housing * n;
+    total += n;
+  }
+  if (total <= 0) return fail(state, "Select troops to donate.");
+  if (housingUsed(recip) + housing > housingCap(recip)) return fail(state, "Your clanmate has no army housing free.");
+  const donorArmy: Army = { ...donor.army };
+  const recipArmy: Army = { ...recip.army };
+  for (const [u, n] of Object.entries(army)) {
+    if (!n) continue;
+    donorArmy[u as CocUnitId] = (donorArmy[u as CocUnitId] ?? 0) - n;
+    recipArmy[u as CocUnitId] = (recipArmy[u as CocUnitId] ?? 0) + n;
+  }
+  return {
+    state: {
+      ...state,
+      bases: {
+        ...state.bases,
+        [playerId]: { ...donor, army: donorArmy },
+        [toOwner]: { ...recip, army: recipArmy },
+      },
+    },
+  };
+}
+
+export function applyCommand(state: CocWorld, playerId: string, cmd: CocCommand): CommandResult {
+  switch (cmd.type) {
+    case "claimBase":
+      return claimBase(state, playerId, cmd.q, cmd.r);
+    case "placeBuilding":
+      return placeBuilding(state, playerId, cmd.hexKey, cmd.buildingId);
+    case "upgradeBuilding":
+      return upgradeBuilding(state, playerId, cmd.hexKey);
+    case "collect":
+      return collect(state, playerId);
+    case "expandCluster":
+      return expandCluster(state, playerId, cmd.q, cmd.r);
+    case "placeWall":
+      return placeWall(state, playerId, cmd.aKey, cmd.bKey);
+    case "upgradeWall":
+      return upgradeWall(state, playerId, cmd.edgeKey);
+    case "trainTroop":
+      return trainTroop(state, playerId, cmd.unit);
+    case "raid":
+      return raid(state, playerId, cmd.targetOwner, cmd.army);
+    case "finishNow":
+      return finishNow(state, playerId, cmd.hexKey);
+    case "buyBuilder":
+      return buyBuilder(state, playerId);
+    case "extendShield":
+      return extendShield(state, playerId, cmd.hours);
+    case "createClan":
+      return createClan(state, playerId, cmd.name);
+    case "joinClan":
+      return joinClan(state, playerId, cmd.clanId);
+    case "leaveClan":
+      return leaveClan(state, playerId);
+    case "donateTroops":
+      return donateTroops(state, playerId, cmd.toOwner, cmd.army);
+    default:
+      return fail(state, "Unknown command.");
+  }
+}

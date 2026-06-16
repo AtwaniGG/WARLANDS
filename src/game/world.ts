@@ -102,4 +102,14 @@ export function generateWorld(radius: number): World {
   return { radius, hexes };
 }
 
+/** The 6 axial neighbor directions (pointy-top). */
+export const AXIAL_DIRS: ReadonlyArray<[number, number]> = [
+  [1, 0], [1, -1], [0, -1], [-1, 0], [-1, 1], [0, 1],
+];
+
+/** Coordinates of the 6 hexes adjacent to (q,r) in axial space. */
+export function hexNeighbors(q: number, r: number): { q: number; r: number }[] {
+  return AXIAL_DIRS.map(([dq, dr]) => ({ q: q + dq, r: r + dr }));
+}
+
 export { PLOT_TYPES };

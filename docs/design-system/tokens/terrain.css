@@ -1,0 +1,16 @@
+/* ==================================================================
+   WARLANDS — Terrain & map tokens
+   The 9 plot types (GDD §4) + ownership rim colors used by HexMap.
+   ================================================================== */
+:root {
+  /* ---- Terrain fills (9 plot types) ---- */
+  --terrain-plains: #7c8a4f;
+  --terrain-forest: #2f5d3a;
+  --terrain-river: #2c6f8c;
+  --terrain-mountain: #6b6f78;
+  --terrain-desert: #c9a14a;
+  --terrain-coastal: #3f9aa6;
+  --terrain-industrial: #8a5a3c;
+  --terrain-techruins: #5b4b8a;
+  --terrain-warzone: #9c2b2b;
+}

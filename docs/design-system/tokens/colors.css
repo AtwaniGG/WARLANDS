@@ -1,94 +1,98 @@
-/* WARLANDS — Color system
-   ==================================================================
-   "Color = information." The world is desaturated gunmetal/sand/olive;
-   meaning is carried by a few high-chroma accents. Rule of thumb:
-   <= 2 accent colors per composition. (Art Direction Bible §1.3)
-   These base hexes are the canonical brand tokens and match the exact
-   terrain/accent values shipped in the WARLANDS prototype.
+/* ==================================================================
+   WARLANDS — Color tokens
+   War-room / field-console palette: near-black gunmetal surfaces,
+   amber command accent, blood-red hostility, teal intel.
+   Base values first, then semantic aliases — prefer the aliases.
    ================================================================== */
-
 :root {
-  /* ---- Base / environment (the desaturated war world) ---- */
-  --gunmetal:    #2a2f3a;
-  --ash:         #4b515c;
-  --olive-drab:  #5c6347;
-  --sand:        #c9a14a;
-  --concrete:    #8b8f96;
-  --dirt-brown:  #6b5840;
+  /* ---- Base / environment (raw material colors) ---- */
+  --gunmetal: #2a2f3a;
+  --ash: #4b515c;
+  --olive-drab: #5c6347;
+  --sand: #c9a14a;
+  --concrete: #8b8f96;
+  --dirt-brown: #6b5840;
 
-  /* ---- UI surfaces (dark, recon-screen) ---- */
-  --panel-void:  #0c1018;  /* deepest — app & map background */
-  --panel:       #12161f;  /* default card / panel surface   */
-  --panel-2:     #1a2030;  /* raised surface, rows, inputs    */
-  --hairline:    #232b3a;  /* 1px borders & dividers          */
-  --text-hi:     #e6e9ef;  /* primary text                    */
-  --text-lo:     #8a92a3;  /* secondary text                  */
-  --text-faint:  #5a6273;  /* labels, captions, disabled text */
+  /* ---- UI surfaces ---- */
+  --panel-void: #0c1018;   /* app background — deepest */
+  --panel: #12161f;        /* default card surface */
+  --panel-2: #1a2030;      /* raised surface */
+  --surface-sunken: #0a0d14;
+  --hairline: #232b3a;     /* default border */
+  --border-strong: #2f3a4d;
 
-  /* ---- Semantic accents (high-chroma = "signal", used sparingly) ---- */
-  --amber:   #f5b301;  /* owned land, economy, primary CTA, $WAR */
-  --blood:   #9c2b2b;  /* warzone, combat, danger, enemy         */
-  --teal:    #3f9aa6;  /* coastal, market, logistics, info       */
-  --toxic:   #6ee7a8;  /* technology, EMP, research, "active"    */
-  --sky:     #4a90d9;  /* allegiance, defense, scouting          */
-  --violet:  #8b5cf6;  /* rare / legendary, tech ruins, premium  */
+  /* ---- Text ---- */
+  --text-hi: #e6e9ef;      /* primary */
+  --text-lo: #8a92a3;      /* secondary */
+  --text-faint: #5a6273;   /* muted / disabled */
 
-  /* brighter on-dark readouts of the accents (text on near-black) */
-  --amber-text:   #fbbf24;
-  --blood-text:   #f87171;
-  --teal-text:    #5ec8d4;
+  /* ---- Semantic accent fills ---- */
+  --amber: #f5b301;        /* command / $WAR CTA */
+  --blood: #9c2b2b;        /* hostile / danger */
+  --teal: #3f9aa6;         /* intel / info */
+  --toxic: #6ee7a8;        /* tech / research */
+  --sky: #4a90d9;          /* ally / staked */
+  --violet: #8b5cf6;       /* rare / premium */
+
+  /* ---- Accent text (lifted for legibility on dark) ---- */
+  --amber-text: #fbbf24;
+  --blood-text: #f87171;
+  --teal-text: #5ec8d4;
   --emerald-text: #34d399;
-  --sky-text:     #7cb3ec;
-  --violet-text:  #c4b5fd;
+  --sky-text: #7cb3ec;
+  --violet-text: #c4b5fd;
 
   /* ---- State ---- */
-  --success:  #34d399;
-  --warning:  #fbbf24;
-  --error:    #ef4444;
+  --success: #34d399;
+  --warning: #fbbf24;
+  --error: #ef4444;
   --disabled: #3a4150;
 
-  /* ---- Terrain fills (9 plot types, GDD §4) ---- */
-  --terrain-plains:     #7c8a4f;
-  --terrain-forest:     #2f5d3a;
-  --terrain-river:      #2c6f8c;
-  --terrain-mountain:   #6b6f78;
-  --terrain-desert:     #c9a14a;
-  --terrain-coastal:    #3f9aa6;
-  --terrain-industrial: #8a5a3c;
-  --terrain-techruins:  #5b4b8a;
-  --terrain-warzone:    #9c2b2b;
-
-  /* ---- Map ownership rims (never rely on color alone — pair w/ icon) ---- */
-  --rim-owned:    #facc15;  /* thin amber rim on your assets   */
-  --rim-enemy:    #dc2626;  /* red rim on hostiles             */
-  --rim-neutral:  #1c2433;  /* hairline on unclaimed           */
-  --rim-selected: #ffd24a;  /* bright amber selection          */
+  /* ---- Map ownership rims ---- */
+  --rim-owned: #facc15;
+  --rim-enemy: #dc2626;
+  --rim-neutral: #1c2433;
+  --rim-selected: #ffd24a;
 
   /* ================================================================
-     SEMANTIC ALIASES — prefer these in components & screens
+     Semantic aliases — use THESE in components.
      ================================================================ */
-  --bg-app:          var(--panel-void);
-  --surface-card:    var(--panel);
-  --surface-raised:  var(--panel-2);
-  --surface-sunken:  #0a0d14;
-  --border-default:  var(--hairline);
-  --border-strong:   #2f3a4d;
+  --bg-app: var(--panel-void);
+  --surface-card: var(--panel);
+  --surface-raised: var(--panel-2);
+  --border-default: var(--hairline);
 
-  --text-primary:    var(--text-hi);
-  --text-secondary:  var(--text-lo);
-  --text-muted:      var(--text-faint);
+  --text-primary: var(--text-hi);
+  --text-secondary: var(--text-lo);
+  --text-muted: var(--text-faint);
 
-  --accent:          var(--amber);
-  --accent-text:     var(--amber-text);
-  --cta-bg:          var(--amber);
-  --cta-bg-hover:    #ffc21f;
-  --cta-fg:          #0c0a04;   /* near-black text on amber */
+  --accent: var(--amber);
+  --accent-text: var(--amber-text);
+  --cta-bg: var(--amber);
+  --cta-bg-hover: #ffc21f;
+  --cta-fg: #0c0a04;
 
-  --danger:          var(--blood);
-  --danger-strong:   #dc2626;
-  --info:            var(--teal);
-  --ally:            var(--sky);
-  --tech:            var(--toxic);
+  --danger: var(--blood);
+  --danger-strong: #dc2626;
+  --info: var(--teal);
+  --ally: var(--sky);
+  --tech: var(--toxic);
 
-  --focus-ring:      var(--amber);
+  --focus-ring-color: var(--amber);
+
+  /* legacy aliases kept for component parity with the app */
+  --background: var(--panel-void);
+  --foreground: var(--text-hi);
+}
+
+/* Colorblind-safe remap (deuteranopia/protanopia): red→orange, green→blue.
+   Toggle by adding class `cb` to <html>. */
+html.cb {
+  --blood: #d97706;
+  --blood-text: #fb923c;
+  --rim-enemy: #fb923c;
+  --success: #2563eb;
+  --emerald-text: #60a5fa;
+  --danger: #d97706;
+  --danger-strong: #ea580c;
 }

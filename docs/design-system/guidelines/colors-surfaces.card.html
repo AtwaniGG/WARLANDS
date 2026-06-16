@@ -1,0 +1,25 @@
+<!-- @dsCard group="Colors" viewport="700x150" name="Surfaces" subtitle="Gunmetal surface stack — void to raised" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  body { margin: 0; background: var(--panel-void); padding: 20px; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .sw { width: 132px; }
+  .chip { height: 56px; border-radius: var(--radius-md); border: 1px solid var(--hairline); }
+  .nm { font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; color: var(--text-hi); margin-top: 8px; }
+  .hx { font-family: var(--font-mono); font-size: 10px; color: var(--text-lo); margin-top: 2px; }
+</style>
+</head>
+<body>
+  <div class="row">
+    <div class="sw"><div class="chip" style="background:var(--panel-void)"></div><div class="nm">Void</div><div class="hx">#0C1018 · bg-app</div></div>
+    <div class="sw"><div class="chip" style="background:var(--surface-sunken)"></div><div class="nm">Sunken</div><div class="hx">#0A0D14</div></div>
+    <div class="sw"><div class="chip" style="background:var(--panel)"></div><div class="nm">Card</div><div class="hx">#12161F · panel</div></div>
+    <div class="sw"><div class="chip" style="background:var(--panel-2)"></div><div class="nm">Raised</div><div class="hx">#1A2030 · panel-2</div></div>
+    <div class="sw"><div class="chip" style="background:var(--hairline)"></div><div class="nm">Hairline</div><div class="hx">#232B3A · border</div></div>
+  </div>
+</body>
+</html>
