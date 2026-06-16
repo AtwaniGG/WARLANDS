@@ -1,0 +1,160 @@
+/**
+ * Heavy, long-running stress + invariant suite for the CoC ruleset.
+ * SKIPPED by default (keeps `npm test` fast). Run explicitly:
+ *
+ *   STRESS=1 npx vitest run src/sim/coc/stress.test.ts
+ *
+ * Tunables (env): STRESS_SEEDS, STRESS_STEPS, STRESS_BATTLES.
+ * Defaults are sized for ~60–90 min of CPU on a laptop.
+ */
+import { describe, it, expect } from "vitest";
+import { createWorld, addPlayer, housingCap, housingUsed } from "./world";
+import { applyCommand } from "./commands";
+import { applyTick } from "./tick";
+import { resolveRaid } from "./battle";
+import { maxLevelOf, UNIT_IDS, WALL } from "./config";
+import type { CocBuildingId, CocCommand, CocUnitId, CocWorld, CocBase } from "./types";
+
+const RUN = !!process.env.STRESS;
+const SEEDS = Number(process.env.STRESS_SEEDS ?? 250);
+const STEPS = Number(process.env.STRESS_STEPS ?? 120_000);
+const BATTLES = Number(process.env.STRESS_BATTLES ?? 400_000);
+const NINETY_MIN = 90 * 60 * 1000;
+
+function mulberry32(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function pick<T>(rnd: () => number, arr: T[]): T {
+  return arr[Math.floor(rnd() * arr.length)];
+}
+
+const BUILDABLE: CocBuildingId[] = [
+  "goldCollector", "elixirCollector", "goldStorage", "elixirStorage",
+  "cannon", "mortar", "airDefense", "barracks", "armyCamp",
+];
+
+function checkInvariants(w: CocWorld): void {
+  for (const p of Object.values(w.players)) {
+    if (!(p.war >= 0) || !Number.isFinite(p.war)) throw new Error(`bad war ${p.war} for ${p.id}`);
+  }
+  for (const [owner, b] of Object.entries(w.bases)) {
+    if (!(b.gold >= 0) || !Number.isFinite(b.gold)) throw new Error(`bad gold ${b.gold}`);
+    if (!(b.elixir >= 0) || !Number.isFinite(b.elixir)) throw new Error(`bad elixir ${b.elixir}`);
+    if (b.jobs.length > b.builders) throw new Error("builders over-committed");
+    if (housingUsed(b) > housingCap(b)) throw new Error("army over housing");
+    if (b.ownedHexes.length < 1) throw new Error("empty cluster");
+    for (const h of b.ownedHexes) if (w.claimedHexes[h] !== owner) throw new Error("ownership desync");
+    for (const [hx, bld] of Object.entries(b.buildings)) {
+      if (!b.ownedHexes.includes(hx)) throw new Error("building off-cluster");
+      if (bld.level < 0 || bld.level > maxLevelOf(bld.id)) throw new Error("bad building level");
+    }
+    for (const job of b.jobs) {
+      if (!b.buildings[job.hexKey]) throw new Error("job without building");
+      if (job.toLevel > maxLevelOf(job.buildingId)) throw new Error("job over max level");
+    }
+    for (const lvl of Object.values(b.walls)) if (lvl < 1 || lvl > WALL.levels.length) throw new Error("bad wall level");
+    for (const u of UNIT_IDS) if ((b.army[u] ?? 0) < 0) throw new Error("negative army");
+  }
+  for (const [cid, clan] of Object.entries(w.clans)) {
+    if (clan.members.length < 1) throw new Error("empty clan not pruned");
+    for (const m of clan.members) if (w.players[m]?.clanId !== cid) throw new Error("clan member desync");
+  }
+}
+
+function randomCommand(rnd: () => number, w: CocWorld): CocCommand {
+  const hexes = Object.keys(w.hexes);
+  const owners = Object.keys(w.bases);
+  const r = rnd();
+  if (r < 0.10) { const [q, c] = pick(rnd, hexes).split(",").map(Number); return { type: "claimBase", q, r: c }; }
+  if (r < 0.30) return { type: "placeBuilding", hexKey: pick(rnd, hexes), buildingId: pick(rnd, BUILDABLE) };
+  if (r < 0.40) return { type: "upgradeBuilding", hexKey: pick(rnd, hexes) };
+  if (r < 0.48) return { type: "collect" };
+  if (r < 0.55) { const [q, c] = pick(rnd, hexes).split(",").map(Number); return { type: "expandCluster", q, r: c }; }
+  if (r < 0.62) return { type: "placeWall", aKey: pick(rnd, hexes), bKey: pick(rnd, hexes) };
+  if (r < 0.67) return { type: "upgradeWall", edgeKey: `${pick(rnd, hexes)}|${pick(rnd, hexes)}` };
+  if (r < 0.77) return { type: "trainTroop", unit: pick(rnd, UNIT_IDS) as CocUnitId };
+  if (r < 0.86) return { type: "raid", targetOwner: owners.length ? pick(rnd, owners) : "p1", army: { grunt: Math.floor(rnd() * 30), juggernaut: Math.floor(rnd() * 4), gunship: Math.floor(rnd() * 8) } };
+  if (r < 0.90) return { type: "finishNow", hexKey: pick(rnd, hexes) };
+  if (r < 0.93) return { type: "buyBuilder" };
+  if (r < 0.96) return { type: "extendShield", hours: Math.floor(rnd() * 26) };
+  if (r < 0.98) return { type: "createClan", name: `C${Math.floor(rnd() * 9999)}` };
+  if (r < 0.99) return { type: "joinClan", clanId: pick(rnd, ["clan1", "clan2", "clan3", "clan4"]) };
+  return { type: "leaveClan" };
+}
+
+function runWorld(seed: number, steps: number): CocWorld {
+  const rnd = mulberry32(seed);
+  let w = addPlayer(addPlayer(addPlayer(addPlayer(createWorld(seed), "p1"), "p2"), "p3"), "p4");
+  const players = ["p1", "p2", "p3", "p4"];
+  for (let i = 0; i < steps; i++) {
+    w = applyCommand(w, pick(rnd, players), randomCommand(rnd, w)).state;
+    if (i % 25 === 0) w = applyTick(w);
+    if (i % 2000 === 0) checkInvariants(w);
+  }
+  checkInvariants(w);
+  return w;
+}
+
+describe.skipIf(!RUN)("CoC STRESS (long-running)", () => {
+  it(`world fuzz: ${SEEDS} seeds × ${STEPS.toLocaleString()} steps, invariants hold + deterministic`, () => {
+    let totalBases = 0;
+    for (let s = 0; s < SEEDS; s++) {
+      const a = runWorld(1000 + s, STEPS);
+      totalBases += Object.keys(a.bases).length;
+      // determinism spot-check on every 25th seed (re-run must match tick + base count)
+      if (s % 25 === 0) {
+        const b = runWorld(1000 + s, STEPS);
+        expect(b.tick).toBe(a.tick);
+        expect(Object.keys(b.bases).length).toBe(Object.keys(a.bases).length);
+      }
+    }
+    expect(totalBases).toBeGreaterThan(0);
+  }, NINETY_MIN);
+
+  it(`battle resolver: ${BATTLES.toLocaleString()} random raids, invariants + determinism`, () => {
+    const rnd = mulberry32(0xBA771E);
+    for (let i = 0; i < BATTLES; i++) {
+      const defender = randomDefender(rnd);
+      const army = {
+        grunt: Math.floor(rnd() * 60),
+        marksman: Math.floor(rnd() * 40),
+        breacher: Math.floor(rnd() * 20),
+        juggernaut: Math.floor(rnd() * 10),
+        gunship: Math.floor(rnd() * 15),
+      };
+      const seed = Math.floor(rnd() * 0xffffffff);
+      const res = resolveRaid(army, defender, seed);
+      expect(res.stars).toBeGreaterThanOrEqual(0);
+      expect(res.stars).toBeLessThanOrEqual(3);
+      expect(res.destructionPct).toBeGreaterThanOrEqual(0);
+      expect(res.destructionPct).toBeLessThanOrEqual(1);
+      expect(res.loot.gold).toBeLessThanOrEqual(defender.gold);
+      expect(res.loot.elixir).toBeLessThanOrEqual(defender.elixir);
+      expect(Number.isFinite(res.loot.gold)).toBe(true);
+      if (i % 5000 === 0) expect(resolveRaid(army, defender, seed)).toEqual(res); // determinism
+    }
+  }, NINETY_MIN);
+});
+
+function randomDefender(rnd: () => number): CocBase {
+  const hexes = ["0,0", "1,0", "1,-1", "0,-1", "-1,0", "-1,1", "0,1", "2,0", "2,-1"];
+  const ids: CocBuildingId[] = ["commandCenter", "goldCollector", "elixirCollector", "goldStorage", "elixirStorage", "cannon", "mortar", "airDefense", "barracks", "armyCamp"];
+  const buildings: Record<string, { id: CocBuildingId; level: number }> = { "0,0": { id: "commandCenter", level: 1 + Math.floor(rnd() * 5) } };
+  const n = 1 + Math.floor(rnd() * 8);
+  for (let i = 1; i <= n; i++) buildings[hexes[i]] = { id: pick(rnd, ids.slice(1)), level: 1 + Math.floor(rnd() * 3) };
+  const walls: Record<string, number> = {};
+  if (rnd() < 0.7) walls["0,0|1,0"] = 1 + Math.floor(rnd() * 3);
+  if (rnd() < 0.5) walls["0,0|0,1"] = 1 + Math.floor(rnd() * 3);
+  return {
+    owner: "d", centerKey: "0,0", ownedHexes: hexes.slice(0, n + 1), buildings, walls,
+    gold: Math.floor(rnd() * 20000), elixir: Math.floor(rnd() * 20000),
+    builders: 2, jobs: [], army: {}, trainQueue: [], shieldUntil: 0, trophies: 0,
+  };
+}
