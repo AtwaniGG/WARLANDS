@@ -419,3 +419,50 @@ describe("clans", () => {
     expect(r.error).toMatch(/clanmate/i);
   });
 });
+
+describe("objectives + sink-funded season pool", () => {
+  it("assigns objectives on join and bumps progress on training", () => {
+    let s = withArmyBuildings(claimed(), 1000);
+    const before = s.players.p1.objectives!.find((o) => o.kind === "trainTroops")!.progress;
+    s = applyCommand(s, "p1", { type: "trainTroop", unit: "grunt" }).state;
+    expect(s.players.p1.objectives!.find((o) => o.kind === "trainTroops")!.progress).toBe(before + 1);
+  });
+  it("claiming a completed objective pays $WAR from the pool and rotates the slot", () => {
+    let s = claimed();
+    const obj = s.players.p1.objectives!.find((o) => o.kind === "trainTroops")!;
+    s = { ...s, players: { ...s.players, p1: { ...s.players.p1, objectives: s.players.p1.objectives!.map((o) => (o.id === obj.id ? { ...o, progress: o.target } : o)) } } };
+    const warBefore = s.players.p1.war, poolBefore = s.seasonPool!;
+    const r = applyCommand(s, "p1", { type: "claimObjective", id: obj.id });
+    expect(r.error).toBeUndefined();
+    expect(r.state.players.p1.war).toBe(warBefore + obj.reward);
+    expect(r.state.seasonPool).toBe(poolBefore - obj.reward);
+    expect(r.state.players.p1.objectives!.some((o) => o.id === obj.id)).toBe(false); // rotated
+  });
+  it("rejects claiming an incomplete objective", () => {
+    const s = claimed();
+    const r = applyCommand(s, "p1", { type: "claimObjective", id: s.players.p1.objectives![0].id });
+    expect(r.error).toMatch(/not complete/i);
+  });
+  it("a $WAR sink flows into the season pool", () => {
+    let s = give(claimed(), 0, 1000);
+    s = applyCommand(s, "p1", { type: "placeBuilding", tileKey: "0,0", buildingId: "goldCollector" }).state;
+    const poolBefore = s.seasonPool!;
+    const r = applyCommand(s, "p1", { type: "finishNow", tileKey: "0,0" });
+    expect(r.state.seasonPool!).toBeGreaterThan(poolBefore);
+  });
+  it("a raid reward is paid out of the pool (never minted)", () => {
+    let s = twoBases();
+    s = { ...s, seasonPool: 80, bases: { ...s.bases, p1: { ...s.bases.p1, army: { grunt: 80 } } } };
+    const r = applyCommand(s, "p1", { type: "raid", targetOwner: "p2", deploy: dep("grunt", 80) });
+    expect(r.report!.stars).toBe(3);
+    expect(r.state.seasonPool).toBe(0); // pool only had 80 of the 150 desired
+    expect(r.state.players.p1.war).toBe(twoBases().players.p1.war + 80); // capped to the pool
+  });
+  it("claim records an on-chain withdrawal and reduces in-game $WAR", () => {
+    const s = claimed();
+    const war = s.players.p1.war;
+    const r = applyCommand(s, "p1", { type: "claim", amount: 1000 });
+    expect(r.state.players.p1.war).toBe(war - 1000);
+    expect(r.state.players.p1.claimed).toBe(1000);
+  });
+});

@@ -89,4 +89,12 @@ describe("applyTick", () => {
     expect(w.bases.p1.gold).toBe(5000);
     expect(w.pendingReports?.p1 ?? []).toEqual([]);
   });
+
+  it("rolls the season over and soft-resets trophies", () => {
+    let w = worldWith(baseWith({ trophies: 100 }));
+    w = { ...w, season: { id: 1, endsAtTick: 3 } };
+    for (let i = 0; i < 3; i++) w = applyTick(w);
+    expect(w.season!.id).toBe(2);
+    expect(w.bases.p1.trophies).toBe(50);
+  });
 });

@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useBaseSocket } from "@/lib/useBaseSocket";
 import { axialToPixel } from "@/game/world";
-import { Badge, Button, Panel, ProgressBar, Stat } from "@/components/ui";
+import { Badge, Button, Panel, ProgressBar, Stat, type BadgeTone } from "@/components/ui";
 import { BaseTutorial } from "@/components/BaseTutorial";
 import { BaseGrid, buildingArt, UNIT_COLOR } from "@/components/BaseGrid";
 import { useCountUp } from "@/components/useCountUp";
@@ -10,8 +10,8 @@ import { useCountUp } from "@/components/useCountUp";
 const buzz = (p: number | number[]) => { try { (navigator as Navigator & { vibrate?: (p: number | number[]) => boolean }).vibrate?.(p); } catch { /* unsupported */ } };
 import {
   BUILDINGS, LOOT_PCT, MAX_BUILDERS, TRAPS, TRAP_IDS, UNITS, UNIT_IDS, WALL,
-  builderCost, builderCount, ccLevel, ccTier, fitsInGrid, finishCost, freeBuilders, garrisonCap, garrisonUsed, housingCap, housingUsed, levelDef, maxLevelOf, maxWallLevel, occupiedTiles, resolveRaid, storageCap,
-  type Army, type BattleFrame, type BattleReport, type CocBase, type CocBuildingId, type CocResource, type CocTrapId, type CocUnitId, type CocWorld, type Deployment, type PlacedBuilding,
+  builderCost, builderCount, ccLevel, ccTier, fitsInGrid, finishCost, freeBuilders, garrisonCap, garrisonUsed, housingCap, housingUsed, leagueFor, levelDef, maxLevelOf, maxWallLevel, objectiveLabel, occupiedTiles, resolveRaid, storageCap,
+  type Army, type BattleFrame, type BattleReport, type CocBase, type CocBuildingId, type CocPlayer, type CocResource, type CocTrapId, type CocUnitId, type CocWorld, type Deployment, type PlacedBuilding,
 } from "@/sim/coc";
 
 const SERVER_URL = process.env.NEXT_PUBLIC_GAME_SERVER_URL ?? "ws://localhost:8080";
@@ -19,6 +19,12 @@ const HEX = 16;
 const UNIT_ICON: Record<CocUnitId, string> = { grunt: "🪖", marksman: "🎯", breacher: "🧨", juggernaut: "🛡️", gunship: "🚁" };
 
 function num(n: number): string { return Math.floor(n).toLocaleString(); }
+function fmtDur(secs: number): string {
+  const d = Math.floor(secs / 86400), h = Math.floor((secs % 86400) / 3600), m = Math.floor((secs % 3600) / 60);
+  if (d > 0) return `${d}d ${h}h`;
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
+}
 function terrainFill(t: string): string { return `var(--terrain-${t.toLowerCase()})`; }
 function armyTotal(a: Army): number { return UNIT_IDS.reduce((s, u) => s + (a[u] ?? 0), 0); }
 function costStr(cost: Partial<Record<CocResource, number>>): string {
@@ -51,6 +57,8 @@ export default function WorldPage() {
   const [moveFrom, setMoveFrom] = useState<string | null>(null);
   const [armyOpen, setArmyOpen] = useState(false);
   const [clanOpen, setClanOpen] = useState(false);
+  const [objectivesOpen, setObjectivesOpen] = useState(false);
+  const [warOpen, setWarOpen] = useState(false);
   const [scout, setScout] = useState<string | null>(null);
   // ---- raid (deploy + playback) ----
   const [raidTarget, setRaidTarget] = useState<string | null>(null);
@@ -103,6 +111,7 @@ export default function WorldPage() {
   const myBase: CocBase | null = playerId ? state.bases[playerId] ?? null : null;
   const me = playerId ? state.players[playerId] ?? null : null;
   const view = myBase ? screen : "world";
+  const claimableCount = me?.objectives?.filter((o) => o.progress >= o.target && !o.claimed).length ?? 0;
 
   function resetBaseUi() { setMode("view"); setPlacing(null); setPlacingTrap(null); setMoveFrom(null); setSelected(null); }
 
@@ -179,6 +188,7 @@ export default function WorldPage() {
             <Stat label="🧪 ELIXIR" value={`${num(elixirC)} / ${num(storageCap(myBase, "elixir"))}`} accent="violet" />
             <Stat label="💎 $WAR" value={num(warC)} accent="amber" />
             <Stat label="🏆 TROPHIES" value={`${Math.round(trophyC)}`} accent="amber" />
+            <Badge tone={leagueFor(myBase.trophies).tone as BadgeTone} variant="soft">{leagueFor(myBase.trophies).name.toUpperCase()}</Badge>
             <Stat label="TOWN HALL" value={`L${ccLevel(myBase)}`} accent="sky" />
             <Stat label="BUILDERS" value={`${freeBuilders(myBase)}/${builderCount(myBase)}`} accent={freeBuilders(myBase) > 0 ? "emerald" : "neutral"} />
             <Stat label="ARMY" value={`${housingUsed(myBase)}/${housingCap(myBase)}`} accent="blood" />
@@ -192,6 +202,8 @@ export default function WorldPage() {
               </Button>
             )}
             <Button size="sm" variant="outline" icon="🛡️" onClick={() => send({ type: "extendShield", hours: 2 })}>+2h SHIELD · 💎1,000</Button>
+            <Button size="sm" variant={claimableCount > 0 ? "primary" : "outline"} icon="🎯" onClick={() => setObjectivesOpen(true)}>OBJECTIVES{claimableCount > 0 ? ` ✓${claimableCount}` : ""}</Button>
+            <Button size="sm" variant="outline" icon="💰" onClick={() => setWarOpen(true)}>$WAR</Button>
             {myBase.shieldUntil > state.tick && <Badge tone="emerald" variant="soft">SHIELDED {Math.ceil((myBase.shieldUntil - state.tick) / 3600)}h</Badge>}
           </div>
         </Panel>
@@ -306,6 +318,16 @@ export default function WorldPage() {
       {myBase && clanOpen && playerId && (
         <Overlay onClose={() => setClanOpen(false)}>
           <ClanPanel state={state} playerId={playerId} send={send} onClose={() => setClanOpen(false)} />
+        </Overlay>
+      )}
+      {myBase && objectivesOpen && me && (
+        <Overlay onClose={() => setObjectivesOpen(false)}>
+          <ObjectivesPanel me={me} onClaim={(id) => { send({ type: "claimObjective", id }); buzz(12); }} onClose={() => setObjectivesOpen(false)} />
+        </Overlay>
+      )}
+      {myBase && warOpen && me && (
+        <Overlay onClose={() => setWarOpen(false)}>
+          <WarPanel me={me} state={state} onClaim={(amt) => { send({ type: "claim", amount: amt }); buzz(20); }} onClose={() => setWarOpen(false)} />
         </Overlay>
       )}
       {scout && state.bases[scout] && myBase && (
@@ -616,6 +638,54 @@ function ClanPanel({ state, playerId, send, onClose }: { state: CocWorld; player
           </Button>
         ))}
       </div>
+    </Panel>
+  );
+}
+
+function ObjectivesPanel({ me, onClaim, onClose }: { me: CocPlayer; onClaim: (id: string) => void; onClose: () => void }) {
+  const objs = me.objectives ?? [];
+  return (
+    <Panel title="OBJECTIVES" accent padding="14px" headerRight={<button onClick={onClose} style={closeBtn}>✕</button>}>
+      <div style={{ display: "grid", gap: 8 }}>
+        {objs.map((o) => {
+          const done = o.progress >= o.target;
+          return (
+            <div key={o.id} style={{ background: "var(--surface-raised)", border: "1px solid var(--hairline)", borderRadius: "var(--radius-sm)", padding: "8px 10px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 13 }}>{objectiveLabel(o)}</span>
+                <span className="wl-num" style={{ fontSize: 11, color: "var(--amber-text)" }}>💎{o.reward}</span>
+              </div>
+              <div style={{ marginTop: 6 }}>
+                <ProgressBar tone="amber" value={Math.min(o.progress, o.target)} max={o.target} valueText={`${Math.min(o.progress, o.target)}/${o.target}`} />
+              </div>
+              {done && <div style={{ marginTop: 8 }}><Button size="sm" variant="primary" full onClick={() => onClaim(o.id)}>CLAIM 💎{o.reward}</Button></div>}
+            </div>
+          );
+        })}
+        {objs.length === 0 && <span style={{ fontSize: 12, color: "var(--text-muted)" }}>No objectives yet.</span>}
+      </div>
+    </Panel>
+  );
+}
+
+function WarPanel({ me, state, onClaim, onClose }: { me: CocPlayer; state: CocWorld; onClaim: (amt: number) => void; onClose: () => void }) {
+  const pool = state.seasonPool ?? 0;
+  const secsLeft = state.season ? Math.max(0, state.season.endsAtTick - state.tick) : 0;
+  return (
+    <Panel title="$WAR · SEASON" accent padding="14px" headerRight={<button onClick={onClose} style={closeBtn}>✕</button>}>
+      <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 10 }}>
+        <Stat label="SEASON" value={`#${state.season?.id ?? 1}`} accent="sky" />
+        <Stat label="ENDS IN" value={fmtDur(secsLeft)} accent="amber" />
+        <Stat label="🏦 POOL" value={num(pool)} accent="amber" />
+      </div>
+      <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 10 }}>
+        <Stat label="💎 YOUR $WAR" value={num(me.war)} accent="amber" />
+        <Stat label="CLAIMED" value={num(me.claimed ?? 0)} accent="emerald" />
+      </div>
+      <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "0 0 10px", lineHeight: 1.4 }}>
+        Rewards are paid from the season pool, which fills only from $WAR sinks — no minting. Claiming records an on-chain withdrawal; the treasury settles it on Solana.
+      </p>
+      <Button variant="primary" full icon="💰" disabled={me.war <= 0} onClick={() => onClaim(me.war)}>CLAIM {num(me.war)} $WAR ON-CHAIN</Button>
     </Panel>
   );
 }

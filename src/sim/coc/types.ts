@@ -74,6 +74,17 @@ export interface CocBase {
   trophies: number;
 }
 
+export type ObjectiveKind = "raidWins" | "collectGold" | "trainTroops";
+/** A rotating goal that pays $WAR (from the season pool) when completed + claimed. */
+export interface Objective {
+  id: string;
+  kind: ObjectiveKind;
+  target: number;
+  progress: number;
+  reward: number; // $WAR, paid from the season pool
+  claimed: boolean;
+}
+
 export interface CocPlayer {
   id: string;
   war: number;
@@ -81,6 +92,10 @@ export interface CocPlayer {
   clanId?: string | null;
   /** AI-controlled village seeded to populate the world (always a valid raid target). */
   isBot?: boolean;
+  /** rotating daily-style objectives (assigned on join, replaced on claim). */
+  objectives?: Objective[];
+  /** total $WAR the player has claimed for on-chain withdrawal (real transfer is treasury-side). */
+  claimed?: number;
 }
 
 export interface Clan {
@@ -102,6 +117,10 @@ export interface CocWorld {
   nextClanId: number;
   /** defense reports queued for offline players (raided while away) — delivered on connect. */
   pendingReports?: Record<string, BattleReport[]>;
+  /** sink-funded $WAR treasury: every $WAR sink flows in, every reward is paid out of it (never minted beyond it). */
+  seasonPool?: number;
+  /** current season id + when it rolls over (trophy soft-reset). */
+  season?: { id: number; endsAtTick: number };
 }
 
 export type CocCommand =
@@ -120,7 +139,9 @@ export type CocCommand =
   | { type: "createClan"; name: string }
   | { type: "joinClan"; clanId: string }
   | { type: "leaveClan" }
-  | { type: "donateTroops"; toOwner: string; army: Army };
+  | { type: "donateTroops"; toOwner: string; army: Army }
+  | { type: "claimObjective"; id: string }
+  | { type: "claim"; amount: number };
 
 /** Outcome of a raid, surfaced to the attacking client only. */
 export interface BattleReport {

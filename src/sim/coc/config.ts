@@ -1,4 +1,4 @@
-import type { CocBuildingId, CocResource, CocTrapId, CocUnitId } from "./types";
+import type { CocBuildingId, CocResource, CocTrapId, CocUnitId, Objective, ObjectiveKind } from "./types";
 
 export const STARTING_WAR = 200_000;
 export const STARTING_GOLD = 500;
@@ -348,6 +348,56 @@ export const CC_PROGRESSION: CcTier[] = [
     },
   },
 ];
+
+// ---- trophy leagues ----
+export interface League { name: string; min: number; tone: string; }
+export const LEAGUES: League[] = [
+  { name: "Unranked", min: 0, tone: "neutral" },
+  { name: "Bronze", min: 100, tone: "amber" },
+  { name: "Silver", min: 400, tone: "neutral" },
+  { name: "Gold", min: 800, tone: "amber" },
+  { name: "Crystal", min: 1400, tone: "teal" },
+  { name: "Master", min: 2200, tone: "violet" },
+  { name: "Champion", min: 3200, tone: "blood" },
+];
+export function leagueFor(trophies: number): League {
+  let r = LEAGUES[0];
+  for (const l of LEAGUES) if (trophies >= l.min) r = l;
+  return r;
+}
+
+// ---- rotating objectives (reward $WAR from the season pool) ----
+export const OBJECTIVE_KINDS: ObjectiveKind[] = ["raidWins", "collectGold", "trainTroops"];
+const OBJ_BASE: Record<ObjectiveKind, { target: number; reward: number }> = {
+  raidWins: { target: 3, reward: 400 },
+  collectGold: { target: 2500, reward: 250 },
+  trainTroops: { target: 12, reward: 200 },
+};
+export function objectiveLabel(o: Objective): string {
+  if (o.kind === "raidWins") return `Win ${o.target} raids`;
+  if (o.kind === "collectGold") return `Collect ${o.target.toLocaleString()} gold`;
+  return `Train ${o.target} troops`;
+}
+export function makeObjective(kind: ObjectiveKind, tier: number, id: string): Objective {
+  const t = Math.max(1, Math.min(5, tier));
+  const base = OBJ_BASE[kind];
+  return { id, kind, target: base.target * t, progress: 0, reward: base.reward * t, claimed: false };
+}
+export function makeObjectives(seed: string): Objective[] {
+  return OBJECTIVE_KINDS.map((k, i) => makeObjective(k, 1, `${seed}:${k}:${i}`));
+}
+/** Replace a claimed objective with the next one (rotate kind, +1 tier) — endless goals. */
+export function nextObjective(prev: Objective): Objective {
+  const idx = OBJECTIVE_KINDS.indexOf(prev.kind);
+  const kind = OBJECTIVE_KINDS[(idx + 1) % OBJECTIVE_KINDS.length];
+  const tier = Math.min(5, Math.round(prev.target / OBJ_BASE[prev.kind].target) + 1);
+  return makeObjective(kind, tier, `${prev.id}#${prev.target}`);
+}
+
+// ---- sink-funded season economy ($WAR) ----
+export const STARTING_SEASON_POOL = 1_000_000;
+export const SEASON_LENGTH = 7 * 24 * 3600; // ticks (≈7 days at 1 Hz)
+export const SEASON_TROPHY_KEEP = 0.5; // soft trophy reset fraction at season rollover
 
 export function levelDef(id: CocBuildingId, level: number): BuildingLevel | undefined {
   return BUILDINGS[id].levels[level - 1];

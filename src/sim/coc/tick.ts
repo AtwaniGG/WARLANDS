@@ -1,4 +1,4 @@
-import { BUILDINGS, SHIELD_MAX_SECS, SHIELD_SECS_PER_PCT } from "./config";
+import { BUILDINGS, SEASON_LENGTH, SEASON_TROPHY_KEEP, SHIELD_MAX_SECS, SHIELD_SECS_PER_PCT } from "./config";
 import { resolveRaid } from "./battle";
 import type { Army, BattleReport, BuildJob, CocBase, CocWorld, Deployment, PlacedBuilding, TrainOrder } from "./types";
 
@@ -90,9 +90,16 @@ export function applyTick(state: CocWorld): CocWorld {
   for (const [owner, base] of Object.entries(state.bases)) {
     bases[owner] = tickBase(base, nextTick);
   }
+  let next: CocWorld = { ...state, tick: nextTick, bases };
   if (nextTick % RAID_INTERVAL === 0) {
     const wave = botRaidWave(state, bases, nextTick);
-    return { ...state, tick: nextTick, bases: wave.bases, pendingReports: wave.pendingReports };
+    next = { ...next, bases: wave.bases, pendingReports: wave.pendingReports };
   }
-  return { ...state, tick: nextTick, bases };
+  // season rollover: soft-reset trophies + start the next season
+  if (next.season && nextTick >= next.season.endsAtTick) {
+    const rolled: CocWorld["bases"] = {};
+    for (const [owner, b] of Object.entries(next.bases)) rolled[owner] = { ...b, trophies: Math.floor((b.trophies ?? 0) * SEASON_TROPHY_KEEP) };
+    next = { ...next, bases: rolled, season: { id: next.season.id + 1, endsAtTick: next.season.endsAtTick + SEASON_LENGTH } };
+  }
+  return next;
 }

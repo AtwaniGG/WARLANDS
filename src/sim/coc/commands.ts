@@ -1,8 +1,8 @@
 import { hexKey } from "@/game/world";
-import { builderCost, BUILDINGS, ccTier, finishCost, levelDef, maxLevelOf, maxWallLevel, MAX_BUILDERS, SHIELD_MAX_SECS, SHIELD_SECS_PER_PCT, STARTING_ELIXIR, STARTING_GOLD, TRAPS, UNITS, WALL, WAR_RAID_REWARD_PER_STAR, WAR_SHIELD_PER_HOUR } from "./config";
+import { builderCost, BUILDINGS, ccTier, finishCost, levelDef, maxLevelOf, maxWallLevel, MAX_BUILDERS, nextObjective, SHIELD_MAX_SECS, SHIELD_SECS_PER_PCT, STARTING_ELIXIR, STARTING_GOLD, TRAPS, UNITS, WALL, WAR_RAID_REWARD_PER_STAR, WAR_SHIELD_PER_HOUR } from "./config";
 import { builderCount, ccLevel, fitsInGrid, footprintTiles, freeBuilders, garrisonCap, garrisonUsed, hasBarracks, housingCap, housingUsed, inGrid, occupiedTiles, parseTile, storageCap } from "./world";
 import { resolveRaid } from "./battle";
-import type { Army, Clan, CocBase, CocBuildingId, CocCommand, CocResource, CocTrapId, CocUnitId, CocWorld, CommandResult, Deployment, PlacedBuilding } from "./types";
+import type { Army, Clan, CocBase, CocBuildingId, CocCommand, CocResource, CocTrapId, CocUnitId, CocWorld, CommandResult, Deployment, ObjectiveKind, PlacedBuilding } from "./types";
 
 const CLAN_MAX_MEMBERS = 10;
 /** Starting village layout on the 20×20 grid: a centered Town Hall flanked by two Builder's Huts. */
@@ -24,6 +24,29 @@ function canAfford(base: CocBase, cost: Partial<Record<CocResource, number>>): b
 }
 function spend(base: CocBase, cost: Partial<Record<CocResource, number>>): { gold: number; elixir: number } {
   return { gold: base.gold - (cost.gold ?? 0), elixir: base.elixir - (cost.elixir ?? 0) };
+}
+
+// ---- sink-funded $WAR economy: every sink flows into the season pool; every reward is paid out of it ----
+function sinkToPool(state: CocWorld, amount: number): CocWorld {
+  return { ...state, seasonPool: (state.seasonPool ?? 0) + amount };
+}
+function payFromPool(state: CocWorld, playerId: string, want: number): { state: CocWorld; paid: number } {
+  const pool = state.seasonPool ?? 0;
+  const player = state.players[playerId];
+  if (!player || want <= 0 || pool <= 0) return { state, paid: 0 };
+  const paid = Math.min(pool, want);
+  return { state: { ...state, seasonPool: pool - paid, players: { ...state.players, [playerId]: { ...player, war: player.war + paid } } }, paid };
+}
+function bumpObjectives(state: CocWorld, playerId: string, kind: ObjectiveKind, amount: number): CocWorld {
+  const player = state.players[playerId];
+  if (!player?.objectives || amount <= 0) return state;
+  let touched = false;
+  const objectives = player.objectives.map((o) => {
+    if (o.kind !== kind || o.claimed || o.progress >= o.target) return o;
+    touched = true;
+    return { ...o, progress: Math.min(o.target, o.progress + amount) };
+  });
+  return touched ? { ...state, players: { ...state.players, [playerId]: { ...player, objectives } } } : state;
 }
 /** Would a building of `id` anchored at `anchorKey` collide with anything (excluding `exclude`)? */
 function collides(base: CocBase, anchorKey: string, id: CocBuildingId, exclude?: string): boolean {
@@ -80,6 +103,7 @@ function placeBuilding(state: CocWorld, playerId: string, anchorKey: string, bui
         ...state,
         players: { ...state.players, [playerId]: { ...player, war: player.war - cost } },
         bases: { ...state.bases, [playerId]: newBase },
+        seasonPool: (state.seasonPool ?? 0) + cost, // $WAR sink → treasury
       },
     };
   }
@@ -175,7 +199,8 @@ function collect(state: CocWorld, playerId: string): CommandResult {
       buildings[k] = b;
     }
   }
-  return { state: { ...state, bases: { ...state.bases, [playerId]: { ...base, gold, elixir, buildings } } } };
+  const next: CocWorld = { ...state, bases: { ...state.bases, [playerId]: { ...base, gold, elixir, buildings } } };
+  return { state: bumpObjectives(next, playerId, "collectGold", gold - base.gold) };
 }
 
 function placeWall(state: CocWorld, playerId: string, tileKey: string): CommandResult {
@@ -238,7 +263,8 @@ function trainTroop(state: CocWorld, playerId: string, unit: CocUnitId): Command
     elixir: base.elixir - def.cost.elixir,
     trainQueue: [...base.trainQueue, { unit, finishesAtTick: state.tick + def.trainTimeSec }],
   };
-  return { state: { ...state, bases: { ...state.bases, [playerId]: newBase } } };
+  const next: CocWorld = { ...state, bases: { ...state.bases, [playerId]: newBase } };
+  return { state: bumpObjectives(next, playerId, "trainTroops", 1) };
 }
 
 function fnv1a(s: string): number {
@@ -296,15 +322,13 @@ function raid(state: CocWorld, playerId: string, targetOwner: string, deploy: De
     shieldUntil: result.destructionPct > 0 ? state.tick + shieldSecs : defender.shieldUntil,
   };
 
-  // $WAR reward for the attacker, scaled by stars (faucet).
-  const warReward = result.stars * WAR_RAID_REWARD_PER_STAR;
-  const attackerPlayer = state.players[playerId];
-  const players = warReward > 0 && attackerPlayer
-    ? { ...state.players, [playerId]: { ...attackerPlayer, war: attackerPlayer.war + warReward } }
-    : state.players;
+  // $WAR reward for the attacker, scaled by stars — PAID FROM THE SEASON POOL (never minted).
+  let next: CocWorld = { ...state, bases: { ...state.bases, [playerId]: newAttacker, [targetOwner]: newDefender } };
+  next = payFromPool(next, playerId, result.stars * WAR_RAID_REWARD_PER_STAR).state;
+  if (result.stars > 0) next = bumpObjectives(next, playerId, "raidWins", 1);
 
   return {
-    state: { ...state, players, bases: { ...state.bases, [playerId]: newAttacker, [targetOwner]: newDefender } },
+    state: next,
     report: {
       attacker: playerId,
       defender: targetOwner,
@@ -335,6 +359,7 @@ function finishNow(state: CocWorld, playerId: string, key: string): CommandResul
       ...state,
       players: { ...state.players, [playerId]: { ...player, war: player.war - cost } },
       bases: { ...state.bases, [playerId]: newBase },
+      seasonPool: (state.seasonPool ?? 0) + cost, // $WAR sink → treasury
     },
   };
 }
@@ -352,6 +377,7 @@ function extendShield(state: CocWorld, playerId: string, hours: number): Command
       ...state,
       players: { ...state.players, [playerId]: { ...player, war: player.war - cost } },
       bases: { ...state.bases, [playerId]: { ...base, shieldUntil: from + hours * 3600 } },
+      seasonPool: (state.seasonPool ?? 0) + cost, // $WAR sink → treasury
     },
   };
 }
@@ -444,6 +470,31 @@ function donateTroops(state: CocWorld, playerId: string, toOwner: string, army: 
   };
 }
 
+function claimObjective(state: CocWorld, playerId: string, id: string): CommandResult {
+  const player = state.players[playerId];
+  if (!player?.objectives) return fail(state, "No objectives.");
+  const obj = player.objectives.find((o) => o.id === id);
+  if (!obj) return fail(state, "No such objective.");
+  if (obj.progress < obj.target) return fail(state, "Objective not complete.");
+  if (obj.claimed) return fail(state, "Already claimed.");
+  // pay the reward from the season pool, then rotate the slot to a fresh objective
+  let next = payFromPool(state, playerId, obj.reward).state;
+  const p2 = next.players[playerId];
+  const objectives = p2.objectives!.map((o) => (o.id === id ? nextObjective(o) : o));
+  next = { ...next, players: { ...next.players, [playerId]: { ...p2, objectives } } };
+  return { state: next };
+}
+
+/** Withdraw in-game $WAR for on-chain payout. The real Solana transfer is treasury-side
+ *  (see docs/runbooks/onchain-war-payout.md); here we only record the claimed amount. */
+function claim(state: CocWorld, playerId: string, amount: number): CommandResult {
+  const player = state.players[playerId];
+  if (!player) return fail(state, "Unknown player.");
+  const amt = Math.min(player.war, Math.max(0, Math.floor(amount)));
+  if (amt <= 0) return fail(state, "Nothing to claim.");
+  return { state: { ...state, players: { ...state.players, [playerId]: { ...player, war: player.war - amt, claimed: (player.claimed ?? 0) + amt } } } };
+}
+
 export function applyCommand(state: CocWorld, playerId: string, cmd: CocCommand): CommandResult {
   switch (cmd.type) {
     case "claimBase":
@@ -478,6 +529,10 @@ export function applyCommand(state: CocWorld, playerId: string, cmd: CocCommand)
       return leaveClan(state, playerId);
     case "donateTroops":
       return donateTroops(state, playerId, cmd.toOwner, cmd.army);
+    case "claimObjective":
+      return claimObjective(state, playerId, cmd.id);
+    case "claim":
+      return claim(state, playerId, cmd.amount);
     default:
       return fail(state, "Unknown command.");
   }

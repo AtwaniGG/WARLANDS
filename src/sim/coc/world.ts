@@ -1,5 +1,5 @@
 import { generateWorld, hexKey } from "@/game/world";
-import { BASE_STORAGE_CAP, BUILDINGS, GRID_H, GRID_W, STARTING_WAR, UNITS } from "./config";
+import { BASE_STORAGE_CAP, BUILDINGS, GRID_H, GRID_W, SEASON_LENGTH, STARTING_SEASON_POOL, STARTING_WAR, UNITS, makeObjectives } from "./config";
 import type { CocBase, CocBuildingId, CocPlayer, CocResource, CocWorld } from "./types";
 
 export const WORLD_RADIUS = 9;
@@ -10,12 +10,12 @@ export function createWorld(seed: number): CocWorld {
   const { radius, hexes } = generateWorld(WORLD_RADIUS);
   const hexRecord: CocWorld["hexes"] = {};
   for (const [k, h] of hexes) hexRecord[k] = h;
-  return { seed, radius, tick: 0, hexes: hexRecord, bases: {}, claimedHexes: {}, players: {}, clans: {}, nextClanId: 1, pendingReports: {} };
+  return { seed, radius, tick: 0, hexes: hexRecord, bases: {}, claimedHexes: {}, players: {}, clans: {}, nextClanId: 1, pendingReports: {}, seasonPool: STARTING_SEASON_POOL, season: { id: 1, endsAtTick: SEASON_LENGTH } };
 }
 
 export function addPlayer(state: CocWorld, id: string): CocWorld {
   if (state.players[id]) return state;
-  const player: CocPlayer = { id, war: STARTING_WAR, joinedTick: state.tick };
+  const player: CocPlayer = { id, war: STARTING_WAR, joinedTick: state.tick, objectives: makeObjectives(id), claimed: 0 };
   return { ...state, players: { ...state.players, [id]: player } };
 }
 
@@ -153,14 +153,20 @@ export function normalizeWorld(state: CocWorld): CocWorld {
     };
     claimedHexes[loc] = owner;
   }
+  const players: CocWorld["players"] = {};
+  for (const [id, p] of Object.entries(state.players ?? {})) {
+    players[id] = { ...p, objectives: p.objectives ?? (p.isBot ? undefined : makeObjectives(id)), claimed: p.claimed ?? 0 };
+  }
   return {
     ...state,
     bases,
     claimedHexes,
-    players: state.players ?? {},
+    players,
     clans: state.clans ?? {},
     nextClanId: state.nextClanId ?? 1,
     pendingReports: state.pendingReports ?? {},
+    seasonPool: state.seasonPool ?? STARTING_SEASON_POOL,
+    season: state.season ?? { id: 1, endsAtTick: (state.tick ?? 0) + SEASON_LENGTH },
   };
 }
 
