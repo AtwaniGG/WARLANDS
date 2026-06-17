@@ -10,9 +10,9 @@ beforeAll(async () => {
 });
 afterAll(() => srv.close());
 
-function connect(): Promise<{ ws: WebSocket; first: any }> {
+function connect(id?: string): Promise<{ ws: WebSocket; first: any }> {
   return new Promise((resolve) => {
-    const ws = new WebSocket(`ws://127.0.0.1:${port}`);
+    const ws = new WebSocket(`ws://127.0.0.1:${port}${id ? `?id=${id}` : ""}`);
     ws.once("message", (d) => resolve({ ws, first: JSON.parse(d.toString()) }));
   });
 }
@@ -56,5 +56,19 @@ describe("server", () => {
     const err = await errMsg;
     expect(err.message).toMatch(/hex/i);
     a.ws.close();
+  });
+
+  it("a returning player (stable ?id) reclaims their existing base", async () => {
+    const id = "persistentidentitytoken123";
+    const a = await connect(id);
+    expect(a.first.playerId).toBe(id); // server honors the stable identity
+    a.ws.send(JSON.stringify({ type: "command", cmd: { type: "claimBase", q: 2, r: -1 } }));
+    await waitFor(a.ws, (m) => m.type === "state" && m.state.bases[id]?.location === "2,-1");
+    a.ws.close();
+    await new Promise((r) => setTimeout(r, 30));
+    const b = await connect(id); // reconnect with the same identity
+    expect(b.first.playerId).toBe(id);
+    expect(b.first.state.bases[id]?.location).toBe("2,-1"); // base survived the reconnect
+    b.ws.close();
   });
 });

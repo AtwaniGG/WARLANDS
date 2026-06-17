@@ -9,7 +9,20 @@ export interface BaseSocket {
   error: string | null;
   report: BattleReport | null;
   send: (cmd: CocCommand) => void;
+  link: (wallet: string) => void;
   clearReport: () => void;
+}
+
+/** A persistent per-browser identity so a returning player reclaims their existing base. */
+function getIdentity(): string {
+  if (typeof window === "undefined") return "";
+  try {
+    let id = localStorage.getItem("warlands.id");
+    if (!id) { id = (crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`).replace(/-/g, ""); localStorage.setItem("warlands.id", id); }
+    return id;
+  } catch {
+    return "";
+  }
 }
 
 export function useBaseSocket(url: string): BaseSocket {
@@ -21,7 +34,8 @@ export function useBaseSocket(url: string): BaseSocket {
   const ref = useRef<WebSocket | null>(null);
 
   useEffect(() => {
-    const ws = new WebSocket(url);
+    const id = getIdentity();
+    const ws = new WebSocket(id ? `${url}?id=${encodeURIComponent(id)}` : url);
     ref.current = ws;
     ws.onopen = () => setConnected(true);
     ws.onclose = () => setConnected(false);
@@ -45,7 +59,10 @@ export function useBaseSocket(url: string): BaseSocket {
   const send = useCallback((cmd: CocCommand) => {
     ref.current?.send(JSON.stringify({ type: "command", cmd }));
   }, []);
+  const link = useCallback((wallet: string) => {
+    ref.current?.send(JSON.stringify({ type: "link", wallet }));
+  }, []);
   const clearReport = useCallback(() => setReport(null), []);
 
-  return { state, playerId, connected, error, report, send, clearReport };
+  return { state, playerId, connected, error, report, send, link, clearReport };
 }

@@ -19,6 +19,15 @@ export function addPlayer(state: CocWorld, id: string): CocWorld {
   return { ...state, players: { ...state.players, [id]: player } };
 }
 
+/** Link a Solana wallet (base58 pubkey) to a player so the treasury can pay out on-chain. */
+export function setWallet(state: CocWorld, id: string, wallet: string): CocWorld {
+  const player = state.players[id];
+  if (!player) return state;
+  const clean = wallet.trim();
+  if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(clean) || player.wallet === clean) return state; // base58 pubkey
+  return { ...state, players: { ...state.players, [id]: { ...player, wallet: clean } } };
+}
+
 // ---- village grid geometry ----
 
 export function tileKey(x: number, y: number): string {

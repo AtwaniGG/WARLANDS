@@ -1,7 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { WebSocketServer, WebSocket } from "ws";
-import { createWorld, addPlayer, normalizeWorld } from "@/sim/coc/world";
+import { createWorld, addPlayer, normalizeWorld, setWallet } from "@/sim/coc/world";
 import { ensureBots } from "@/sim/coc/bots";
+
+/** Accept only an unguessable, bot-safe client identity token; else issue a fresh one. */
+function validIdentity(raw: string | null): string | null {
+  return raw && /^[A-Za-z0-9_-]{16,64}$/.test(raw) && !raw.toLowerCase().startsWith("bot") ? raw : null;
+}
 import { applyCommand } from "@/sim/coc/commands";
 import { applyTick } from "@/sim/coc/tick";
 import type { CocWorld, CocCommand } from "@/sim/coc/types";
@@ -47,19 +52,29 @@ export function startServer(opts: Options = {}): ServerHandle {
     }
   }
 
-  wss.on("connection", (ws) => {
-    const playerId = randomUUID();
+  wss.on("connection", (ws, req) => {
+    // Stable identity: the client sends a persistent token (?id=…) so returning players reclaim
+    // their base; fall back to a fresh UUID for first-timers / invalid tokens.
+    const q = new URLSearchParams((req.url ?? "").split("?")[1] ?? "");
+    const playerId = validIdentity(q.get("id")) ?? randomUUID();
     state = addPlayer(state, playerId);
+    const wallet = q.get("wallet");
+    if (wallet) state = setWallet(state, playerId, wallet);
     sockets.set(ws, playerId);
     ws.send(JSON.stringify({ type: "welcome", playerId, state }));
     flushReports();
     broadcast();
 
     ws.on("message", (raw) => {
-      let parsed: { type?: string; cmd?: CocCommand };
+      let parsed: { type?: string; cmd?: CocCommand; wallet?: string };
       try {
         parsed = JSON.parse(raw.toString());
       } catch {
+        return;
+      }
+      if (parsed.type === "link" && typeof parsed.wallet === "string") {
+        state = setWallet(state, playerId, parsed.wallet);
+        broadcast();
         return;
       }
       if (parsed.type !== "command" || !parsed.cmd) return;

@@ -96,6 +96,8 @@ export interface CocPlayer {
   objectives?: Objective[];
   /** total $WAR the player has claimed for on-chain withdrawal (real transfer is treasury-side). */
   claimed?: number;
+  /** linked Solana wallet (base58 pubkey) — destination for on-chain $WAR payouts. */
+  wallet?: string;
 }
 
 export interface Clan {
