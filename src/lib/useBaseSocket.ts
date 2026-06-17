@@ -53,7 +53,19 @@ export function useBaseSocket(url: string): BaseSocket {
         setReport(msg.report);
       }
     };
-    return () => ws.close();
+
+    // telemetry: forward client crashes to the server (logged + persisted)
+    const reportErr = (message: string) => { try { if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: "clientError", message: message.slice(0, 500) })); } catch { /* ignore */ } };
+    const onErr = (e: ErrorEvent) => reportErr(`${e.message} @ ${e.filename}:${e.lineno}`);
+    const onRej = (e: PromiseRejectionEvent) => reportErr(`unhandledrejection: ${String(e.reason?.message ?? e.reason)}`);
+    window.addEventListener("error", onErr);
+    window.addEventListener("unhandledrejection", onRej);
+
+    return () => {
+      window.removeEventListener("error", onErr);
+      window.removeEventListener("unhandledrejection", onRej);
+      ws.close();
+    };
   }, [url]);
 
   const send = useCallback((cmd: CocCommand) => {

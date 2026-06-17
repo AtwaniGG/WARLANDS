@@ -10,7 +10,7 @@ function validIdentity(raw: string | null): string | null {
 import { applyCommand } from "@/sim/coc/commands";
 import { applyTick } from "@/sim/coc/tick";
 import type { CocWorld, CocCommand } from "@/sim/coc/types";
-import { initDb, loadLatest, saveSnapshot } from "./db";
+import { initDb, loadLatest, saveSnapshot, logEvent } from "./db";
 
 interface Options {
   port?: number;
@@ -64,16 +64,23 @@ export function startServer(opts: Options = {}): ServerHandle {
     ws.send(JSON.stringify({ type: "welcome", playerId, state }));
     flushReports();
     broadcast();
+    logEvent("join", playerId, { wallet: !!wallet, players: sockets.size });
 
     ws.on("message", (raw) => {
-      let parsed: { type?: string; cmd?: CocCommand; wallet?: string };
+      let parsed: { type?: string; cmd?: CocCommand; wallet?: string; message?: string };
       try {
         parsed = JSON.parse(raw.toString());
       } catch {
         return;
       }
+      if (parsed.type === "clientError" && typeof parsed.message === "string") {
+        console.error(`[client_error ${playerId.slice(0, 8)}] ${parsed.message.slice(0, 300)}`);
+        logEvent("client_error", playerId, { message: parsed.message.slice(0, 500) });
+        return;
+      }
       if (parsed.type === "link" && typeof parsed.wallet === "string") {
         state = setWallet(state, playerId, parsed.wallet);
+        logEvent("link", playerId);
         broadcast();
         return;
       }
@@ -85,10 +92,16 @@ export function startServer(opts: Options = {}): ServerHandle {
       }
       state = result.state;
       if (result.report) ws.send(JSON.stringify({ type: "report", report: result.report }));
+      // telemetry on notable actions
+      const c = parsed.cmd;
+      if (c.type === "claimBase") logEvent("claim_base", playerId);
+      else if (c.type === "raid" && result.report) logEvent("raid", playerId, { stars: result.report.stars, loot: result.report.loot.gold + result.report.loot.elixir });
+      else if (c.type === "claimObjective") logEvent("objective", playerId);
+      else if (c.type === "claim") logEvent("war_claim", playerId, { amount: c.amount });
       broadcast();
     });
 
-    ws.on("close", () => sockets.delete(ws));
+    ws.on("close", () => { sockets.delete(ws); logEvent("leave", playerId, { players: sockets.size }); });
   });
 
   let ticks = 0;

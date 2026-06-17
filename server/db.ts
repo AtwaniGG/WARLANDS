@@ -19,6 +19,20 @@ export async function initDb(): Promise<void> {
     state JSONB NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
   )`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS events (
+    id SERIAL PRIMARY KEY,
+    ts TIMESTAMPTZ NOT NULL DEFAULT now(),
+    type TEXT NOT NULL,
+    player TEXT,
+    meta JSONB
+  )`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS events_type_ts ON events (type, ts DESC)`);
+}
+
+/** Fire-and-forget telemetry: record a gameplay/ops event (no-op without a DB). */
+export function logEvent(type: string, player?: string | null, meta?: unknown): void {
+  if (!pool) return;
+  pool.query("INSERT INTO events (type, player, meta) VALUES ($1, $2, $3)", [type, player ?? null, meta == null ? null : JSON.stringify(meta)]).catch(() => {});
 }
 
 export async function loadLatest(): Promise<WorldState | null> {
