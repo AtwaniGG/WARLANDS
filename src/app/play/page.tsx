@@ -1,10 +1,6 @@
-import { Web3Provider } from "@/web3/Web3Provider";
-import { GameShell } from "@/components/GameShell";
+import { redirect } from "next/navigation";
 
-export default function PlayPage() {
-  return (
-    <Web3Provider>
-      <GameShell />
-    </Web3Provider>
-  );
+// The hex-world prototype was superseded by the Clash-of-Clans base-builder at /world.
+export default function PlayRedirect() {
+  redirect("/world");
 }

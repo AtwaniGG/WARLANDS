@@ -183,15 +183,17 @@ export default function WorldPage() {
       {myBase ? (
         <Panel label="HEADQUARTERS" accent padding="10px 14px" style={{ marginTop: 10 }}
           headerRight={<Button size="sm" variant="primary" icon="📥" onClick={() => { send({ type: "collect" }); buzz(12); }}>COLLECT</Button>}>
-          <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center" }}>
-            <Stat label="🪙 GOLD" value={`${num(goldC)} / ${num(storageCap(myBase, "gold"))}`} accent="amber" />
-            <Stat label="🧪 ELIXIR" value={`${num(elixirC)} / ${num(storageCap(myBase, "elixir"))}`} accent="violet" />
-            <Stat label="💎 $WAR" value={num(warC)} accent="amber" />
-            <Stat label="🏆 TROPHIES" value={`${Math.round(trophyC)}`} accent="amber" />
+          <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+            <ResourceBar icon="🪙" value={goldC} cap={storageCap(myBase, "gold")} color="var(--amber)" />
+            <ResourceBar icon="🧪" value={elixirC} cap={storageCap(myBase, "elixir")} color="var(--violet)" />
+            <Chip label="💎 $WAR" value={num(warC)} strong />
+          </div>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8, alignItems: "center" }}>
+            <Chip label="🏛 TH" value={`L${ccLevel(myBase)}`} />
+            <Chip label="🔨" value={`${freeBuilders(myBase)}/${builderCount(myBase)}`} />
+            <Chip label="🏆" value={`${Math.round(trophyC)}`} />
             <Badge tone={leagueFor(myBase.trophies).tone as BadgeTone} variant="soft">{leagueFor(myBase.trophies).name.toUpperCase()}</Badge>
-            <Stat label="TOWN HALL" value={`L${ccLevel(myBase)}`} accent="sky" />
-            <Stat label="BUILDERS" value={`${freeBuilders(myBase)}/${builderCount(myBase)}`} accent={freeBuilders(myBase) > 0 ? "emerald" : "neutral"} />
-            <Stat label="ARMY" value={`${housingUsed(myBase)}/${housingCap(myBase)}`} accent="blood" />
+            <Chip label="⚔" value={`${housingUsed(myBase)}/${housingCap(myBase)}`} />
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
             <Button size="sm" variant="outline" icon="⚔️" onClick={() => setArmyOpen(true)}>ARMY ({armyTotal(myBase.army)})</Button>
@@ -639,6 +641,29 @@ function ClanPanel({ state, playerId, send, onClose }: { state: CocWorld; player
         ))}
       </div>
     </Panel>
+  );
+}
+
+function ResourceBar({ icon, value, cap, color }: { icon: string; value: number; cap: number; color: string }) {
+  const pct = cap > 0 ? Math.min(100, (value / cap) * 100) : 0;
+  return (
+    <div style={{ flex: "1 1 130px", minWidth: 118 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontSize: 11, marginBottom: 3 }}>
+        <span aria-hidden>{icon}</span>
+        <span className="wl-num" style={{ color: "var(--text-secondary)" }}>{num(value)} / {num(cap)}</span>
+      </div>
+      <div style={{ height: 7, borderRadius: 4, background: "var(--surface-sunken)", border: "1px solid var(--hairline)", overflow: "hidden" }}>
+        <div style={{ height: "100%", width: `${pct}%`, background: color, transition: "width 320ms var(--ease-out)" }} />
+      </div>
+    </div>
+  );
+}
+function Chip({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+  return (
+    <div style={{ display: "inline-flex", alignItems: "center", gap: 5, background: strong ? "var(--cta-bg)" : "var(--surface-raised)", border: `1px solid ${strong ? "transparent" : "var(--hairline)"}`, borderRadius: 999, padding: "3px 9px" }}>
+      <span className="wl-label" style={{ fontSize: 9, color: strong ? "var(--cta-fg)" : undefined }}>{label}</span>
+      <span className="wl-num" style={{ fontSize: 12, fontWeight: 700, color: strong ? "var(--cta-fg)" : "var(--text-primary)" }}>{value}</span>
+    </div>
   );
 }
 

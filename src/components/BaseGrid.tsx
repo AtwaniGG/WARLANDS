@@ -78,15 +78,19 @@ export function BaseGrid({ base, tick, readOnly, selected, placing, wallMode, mo
   const stageW = GRID_W * TILE;
   const stageH = GRID_H * TILE;
 
-  // Fit-to-width on mount.
+  // Zoom in + center on the base on mount (CoC-style: you pan a large village, not see all 20×20).
   useEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
-    const w = el.clientWidth;
-    const h = el.clientHeight;
-    const scale = Math.max(0.25, Math.min(1.2, Math.min(w / stageW, h / stageH)));
-    setView({ x: (w - stageW * scale) / 2, y: (h - stageH * scale) / 2, scale });
-  }, [stageW, stageH]);
+    const w = el.clientWidth, h = el.clientHeight;
+    // show ~11 tiles across so buildings read large; clamp so it never looks tiny or absurd
+    const scale = Math.max(0.7, Math.min(1.6, w / (11 * TILE)));
+    // center on the Town Hall if placed, else the grid middle
+    const th = Object.entries(base.buildings).find(([, b]) => b.id === "commandCenter")?.[0];
+    const [cxT, cyT] = th ? th.split(",").map(Number) : [GRID_W / 2 - 2, GRID_H / 2 - 2];
+    const cx = (cxT + 2) * TILE, cy = (cyT + 2) * TILE; // building footprint center-ish
+    setView({ x: w / 2 - cx * scale, y: h / 2 - cy * scale, scale });
+  }, [stageW, stageH]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // tile under a client point, honoring the current pan/zoom
   const tileAt = useCallback((clientX: number, clientY: number): { tx: number; ty: number } | null => {
