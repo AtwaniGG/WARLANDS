@@ -280,11 +280,12 @@ export default function WorldPage() {
               canPlace={(a, id) => canPlaceAt(myBase, a, id)}
               onSelectBuilding={(a) => { if (mode === "view" && !moveFrom) setSelected(a); }}
               onTile={onTile}
+              onCancelPlace={() => { setPlacing(null); setMoveFrom(null); }}
             />
           </div>
 
-          {/* Build tray (bottom sheet) */}
-          {mode === "build" && (
+          {/* Build tray (bottom sheet) — collapses while a building is being placed so the grid + ✓ confirm are clear */}
+          {mode === "build" && !placing && (
             <div style={sheet}>
               <Panel title="BUILD" accent padding="12px 14px" headerRight={<button onClick={resetBaseUi} style={closeBtn}>✕</button>}>
                 <BuildTray base={myBase} war={me?.war ?? 0}
@@ -411,59 +412,62 @@ function Overlay({ children, onClose }: { children: React.ReactNode; onClose: ()
 function BuildTray({ base, war, onPick, onPickTrap, active, activeTrap }: { base: CocBase; war: number; onPick: (id: CocBuildingId) => void; onPickTrap: (t: CocTrapId) => void; active: CocBuildingId | null; activeTrap: CocTrapId | null }) {
   const tier = ccTier(ccLevel(base));
   const inCaps = Object.keys(tier.caps) as CocBuildingId[];
-  const groups: { label: string; ids: CocBuildingId[] }[] = [
-    { label: "RESOURCES", ids: inCaps.filter((id) => ["collector", "storage"].includes(BUILDINGS[id].category)) },
-    { label: "DEFENSE", ids: inCaps.filter((id) => BUILDINGS[id].category === "defense") },
-    { label: "ARMY", ids: inCaps.filter((id) => BUILDINGS[id].category === "army") },
-    { label: "SPECIAL", ids: ["builderHut" as CocBuildingId, ...inCaps.filter((id) => id === "clanCastle")] },
-  ];
   const countOf = (id: CocBuildingId) => Object.values(base.buildings).filter((b) => b.id === id).length;
+  const sections: { key: string; ids: CocBuildingId[] }[] = [
+    { key: "RESOURCES", ids: inCaps.filter((id) => ["collector", "storage"].includes(BUILDINGS[id].category)) },
+    { key: "DEFENSE", ids: inCaps.filter((id) => BUILDINGS[id].category === "defense") },
+    { key: "ARMY", ids: inCaps.filter((id) => BUILDINGS[id].category === "army") },
+    { key: "SPECIAL", ids: ["builderHut" as CocBuildingId, ...inCaps.filter((id) => id === "clanCastle")] },
+  ].filter((s) => s.ids.length > 0);
+  const tabs = [...sections.map((s) => s.key), ...(tier.maxTraps > 0 ? ["TRAPS"] : [])];
+  const [tab, setTab] = useState(tabs[0]);
+  const activeTab = tabs.includes(tab) ? tab : tabs[0];
+
+  const buildingCard = (id: CocBuildingId) => {
+    const def = BUILDINGS[id];
+    const lv = levelDef(id, 1)!;
+    if (id === "builderHut") {
+      const cost = builderCost(builderCount(base));
+      const atMax = builderCount(base) >= MAX_BUILDERS;
+      return <TrayCard key={id} id={id} name={def.name} sub={atMax ? "MAX BUILDERS" : `💎${num(cost)} · instant`} ok={!atMax && war >= cost} activeId={active} onPick={onPick} />;
+    }
+    const atCap = countOf(id) >= tier.caps[id]!.maxCount;
+    const afford = base.gold >= (lv.cost.gold ?? 0) && base.elixir >= (lv.cost.elixir ?? 0);
+    return <TrayCard key={id} id={id} name={def.name} sub={atCap ? "AT LIMIT" : `${costStr(lv.cost)} · ${lv.buildTimeSec}s`} ok={!atCap && afford && freeBuilders(base) > 0} activeId={active} onPick={onPick} />;
+  };
+
   return (
-    <div style={{ display: "grid", gap: 12 }}>
-      {groups.map((g) => g.ids.length === 0 ? null : (
-        <div key={g.label}>
-          <span className="wl-label">{g.label}</span>
-          <div style={{ display: "grid", gap: 6, marginTop: 8 }}>
-            {g.ids.map((id) => {
-              const def = BUILDINGS[id];
-              const lv = levelDef(id, 1)!;
-              if (id === "builderHut") {
-                const cost = builderCost(builderCount(base));
-                const atMax = builderCount(base) >= MAX_BUILDERS;
-                const ok = !atMax && war >= cost;
-                return <TrayCard key={id} id={id} name={def.name} sub={atMax ? "MAX BUILDERS" : `💎${num(cost)} · instant`} ok={ok} activeId={active} onPick={onPick} />;
-              }
-              const cap = tier.caps[id]!;
-              const atCap = countOf(id) >= cap.maxCount;
-              const afford = base.gold >= (lv.cost.gold ?? 0) && base.elixir >= (lv.cost.elixir ?? 0);
-              const ok = !atCap && afford && freeBuilders(base) > 0;
-              return <TrayCard key={id} id={id} name={def.name} sub={atCap ? "AT LIMIT" : `${costStr(lv.cost)} · ${lv.buildTimeSec}s`} ok={ok} activeId={active} onPick={onPick} />;
-            })}
-          </div>
-        </div>
-      ))}
-      {tier.maxTraps > 0 && (
-        <div>
-          <span className="wl-label">TRAPS ({Object.keys(base.traps).length}/{tier.maxTraps})</span>
-          <div style={{ display: "grid", gap: 6, marginTop: 8 }}>
-            {TRAP_IDS.map((tid) => {
+    <div>
+      {/* segmented control */}
+      <div style={{ display: "flex", gap: 4, background: "var(--surface-sunken)", border: "1px solid var(--hairline)", borderRadius: "var(--radius-md)", padding: 3 }}>
+        {tabs.map((t) => (
+          <button key={t} onClick={() => setTab(t)} style={{
+            flex: 1, padding: "6px 4px", borderRadius: "var(--radius-sm)", border: 0, cursor: "pointer",
+            fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 11, letterSpacing: "0.06em",
+            background: t === activeTab ? "var(--cta-bg)" : "transparent",
+            color: t === activeTab ? "var(--cta-fg)" : "var(--text-secondary)",
+          }}>{t}{t === "TRAPS" ? ` ${Object.keys(base.traps).length}/${tier.maxTraps}` : ""}</button>
+        ))}
+      </div>
+      <div style={{ display: "grid", gap: 6, marginTop: 10 }}>
+        {activeTab === "TRAPS"
+          ? TRAP_IDS.map((tid) => {
               const t = TRAPS[tid];
               const atCap = Object.keys(base.traps).length >= tier.maxTraps;
               const ok = !atCap && base.gold >= t.cost.gold;
               return (
                 <button key={tid} disabled={!ok} onClick={() => onPickTrap(tid)}
                   style={{ ...trayCard, opacity: ok ? 1 : 0.45, outline: activeTrap === tid ? "2px solid var(--rim-selected)" : "none", cursor: ok ? "pointer" : "not-allowed" }}>
-                  <span style={{ width: 18, height: 18, borderRadius: "50%", border: "1.5px solid var(--blood-text)", background: "rgba(156,43,43,0.35)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 10, flexShrink: 0 }}>{tid === "airMine" ? "▲" : "●"}</span>
+                  <span style={{ width: 34, height: 34, borderRadius: "50%", border: "1.5px solid var(--blood-text)", background: "rgba(156,43,43,0.35)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 14, flexShrink: 0 }}>{tid === "airMine" ? "▲" : "●"}</span>
                   <span style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 2 }}>
                     <span style={{ fontSize: 13, fontWeight: 600 }}>{t.name}</span>
                     <span className="wl-num" style={{ fontSize: 11, color: "var(--text-secondary)" }}>{atCap ? "AT LIMIT" : `🪙${t.cost.gold} · hidden · ${t.target}`}</span>
                   </span>
                 </button>
               );
-            })}
-          </div>
-        </div>
-      )}
+            })
+          : (sections.find((s) => s.key === activeTab)?.ids ?? []).map(buildingCard)}
+      </div>
     </div>
   );
 }

@@ -50,6 +50,8 @@ export interface BaseGridProps {
   onSelectBuilding?: (anchor: string | null) => void;
   /** tap on a tile (used by build / wall / move-destination / deploy flows) */
   onTile?: (tileKey: string) => void;
+  /** ✕ on the placement confirm cluster — cancel the active build/move intent */
+  onCancelPlace?: () => void;
   /** deploy phase: tapping an open tile drops a troop */
   deployMode?: boolean;
   /** placed troop markers shown during the deploy phase */
@@ -66,11 +68,12 @@ function num(n: number): string {
   return Math.floor(n).toLocaleString();
 }
 
-export function BaseGrid({ base, tick, readOnly, selected, placing, wallMode, moveFrom, canPlace, onSelectBuilding, onTile, deployMode, deployMarkers, placingTrap, showTraps, frame }: BaseGridProps) {
+export function BaseGrid({ base, tick, readOnly, selected, placing, wallMode, moveFrom, canPlace, onSelectBuilding, onTile, onCancelPlace, deployMode, deployMarkers, placingTrap, showTraps, frame }: BaseGridProps) {
   const tilePlacing = wallMode || deployMode || !!placingTrap;
   const wrapRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState({ x: 0, y: 0, scale: 1 });
   const [ghost, setGhost] = useState<string | null>(null);
+  const [pending, setPending] = useState<string | null>(null); // building/move tile awaiting ✓ confirm
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const pan = useRef<{ x: number; y: number; vx: number; vy: number; moved: boolean } | null>(null);
   const pinch = useRef<{ dist: number; scale: number } | null>(null);
@@ -91,6 +94,9 @@ export function BaseGrid({ base, tick, readOnly, selected, placing, wallMode, mo
     const cx = (cxT + 2) * TILE, cy = (cyT + 2) * TILE; // building footprint center-ish
     setView({ x: w / 2 - cx * scale, y: h / 2 - cy * scale, scale });
   }, [stageW, stageH]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // drop any pending placement when the active build/move intent changes
+  useEffect(() => { setPending(null); }, [placing, moveFrom, wallMode, placingTrap]);
 
   // tile under a client point, honoring the current pan/zoom
   const tileAt = useCallback((clientX: number, clientY: number): { tx: number; ty: number } | null => {
@@ -157,8 +163,10 @@ export function BaseGrid({ base, tick, readOnly, selected, placing, wallMode, mo
       const t = tileAt(e.clientX, e.clientY);
       if (t) {
         const key = `${t.tx},${t.ty}`;
-        if (!readOnly && (placing || tilePlacing || moveFrom)) {
-          onTile?.(key);
+        if (!readOnly && (placing || moveFrom)) {
+          setPending(key); // footprint buildings + move use a place → ✓ confirm step
+        } else if (!readOnly && tilePlacing) {
+          onTile?.(key); // walls / traps / deploy place instantly (rapid)
         } else if (!tilePlacing) {
           onSelectBuilding?.(anchorAtTile(key));
         }
@@ -398,8 +406,8 @@ export function BaseGrid({ base, tick, readOnly, selected, placing, wallMode, mo
           return <span key={f.id} className="fx-spark" style={{ position: "absolute", left: f.x - 7, top: f.y - 7, width: 14, height: 14, borderRadius: "50%", background: "radial-gradient(circle, #fff6cf, #f5b301 50%, transparent 72%)", pointerEvents: "none", zIndex: 11 }} />;
         })}
 
-        {/* placement / wall / move / deploy / trap ghost */}
-        {ghost && (placing || tilePlacing || moveFrom) && (() => {
+        {/* live hover ghost (hidden once a tile is pending confirm) */}
+        {ghost && !pending && (placing || tilePlacing || moveFrom) && (() => {
           const id: CocBuildingId | null = placing ?? (moveFrom ? base.buildings[moveFrom]?.id ?? null : null);
           const { w, h } = tilePlacing ? { w: 1, h: 1 } : id ? BUILDINGS[id].footprint : { w: 1, h: 1 };
           const [gx, gy] = ghost.split(",").map(Number);
@@ -408,9 +416,59 @@ export function BaseGrid({ base, tick, readOnly, selected, placing, wallMode, mo
             <div style={{ position: "absolute", left: gx * TILE, top: gy * TILE, width: w * TILE, height: h * TILE, background: valid ? "var(--bb-valid)" : "var(--bb-invalid)", border: `2px solid ${valid ? "var(--bb-valid-line)" : "var(--bb-invalid-line)"}`, borderRadius: 4, pointerEvents: "none" }} />
           );
         })()}
+
+        {/* pending placement: faux-iso ghost on a tinted footprint, awaiting ✓ */}
+        {pending && (() => {
+          const id: CocBuildingId | null = placing ?? (moveFrom ? base.buildings[moveFrom]?.id ?? null : null);
+          if (!id) return null;
+          const { w, h } = BUILDINGS[id].footprint;
+          const [gx, gy] = pending.split(",").map(Number);
+          const valid = placing ? !canPlace || canPlace(pending, id) : true;
+          const lvl = placing ? 1 : base.buildings[moveFrom!]?.level ?? 1;
+          return (
+            <div style={{ position: "absolute", left: gx * TILE, top: gy * TILE, width: w * TILE, height: h * TILE, pointerEvents: "none" }}>
+              <div style={{ position: "absolute", inset: 0, background: valid ? "var(--bb-valid)" : "var(--bb-invalid)", border: `2px solid ${valid ? "var(--bb-valid-line)" : "var(--bb-invalid-line)"}`, borderRadius: 4 }} />
+              <img src={buildingArt(id, lvl)} alt="" draggable={false} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0.9, filter: "drop-shadow(var(--bb-shadow))" }} />
+            </div>
+          );
+        })()}
       </div>
+
+      {/* placement status chip + ✕/✓ confirm cluster (screen space) */}
+      {pending && (placing || moveFrom) && (() => {
+        const id: CocBuildingId | null = placing ?? (moveFrom ? base.buildings[moveFrom]?.id ?? null : null);
+        if (!id) return null;
+        const { w, h } = BUILDINGS[id].footprint;
+        const [gx, gy] = pending.split(",").map(Number);
+        const valid = placing ? !canPlace || canPlace(pending, id) : true;
+        const left = view.x + (gx + w / 2) * TILE * view.scale;
+        const top = view.y + (gy + h) * TILE * view.scale;
+        const stop = (e: RPointerEvent) => e.stopPropagation();
+        return (
+          <>
+            <div style={{ position: "absolute", top: 8, left: "50%", transform: "translateX(-50%)", zIndex: 22, pointerEvents: "none", padding: "4px 11px", borderRadius: 999, background: "rgba(12,16,24,0.85)", border: `1px solid ${valid ? "var(--bb-valid-line)" : "var(--bb-invalid-line)"}`, font: "700 10px var(--font-display)", letterSpacing: "0.08em", color: valid ? "var(--success)" : "var(--danger-strong)", whiteSpace: "nowrap" }}>
+              PLACING · {valid ? "VALID" : "INVALID"} — {BUILDINGS[id].name.toUpperCase()} · {w}×{h}
+            </div>
+            <div onPointerDown={stop} onPointerUp={stop} style={{ position: "absolute", left, top: top + 12, transform: "translateX(-50%)", display: "flex", gap: 14, zIndex: 22 }}>
+              <button onClick={() => { setPending(null); onCancelPlace?.(); }} style={clusterBtn(false)} aria-label="cancel">✕</button>
+              <button disabled={!valid} onClick={() => { onTile?.(pending); setPending(null); }} style={clusterBtn(true, valid)} aria-label="confirm">✓</button>
+            </div>
+          </>
+        );
+      })()}
     </div>
   );
+}
+
+function clusterBtn(confirm: boolean, enabled = true): CSSProperties {
+  return {
+    width: 44, height: 44, borderRadius: "50%",
+    border: confirm ? 0 : "1px solid var(--hairline)",
+    background: confirm ? (enabled ? "var(--success)" : "var(--disabled)") : "var(--panel-2)",
+    color: confirm ? "#0c0a04" : "var(--text-primary)",
+    fontSize: 19, fontWeight: 700, cursor: enabled ? "pointer" : "not-allowed",
+    boxShadow: "var(--shadow-2), var(--bb-select-glow)", display: "inline-flex", alignItems: "center", justifyContent: "center",
+  };
 }
 
 const wrap: CSSProperties = {
