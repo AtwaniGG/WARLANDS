@@ -48,7 +48,7 @@ function footprint(anchorKey: string, id: CocBuildingId): [number, number][] {
 }
 
 export default function WorldPage() {
-  const { state, playerId, connected, error, report, send, clearReport } = useBaseSocket(SERVER_URL);
+  const { state, playerId, connected, error, report, send, link, clearReport } = useBaseSocket(SERVER_URL);
   const [screen, setScreen] = useState<"world" | "base">("base");
   const [mode, setMode] = useState<"view" | "build" | "wall">("view");
   const [selected, setSelected] = useState<string | null>(null);
@@ -327,7 +327,7 @@ export default function WorldPage() {
       )}
       {myBase && warOpen && me && (
         <Overlay onClose={() => setWarOpen(false)}>
-          <WarPanel me={me} state={state} onClaim={(amt) => { send({ type: "claim", amount: amt }); buzz(20); }} onClose={() => setWarOpen(false)} />
+          <WarPanel me={me} state={state} onClaim={(amt) => { send({ type: "claim", amount: amt }); buzz(20); }} onLink={(a) => { link(a); buzz(8); }} onClose={() => setWarOpen(false)} />
         </Overlay>
       )}
       {scout && state.bases[scout] && myBase && (
@@ -668,9 +668,12 @@ function ObjectivesPanel({ me, onClaim, onClose }: { me: CocPlayer; onClaim: (id
   );
 }
 
-function WarPanel({ me, state, onClaim, onClose }: { me: CocPlayer; state: CocWorld; onClaim: (amt: number) => void; onClose: () => void }) {
+function WarPanel({ me, state, onClaim, onLink, onClose }: { me: CocPlayer; state: CocWorld; onClaim: (amt: number) => void; onLink: (addr: string) => void; onClose: () => void }) {
+  const [addr, setAddr] = useState(me.wallet ?? "");
   const pool = state.seasonPool ?? 0;
   const secsLeft = state.season ? Math.max(0, state.season.endsAtTick - state.tick) : 0;
+  const validAddr = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(addr.trim());
+  const linked = !!me.wallet;
   return (
     <Panel title="$WAR · SEASON" accent padding="14px" headerRight={<button onClick={onClose} style={closeBtn}>✕</button>}>
       <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 10 }}>
@@ -683,9 +686,17 @@ function WarPanel({ me, state, onClaim, onClose }: { me: CocPlayer; state: CocWo
         <Stat label="CLAIMED" value={num(me.claimed ?? 0)} accent="emerald" />
       </div>
       <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "0 0 10px", lineHeight: 1.4 }}>
-        Rewards are paid from the season pool, which fills only from $WAR sinks — no minting. Claiming records an on-chain withdrawal; the treasury settles it on Solana.
+        Rewards are paid from the season pool, which fills only from $WAR sinks — no minting. Claiming records an on-chain withdrawal; the treasury settles it to your Solana wallet.
       </p>
-      <Button variant="primary" full icon="💰" disabled={me.war <= 0} onClick={() => onClaim(me.war)}>CLAIM {num(me.war)} $WAR ON-CHAIN</Button>
+      <span className="wl-label">PAYOUT WALLET (SOLANA)</span>
+      <div style={{ display: "flex", gap: 6, margin: "8px 0 12px" }}>
+        <input value={addr} onChange={(e) => setAddr(e.target.value)} placeholder="Your $WAR wallet address" style={{ ...input, fontFamily: "var(--font-mono)", fontSize: 11 }} />
+        <Button variant="secondary" disabled={!validAddr || addr.trim() === me.wallet} onClick={() => onLink(addr.trim())}>{linked ? "UPDATE" : "LINK"}</Button>
+      </div>
+      {linked && <div style={{ fontSize: 11, color: "var(--emerald-text)", marginBottom: 10 }}>✓ Linked — payouts settle to {me.wallet!.slice(0, 4)}…{me.wallet!.slice(-4)}</div>}
+      <Button variant="primary" full icon="💰" disabled={me.war <= 0 || !linked} onClick={() => onClaim(me.war)}>
+        {linked ? `CLAIM ${num(me.war)} $WAR ON-CHAIN` : "LINK A WALLET TO CLAIM"}
+      </Button>
     </Panel>
   );
 }
