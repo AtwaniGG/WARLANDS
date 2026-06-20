@@ -41,7 +41,7 @@ src/
 | 3 | Build | loop | "Build your economy." |
 | 4 | Raid | loop | "Raid rivals. Take their $WAR." |
 | 5 | Earn | payoff | "Real tokens. Real seasons." |
-| 6 | CTA | action | "Build. Raid. Earn. For real." → warlands-nine.vercel.app/world |
+| 6 | CTA | action | "Build. Raid. Earn. For real." → warlands.net |
 
 Scene durations live in `Trailer.tsx` (`SCENE_FRAMES`). Tweak there to retime.
 
