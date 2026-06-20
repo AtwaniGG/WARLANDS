@@ -1,7 +1,10 @@
 "use client";
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useBaseSocket } from "@/lib/useBaseSocket";
 import { axialToPixel } from "@/game/world";
+import { terrainArt } from "@/game/assets";
+import { Web3Provider } from "@/web3/Web3Provider";
+import { TokenGate } from "@/components/TokenGate";
 import { Badge, Button, Panel, ProgressBar, Stat, type BadgeTone } from "@/components/ui";
 import { BaseTutorial } from "@/components/BaseTutorial";
 import { BaseGrid, buildingArt, UNIT_COLOR } from "@/components/BaseGrid";
@@ -25,7 +28,6 @@ function fmtDur(secs: number): string {
   if (h > 0) return `${h}h ${m}m`;
   return `${m}m`;
 }
-function terrainFill(t: string): string { return `var(--terrain-${t.toLowerCase()})`; }
 function armyTotal(a: Army): number { return UNIT_IDS.reduce((s, u) => s + (a[u] ?? 0), 0); }
 function costStr(cost: Partial<Record<CocResource, number>>): string {
   const parts: string[] = [];
@@ -48,6 +50,17 @@ function footprint(anchorKey: string, id: CocBuildingId): [number, number][] {
 }
 
 export default function WorldPage() {
+  // Gate the game behind holding $WAR: connect a Solana wallet with ≥ 1,000 $WAR to enter.
+  return (
+    <Web3Provider>
+      <TokenGate>
+        <WorldGame />
+      </TokenGate>
+    </Web3Provider>
+  );
+}
+
+function WorldGame() {
   const { state, playerId, connected, error, report, send, link, clearReport } = useBaseSocket(SERVER_URL);
   const [screen, setScreen] = useState<"world" | "base">("base");
   const [mode, setMode] = useState<"view" | "build" | "wall">("view");
@@ -98,6 +111,18 @@ export default function WorldPage() {
   const elixirC = useCountUp(state && playerId ? state.bases[playerId]?.elixir ?? 0 : 0);
   const warC = useCountUp(state && playerId ? state.players[playerId]?.war ?? 0 : 0);
   const trophyC = useCountUp(state && playerId ? state.bases[playerId]?.trophies ?? 0 : 0, 400);
+
+  // Fit the SVG viewBox to the generated world so it fills the map frame instead of floating tiny.
+  // (declared before the early return so hook order stays stable)
+  const worldBox = useMemo(() => {
+    const pts = Object.values(state?.hexes ?? {}).map((h) => axialToPixel(h.q, h.r, HEX));
+    if (pts.length === 0) return "-260 -260 520 520";
+    const xs = pts.map((p) => p.x), ys = pts.map((p) => p.y);
+    const pad = HEX * 1.1;
+    const minX = Math.min(...xs) - pad, maxX = Math.max(...xs) + pad;
+    const minY = Math.min(...ys) - pad, maxY = Math.max(...ys) + pad;
+    return `${minX} ${minY} ${maxX - minX} ${maxY - minY}`;
+  }, [state?.hexes]);
 
   if (!state) {
     return (
@@ -165,151 +190,191 @@ export default function WorldPage() {
 
   return (
     <main style={page}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-        <span className="wl-title" style={{ fontSize: 20 }}>{view === "world" ? "LIVE WORLD MAP" : "MY BASE"}</span>
-        <Badge tone={connected ? "emerald" : "blood"} variant="soft">{connected ? "● ONLINE" : "● OFFLINE"}</Badge>
-        <span className="wl-num" style={{ fontSize: 11, color: "var(--text-secondary)" }}>TICK {state.tick} · {Object.keys(state.players).length} CMDR</span>
-        <span style={{ flex: 1 }} />
-        {myBase && (
-          <>
-            <Button size="sm" variant={view === "base" ? "primary" : "outline"} icon="🏠" onClick={() => { setScreen("base"); setScout(null); }}>BASE</Button>
-            <Button size="sm" variant={view === "world" ? "primary" : "outline"} icon="🗺️" onClick={() => { setScreen("world"); resetBaseUi(); }}>WORLD</Button>
-          </>
-        )}
-      </div>
-      {error && <div style={{ marginTop: 8 }}><Badge tone="blood" variant="soft" icon="⚠">{error}</Badge></div>}
-
-      {/* ===================== HUD ===================== */}
-      {myBase ? (
-        <Panel label="HEADQUARTERS" accent padding="10px 14px" style={{ marginTop: 10 }}
-          headerRight={<Button size="sm" variant="primary" icon="📥" onClick={() => { send({ type: "collect" }); buzz(12); }}>COLLECT</Button>}>
-          <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-            <ResourceBar icon="🪙" value={goldC} cap={storageCap(myBase, "gold")} color="var(--amber)" />
-            <ResourceBar icon="🧪" value={elixirC} cap={storageCap(myBase, "elixir")} color="var(--violet)" />
-            <Chip label="💎 $WAR" value={num(warC)} strong />
-          </div>
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8, alignItems: "center" }}>
-            <Chip label="🏛 TH" value={`L${ccLevel(myBase)}`} />
-            <Chip label="🔨" value={`${freeBuilders(myBase)}/${builderCount(myBase)}`} />
-            <Chip label="🏆" value={`${Math.round(trophyC)}`} />
-            <Badge tone={leagueFor(myBase.trophies).tone as BadgeTone} variant="soft">{leagueFor(myBase.trophies).name.toUpperCase()}</Badge>
-            <Chip label="⚔" value={`${housingUsed(myBase)}/${housingCap(myBase)}`} />
-          </div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
-            <Button size="sm" variant="outline" icon="⚔️" onClick={() => setArmyOpen(true)}>ARMY ({armyTotal(myBase.army)})</Button>
-            <Button size="sm" variant="outline" icon="🤝" onClick={() => setClanOpen(true)}>CLAN</Button>
-            {builderCount(myBase) < MAX_BUILDERS && (
-              <Button size="sm" variant="outline" icon="🔨" onClick={() => { setScreen("base"); setMode("build"); setPlacing("builderHut"); setSelected(null); }}>
-                +BUILDER · 💎{num(builderCost(builderCount(myBase)))}
-              </Button>
-            )}
-            <Button size="sm" variant="outline" icon="🛡️" onClick={() => send({ type: "extendShield", hours: 2 })}>+2h SHIELD · 💎1,000</Button>
-            <Button size="sm" variant={claimableCount > 0 ? "primary" : "outline"} icon="🎯" onClick={() => setObjectivesOpen(true)}>OBJECTIVES{claimableCount > 0 ? ` ✓${claimableCount}` : ""}</Button>
-            <Button size="sm" variant="outline" icon="💰" onClick={() => setWarOpen(true)}>$WAR</Button>
-            {myBase.shieldUntil > state.tick && <Badge tone="emerald" variant="soft">SHIELDED {Math.ceil((myBase.shieldUntil - state.tick) / 3600)}h</Badge>}
-          </div>
-        </Panel>
+      {/* ===================== PLAYFIELD (full-screen) ===================== */}
+      {view === "base" && myBase ? (
+        <div style={fieldWrap}>
+          <BaseGrid
+            fill
+            base={myBase} tick={state.tick} showTraps
+            selected={selected} placing={placing} placingTrap={placingTrap} wallMode={mode === "wall"} moveFrom={moveFrom}
+            canPlace={(a, id) => canPlaceAt(myBase, a, id)}
+            onSelectBuilding={(a) => { if (mode === "view" && !moveFrom) setSelected(a); }}
+            onTile={onTile}
+            onCancelPlace={() => { setPlacing(null); setMoveFrom(null); }}
+          />
+        </div>
       ) : (
-        <Panel title="CLAIM YOUR GROUND" rim="amber" padding="12px 14px" style={{ marginTop: 10 }}>
-          <p style={{ margin: 0, fontSize: 13, color: "var(--text-secondary)" }}>Tap any unclaimed hex on the world map to found your village. You build your base on a 20×20 plot.</p>
-        </Panel>
+        <div style={{ ...fieldWrap, background: "radial-gradient(70% 60% at 50% 46%, rgba(245,179,1,0.05), transparent 64%), radial-gradient(130% 95% at 50% 14%, #11161f 0%, #070a10 74%)" }}>
+          <div className="wl-hexgrid" style={{ position: "absolute", inset: 0, opacity: 0.5, pointerEvents: "none" }} />
+          <div className="wl-scanline" />
+          <svg viewBox={worldBox} preserveAspectRatio="xMidYMid meet" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", display: "block" }}>
+            <defs>
+              <clipPath id="wlHexClip"><polygon points={hexPoints(HEX)} /></clipPath>
+            </defs>
+            {Object.values(state.hexes).map((h) => {
+              const key = `${h.q},${h.r}`;
+              const { x, y } = axialToPixel(h.q, h.r, HEX);
+              const owner = state.claimedHexes[key];
+              const mine = !!owner && owner === playerId;
+              const b = owner ? state.bases[owner] : undefined;
+              const shielded = !!b && b.shieldUntil > state.tick;
+              const rim = mine ? "var(--rim-owned)" : shielded ? "var(--success)" : owner ? "var(--rim-enemy)" : "var(--rim-neutral)";
+              const sel = scout === owner && !!owner;
+              const W = HEX * 2.42; // oversize so the clipped tile fully covers the hex
+              return (
+                <g key={key} transform={`translate(${x},${y})`} style={{ cursor: "pointer" }}
+                  onClick={() => {
+                    if (!myBase) { send({ type: "claimBase", q: h.q, r: h.r }); return; }
+                    if (mine) { setScreen("base"); return; }
+                    if (owner) { setScout(owner); return; }
+                  }}>
+                  <image href={terrainArt(h.terrain)} x={-W / 2} y={-W / 2} width={W} height={W}
+                    clipPath="url(#wlHexClip)" preserveAspectRatio="xMidYMid slice" />
+                  {owner && <polygon points={hexPoints(HEX)} fill="rgba(5,7,11,0.18)" pointerEvents="none" />}
+                  <polygon points={hexPoints(HEX)} fill="none" stroke={rim} strokeWidth={owner ? 1.8 : 0.5}
+                    strokeLinejoin="round" style={owner ? { filter: "drop-shadow(0 0 2px rgba(0,0,0,0.6))" } : undefined} />
+                  {sel && <polygon className="wl-glow" points={hexPoints(HEX + 1.4)} fill="none" stroke="var(--rim-selected)" strokeWidth={1.2} strokeDasharray="3 2.4" pointerEvents="none" />}
+                  {b && (
+                    <>
+                      {/* flagpole + TH chip */}
+                      <line x1={0} y1={HEX * 0.42} x2={0} y2={HEX * 0.74} stroke="#0a0d14" strokeWidth={1} pointerEvents="none" />
+                      <g transform={`translate(0,${HEX * 0.92})`} pointerEvents="none">
+                        <rect x={-9} y={-5.2} width={18} height={10} rx={2.4} fill="#0a0d14" stroke="var(--border-strong)" strokeWidth={0.5} />
+                        <text textAnchor="middle" dy={2.6} fontSize={6} fill="var(--text-hi)" style={{ fontFamily: "var(--font-mono)", fontWeight: 700 }}>TH{ccLevel(b)}</text>
+                      </g>
+                      {mine && (
+                        <g transform={`translate(0,${-HEX * 0.96})`} pointerEvents="none">
+                          <rect x={-8.5} y={-4.6} width={17} height={9} rx={2.2} fill="var(--amber)" />
+                          <text textAnchor="middle" dy={2.4} fontSize={5.5} fill="#0c0a04" style={{ fontFamily: "var(--font-display)", fontWeight: 700, letterSpacing: "0.04em" }}>YOU</text>
+                        </g>
+                      )}
+                      {shielded && (
+                        <g transform={`translate(${HEX * 0.62},${-HEX * 0.62})`} pointerEvents="none">
+                          <circle r={4.4} fill="var(--success)" />
+                          <path d="M0 -2.4 L2.2 -1.4 V0.4 C2.2 1.8 1.2 2.6 0 3 C-1.2 2.6 -2.2 1.8 -2.2 0.4 V-1.4 Z" fill="#06231a" />
+                        </g>
+                      )}
+                    </>
+                  )}
+                </g>
+              );
+            })}
+          </svg>
+          <div style={{ position: "absolute", inset: 0, pointerEvents: "none", boxShadow: "inset 0 0 120px 34px rgba(5,7,11,0.82)" }} />
+        </div>
       )}
 
-      {/* ===================== WORLD ===================== */}
-      {view === "world" && (
-        <>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
-            {myBase && <Button size="sm" variant="primary" icon="🎯" onClick={findTarget}>FIND TARGET</Button>}
-            <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
-              {myBase ? "Tap an enemy village to scout & raid · tap yours to manage it." : "Tap an unclaimed hex to found your village."}
-            </span>
+      {/* ===================== TOP HUD (overlay) ===================== */}
+      <div style={topScrim}>
+        {view === "base" && myBase ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 8, flexWrap: "wrap" }}>
+              <TownHallChip level={ccLevel(myBase)} />
+              <span style={{ flex: 1 }} />
+              <MiniStat label="BUILDERS" value={`${freeBuilders(myBase)} / ${builderCount(myBase)}`} color="var(--amber-text)" />
+              <MiniStat label="TROPHIES" value={`${Math.round(trophyC)}`} color="var(--text-hi)" trophy />
+              <HudAction icon="📥" label="COLLECT" primary onClick={() => { send({ type: "collect" }); buzz(12); }} />
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <HudResBar kind="gold" value={goldC} cap={storageCap(myBase, "gold")} />
+              <HudResBar kind="elixir" value={elixirC} cap={storageCap(myBase, "elixir")} />
+              <WarChip value={num(warC)} />
+              <Badge tone={leagueFor(myBase.trophies).tone as BadgeTone} variant="soft">{leagueFor(myBase.trophies).name.toUpperCase()}</Badge>
+              <span style={{ flex: 1 }} />
+              {myBase.shieldUntil > state.tick
+                ? <span style={{ ...hudBox, padding: "5px 11px", color: "var(--emerald-text)", font: "700 10px var(--font-display)", letterSpacing: "0.06em" }}>🛡️ {Math.ceil((myBase.shieldUntil - state.tick) / 3600)}h</span>
+                : <HudAction icon="🛡️" label="SHIELD" onClick={() => send({ type: "extendShield", hours: 2 })} />}
+            </div>
           </div>
-          <div style={mapWrap}>
-            <div className="wl-hexgrid" style={{ position: "absolute", inset: 0, opacity: 0.5, pointerEvents: "none" }} />
-            <div className="wl-scanline" />
-            <svg viewBox="-260 -260 520 520" style={{ width: "100%", height: "100%", display: "block", position: "relative" }}>
-              {Object.values(state.hexes).map((h) => {
-                const key = `${h.q},${h.r}`;
-                const { x, y } = axialToPixel(h.q, h.r, HEX);
-                const owner = state.claimedHexes[key];
-                const mine = !!owner && owner === playerId;
-                const b = owner ? state.bases[owner] : undefined;
-                const fill = mine ? "var(--panel-2)" : owner ? "var(--panel)" : terrainFill(h.terrain);
-                const rim = mine ? "var(--rim-owned)" : owner ? "var(--rim-enemy)" : "var(--rim-neutral)";
-                return (
-                  <g key={key} transform={`translate(${x},${y})`} style={{ cursor: "pointer" }}
-                    onClick={() => {
-                      if (!myBase) { send({ type: "claimBase", q: h.q, r: h.r }); return; }
-                      if (mine) { setScreen("base"); return; }
-                      if (owner) { setScout(owner); return; }
-                    }}>
-                    <polygon points={hexPoints(HEX)} fill={fill} stroke={rim} strokeWidth={owner ? 1.6 : 0.5} />
-                    {b && <text textAnchor="middle" dy="-1" fontSize="10">{mine ? "🏠" : "💀"}</text>}
-                    {b && <text textAnchor="middle" dy="9" fontSize="6" fill={mine ? "var(--amber-text)" : "var(--blood-text)"} style={{ fontFamily: "var(--font-mono)" }}>TH{ccLevel(b)}</text>}
-                    {b && b.shieldUntil > state.tick && <text textAnchor="middle" dy="-9" fontSize="7">🛡️</text>}
-                  </g>
-                );
-              })}
-            </svg>
+        ) : (
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 12, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, flex: "1 1 260px", minWidth: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                <span className="wl-title" style={{ fontSize: 18 }}>{myBase ? "LIVE WORLD MAP" : "CLAIM YOUR GROUND"}</span>
+                <Badge tone={connected ? "emerald" : "blood"} variant="soft">{connected ? "● ONLINE" : "● OFFLINE"}</Badge>
+                <span className="wl-num" style={{ fontSize: 11, color: "var(--text-secondary)" }}>TICK {state.tick} · {Object.keys(state.players).length} CMDR</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                {myBase && <HudAction icon="🎯" label="FIND TARGET" primary onClick={findTarget} />}
+                <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
+                  {myBase ? "Tap an enemy village to scout & raid · tap yours to manage it." : "Tap an unclaimed hex to found your village."}
+                </span>
+              </div>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
+              {myBase && (
+                <span style={{ ...hudBox, padding: "5px 11px" }}>
+                  <span style={{ width: 9, height: 9, background: "var(--amber)", clipPath: "polygon(50% 0,100% 38%,82% 100%,18% 100%,0 38%)" }} />
+                  <span className="wl-num" style={{ fontSize: 13, fontWeight: 700, color: "var(--text-hi)" }}>{Math.round(trophyC)}</span>
+                  <span className="wl-label" style={{ fontSize: 8 }}>TROPHIES</span>
+                </span>
+              )}
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                <LegendChip color="var(--rim-owned)" label="YOU" />
+                <LegendChip color="var(--rim-enemy)" label="HOSTILE" />
+                <LegendChip color="var(--success)" label="SHIELDED" />
+              </div>
+            </div>
           </div>
-        </>
-      )}
+        )}
+        {error && <div style={{ marginTop: 8, pointerEvents: "auto" }}><Badge tone="blood" variant="soft" icon="⚠">{error}</Badge></div>}
+      </div>
 
-      {/* ===================== MY BASE ===================== */}
+      {/* ===================== LEFT TOOL RAIL (base) ===================== */}
       {view === "base" && myBase && (
-        <>
-          <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
-            <Button size="sm" variant={mode === "build" ? "primary" : "outline"} icon="🏗️"
-              onClick={() => { if (mode === "build") resetBaseUi(); else { setMode("build"); setSelected(null); setMoveFrom(null); } }}>
-              {mode === "build" ? "BUILDING…" : "BUILD"}
-            </Button>
-            <Button size="sm" variant={mode === "wall" ? "primary" : "outline"} icon="🧱"
-              onClick={() => { if (mode === "wall") resetBaseUi(); else { setMode("wall"); setPlacing(null); setSelected(null); setMoveFrom(null); } }}>
-              {mode === "wall" ? "WALL MODE: ON" : "WALL"}
-            </Button>
-            {moveFrom && <Badge tone="amber" variant="soft" icon="✥">TAP A DESTINATION TILE</Badge>}
-            {placing && <Badge tone="amber" variant="soft">PLACING {BUILDINGS[placing].name.toUpperCase()} — TAP A TILE</Badge>}
-            {placingTrap && <Badge tone="blood" variant="soft">PLACING {TRAPS[placingTrap].name.toUpperCase()} — TAP OPEN GROUND</Badge>}
-            {mode === "wall" && <Badge tone="amber" variant="soft">TAP TILES TO RAISE WALLS · 🪙{WALL.levels[0].cost.gold}</Badge>}
-          </div>
+        <div style={leftRail}>
+          <RailBtn icon="🧱" label="WALL" active={mode === "wall"} onClick={() => { if (mode === "wall") resetBaseUi(); else { setMode("wall"); setPlacing(null); setSelected(null); setMoveFrom(null); } }} />
+          <RailBtn icon="⚔️" label="ARMY" onClick={() => setArmyOpen(true)} />
+          <RailBtn icon="🤝" label="CLAN" onClick={() => setClanOpen(true)} />
+          <RailBtn icon="🎯" label="GOALS" badge={claimableCount} onClick={() => setObjectivesOpen(true)} />
+          <RailBtn icon="💰" label="$WAR" onClick={() => setWarOpen(true)} />
+        </div>
+      )}
 
-          <div style={{ marginTop: 10 }}>
-            <BaseGrid
-              base={myBase} tick={state.tick} showTraps
-              selected={selected} placing={placing} placingTrap={placingTrap} wallMode={mode === "wall"} moveFrom={moveFrom}
-              canPlace={(a, id) => canPlaceAt(myBase, a, id)}
-              onSelectBuilding={(a) => { if (mode === "view" && !moveFrom) setSelected(a); }}
-              onTile={onTile}
-              onCancelPlace={() => { setPlacing(null); setMoveFrom(null); }}
+      {/* ===================== MODE BANNER (base) ===================== */}
+      {view === "base" && myBase && (placing || placingTrap || moveFrom || mode === "wall") && (
+        <div style={modeBanner}>
+          {moveFrom && <Badge tone="amber" variant="soft" icon="✥">TAP A DESTINATION TILE</Badge>}
+          {placing && <Badge tone="amber" variant="soft">PLACING {BUILDINGS[placing].name.toUpperCase()} — TAP A TILE</Badge>}
+          {placingTrap && <Badge tone="blood" variant="soft">PLACING {TRAPS[placingTrap].name.toUpperCase()} — TAP OPEN GROUND</Badge>}
+          {mode === "wall" && !placing && <Badge tone="amber" variant="soft">TAP TILES TO RAISE WALLS · 🪙{WALL.levels[0].cost.gold}</Badge>}
+        </div>
+      )}
+
+      {/* ===================== BOTTOM DOCK (nav + build FAB) ===================== */}
+      {myBase && (
+        <div style={bottomDock}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, pointerEvents: "auto" }}>
+            <SegNav view={view} onBase={() => { setScreen("base"); setScout(null); }} onWorld={() => { setScreen("world"); resetBaseUi(); }} />
+            {view === "base" && (
+              <Fab active={mode === "build"} onClick={() => { if (mode === "build") resetBaseUi(); else { setMode("build"); setSelected(null); setMoveFrom(null); } }} />
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ===================== BUILD / INFO SHEETS (base) ===================== */}
+      {view === "base" && myBase && mode === "build" && !placing && !placingTrap && (
+        <div style={sheet}>
+          <Panel title="BUILD" accent padding="12px 14px" headerRight={<button onClick={resetBaseUi} style={closeBtn}>✕</button>}>
+            <BuildTray base={myBase} war={me?.war ?? 0}
+              onPick={(id) => { setPlacing(id); setPlacingTrap(null); }}
+              onPickTrap={(t) => { setPlacingTrap(t); setPlacing(null); }}
+              active={placing} activeTrap={placingTrap} />
+          </Panel>
+        </div>
+      )}
+      {view === "base" && myBase && mode === "view" && selected && myBase.buildings[selected] && (
+        <div style={sheet}>
+          <Panel title={BUILDINGS[myBase.buildings[selected].id].name} accent padding="12px 14px"
+            headerRight={<button onClick={() => setSelected(null)} style={closeBtn}>✕</button>}>
+            <BuildingInfo base={myBase} anchor={selected} building={myBase.buildings[selected]} tick={state.tick} war={me?.war ?? 0}
+              onUpgrade={() => send({ type: "upgradeBuilding", tileKey: selected })}
+              onFinish={() => send({ type: "finishNow", tileKey: selected })}
+              onMove={() => { setMoveFrom(selected); setSelected(null); }}
             />
-          </div>
-
-          {/* Build tray (bottom sheet) — collapses while a building is being placed so the grid + ✓ confirm are clear */}
-          {mode === "build" && !placing && (
-            <div style={sheet}>
-              <Panel title="BUILD" accent padding="12px 14px" headerRight={<button onClick={resetBaseUi} style={closeBtn}>✕</button>}>
-                <BuildTray base={myBase} war={me?.war ?? 0}
-                  onPick={(id) => { setPlacing(id); setPlacingTrap(null); }}
-                  onPickTrap={(t) => { setPlacingTrap(t); setPlacing(null); }}
-                  active={placing} activeTrap={placingTrap} />
-              </Panel>
-            </div>
-          )}
-
-          {/* Building info / upgrade / move / finish (bottom sheet) */}
-          {mode === "view" && selected && myBase.buildings[selected] && (
-            <div style={sheet}>
-              <Panel title={BUILDINGS[myBase.buildings[selected].id].name} accent padding="12px 14px"
-                headerRight={<button onClick={() => setSelected(null)} style={closeBtn}>✕</button>}>
-                <BuildingInfo base={myBase} anchor={selected} building={myBase.buildings[selected]} tick={state.tick} war={me?.war ?? 0}
-                  onUpgrade={() => send({ type: "upgradeBuilding", tileKey: selected })}
-                  onFinish={() => send({ type: "finishNow", tileKey: selected })}
-                  onMove={() => { setMoveFrom(selected); setSelected(null); }}
-                />
-              </Panel>
-            </div>
-          )}
-        </>
+          </Panel>
+        </div>
       )}
 
       {/* ===================== Overlays ===================== */}
@@ -648,26 +713,109 @@ function ClanPanel({ state, playerId, send, onClose }: { state: CocWorld; player
   );
 }
 
-function ResourceBar({ icon, value, cap, color }: { icon: string; value: number; cap: number; color: string }) {
-  const pct = cap > 0 ? Math.min(100, (value / cap) * 100) : 0;
+function TownHallChip({ level }: { level: number }) {
   return (
-    <div style={{ flex: "1 1 130px", minWidth: 118 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontSize: 11, marginBottom: 3 }}>
-        <span aria-hidden>{icon}</span>
-        <span className="wl-num" style={{ color: "var(--text-secondary)" }}>{num(value)} / {num(cap)}</span>
-      </div>
-      <div style={{ height: 7, borderRadius: 4, background: "var(--surface-sunken)", border: "1px solid var(--hairline)", overflow: "hidden" }}>
-        <div style={{ height: "100%", width: `${pct}%`, background: color, transition: "width 320ms var(--ease-out)" }} />
+    <div style={{ ...hudBox, padding: "5px 11px 5px 5px" }}>
+      <span style={{ width: 32, height: 32, borderRadius: 7, background: "#0a0d14", border: "1px solid var(--border-strong)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <img src={buildingArt("commandCenter", level)} alt="" width={26} height={26} />
+      </span>
+      <div style={{ lineHeight: 1.05 }}>
+        <div className="wl-label" style={{ fontSize: 8 }}>TOWN HALL</div>
+        <div className="wl-num" style={{ fontSize: 14, fontWeight: 700, color: "var(--text-hi)" }}>LV {level}</div>
       </div>
     </div>
   );
 }
-function Chip({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+function MiniStat({ label, value, color, trophy }: { label: string; value: string; color: string; trophy?: boolean }) {
   return (
-    <div style={{ display: "inline-flex", alignItems: "center", gap: 5, background: strong ? "var(--cta-bg)" : "var(--surface-raised)", border: `1px solid ${strong ? "transparent" : "var(--hairline)"}`, borderRadius: 999, padding: "3px 9px" }}>
-      <span className="wl-label" style={{ fontSize: 9, color: strong ? "var(--cta-fg)" : undefined }}>{label}</span>
-      <span className="wl-num" style={{ fontSize: 12, fontWeight: 700, color: strong ? "var(--cta-fg)" : "var(--text-primary)" }}>{value}</span>
+    <div style={{ ...hudBox, flexDirection: "column", gap: 1, padding: "4px 11px", alignItems: "center" }}>
+      <div className="wl-label" style={{ fontSize: 8 }}>{label}</div>
+      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+        {trophy && <span style={{ width: 8, height: 8, background: "var(--amber)", clipPath: "polygon(50% 0,100% 38%,82% 100%,18% 100%,0 38%)" }} />}
+        <span className="wl-num" style={{ fontSize: 13, fontWeight: 700, color }}>{value}</span>
+      </div>
     </div>
+  );
+}
+function HudResBar({ kind, value, cap }: { kind: "gold" | "elixir"; value: number; cap: number }) {
+  const pct = cap > 0 ? Math.min(100, (value / cap) * 100) : 0;
+  const color = kind === "gold" ? "var(--amber)" : "var(--teal)";
+  return (
+    <div style={{ ...hudBox, flexDirection: "column", alignItems: "stretch", gap: 5, padding: "6px 11px", flex: "1 1 116px", minWidth: 110 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        {kind === "gold"
+          ? <span style={{ width: 11, height: 11, background: "var(--amber)", transform: "rotate(45deg)" }} />
+          : <span style={{ width: 11, height: 11, borderRadius: "50%", background: "var(--teal)" }} />}
+        <span className="wl-num" style={{ fontSize: 13, fontWeight: 700, color: "var(--text-hi)" }}>{num(value)}</span>
+      </div>
+      <div style={{ height: 3, borderRadius: 2, background: "var(--surface-sunken)", overflow: "hidden" }}>
+        <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 2, transition: "width 320ms var(--ease-out)" }} />
+      </div>
+    </div>
+  );
+}
+function WarChip({ value }: { value: string }) {
+  return (
+    <div style={{ ...hudBox, padding: "6px 11px", background: "rgba(245,179,1,0.06)", border: "1px solid rgba(245,179,1,0.35)" }}>
+      <span style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 9, letterSpacing: "0.06em", color: "var(--amber-text)" }}>$WAR</span>
+      <span className="wl-num" style={{ fontSize: 13, fontWeight: 700, color: "var(--text-hi)" }}>{value}</span>
+    </div>
+  );
+}
+function HudAction({ icon, label, primary, onClick }: { icon: string; label: string; primary?: boolean; onClick: () => void }) {
+  return (
+    <button onClick={onClick} style={{
+      display: "inline-flex", alignItems: "center", gap: 6, height: 34, padding: "0 12px", borderRadius: 9, cursor: "pointer", pointerEvents: "auto",
+      border: primary ? "none" : "1px solid var(--hairline)",
+      background: primary ? "var(--amber)" : "var(--surface-card)",
+      color: primary ? "#0c0a04" : "var(--text-secondary)",
+      fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 10, letterSpacing: "0.06em",
+      boxShadow: primary ? "var(--glow-amber)" : undefined,
+    }}><span aria-hidden style={{ fontSize: 13 }}>{icon}</span>{label}</button>
+  );
+}
+function RailBtn({ icon, label, active, badge, onClick }: { icon: string; label: string; active?: boolean; badge?: number; onClick: () => void }) {
+  return (
+    <button onClick={onClick} style={{
+      position: "relative", width: 56, height: 56, borderRadius: 13, cursor: "pointer",
+      border: active ? "none" : "1px solid var(--hairline)",
+      background: active ? "var(--amber)" : "var(--surface-card)",
+      color: active ? "#0c0a04" : "var(--text-secondary)",
+      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3,
+      boxShadow: active ? "var(--glow-amber)" : "var(--shadow-1)",
+    }}>
+      <span style={{ fontSize: 18, lineHeight: 1 }}>{icon}</span>
+      <span style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 8, letterSpacing: "0.06em" }}>{label}</span>
+      {badge ? <span style={{ position: "absolute", top: -6, right: -6, minWidth: 17, height: 17, padding: "0 4px", borderRadius: 9, background: "var(--cta-bg, var(--amber))", color: "#0c0a04", fontFamily: "var(--font-mono)", fontWeight: 700, fontSize: 9, display: "flex", alignItems: "center", justifyContent: "center", border: "1.5px solid var(--panel-void)" }}>{badge}</span> : null}
+    </button>
+  );
+}
+function SegNav({ view, onBase, onWorld }: { view: "world" | "base"; onBase: () => void; onWorld: () => void }) {
+  const seg = (active: boolean): CSSProperties => ({ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, minWidth: 104, height: 44, padding: "0 16px", borderRadius: 8, border: 0, cursor: "pointer", fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 12, letterSpacing: "0.08em", background: active ? "var(--amber)" : "transparent", color: active ? "#0c0a04" : "var(--text-secondary)" });
+  return (
+    <div style={{ display: "flex", gap: 4, padding: 3, background: "var(--surface-card)", border: "1px solid var(--hairline)", borderRadius: 11, boxShadow: "var(--shadow-2)" }}>
+      <button style={seg(view === "base")} onClick={onBase}><span aria-hidden>🏠</span>MY BASE</button>
+      <button style={seg(view === "world")} onClick={onWorld}><span aria-hidden>🗺️</span>WORLD</button>
+    </div>
+  );
+}
+function Fab({ active, onClick }: { active: boolean; onClick: () => void }) {
+  return (
+    <button onClick={onClick} aria-label={active ? "close build" : "build"} style={{
+      width: 54, height: 50, borderRadius: 13, cursor: "pointer", fontSize: 22, lineHeight: 1,
+      border: active ? "1px solid var(--amber)" : "none",
+      background: active ? "var(--surface-card)" : "var(--amber)",
+      color: active ? "var(--amber-text)" : "#0c0a04",
+      display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "var(--glow-amber)",
+    }}>{active ? "✕" : "🏗️"}</button>
+  );
+}
+function LegendChip({ color, label }: { color: string; label: string }) {
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "3px 9px", borderRadius: 999, background: "rgba(5,7,11,0.55)", border: "1px solid var(--hairline)" }}>
+      <span style={{ width: 8, height: 8, borderRadius: 2, background: color }} />
+      <span className="wl-label" style={{ fontSize: 9 }}>{label}</span>
+    </span>
   );
 }
 
@@ -760,8 +908,13 @@ function hexPoints(size: number): string {
   return pts.join(" ");
 }
 
-const page: CSSProperties = { minHeight: "100dvh", background: "var(--bg-app)", color: "var(--text-primary)", padding: "max(16px, env(safe-area-inset-top)) 16px 96px", fontFamily: "var(--font-ui)" };
-const mapWrap: CSSProperties = { position: "relative", marginTop: 10, width: "100%", maxWidth: 560, height: "clamp(320px, 56vh, 560px)", background: "var(--surface-sunken)", borderRadius: "var(--radius-lg)", border: "1px solid var(--hairline)", overflow: "hidden", touchAction: "none" };
+const page: CSSProperties = { position: "fixed", inset: 0, overflow: "hidden", background: "var(--bg-app)", color: "var(--text-primary)", fontFamily: "var(--font-ui)" };
+const fieldWrap: CSSProperties = { position: "absolute", inset: 0, overflow: "hidden", touchAction: "none" };
+const topScrim: CSSProperties = { position: "absolute", left: 0, right: 0, top: 0, zIndex: 40, padding: "calc(env(safe-area-inset-top) + 12px) 12px 18px", background: "linear-gradient(180deg, rgba(5,7,11,0.94) 0%, rgba(5,7,11,0.55) 68%, transparent)", pointerEvents: "none" };
+const bottomDock: CSSProperties = { position: "absolute", left: 0, right: 0, bottom: 0, zIndex: 45, padding: "20px 12px calc(env(safe-area-inset-bottom) + 12px)", background: "linear-gradient(0deg, rgba(5,7,11,0.94) 0%, rgba(5,7,11,0.4) 70%, transparent)", pointerEvents: "none", display: "flex", justifyContent: "center" };
+const leftRail: CSSProperties = { position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", zIndex: 42, display: "flex", flexDirection: "column", gap: 9 };
+const modeBanner: CSSProperties = { position: "absolute", left: 0, right: 0, bottom: 96, zIndex: 44, display: "flex", justifyContent: "center", flexWrap: "wrap", gap: 6, padding: "0 12px", pointerEvents: "none" };
+const hudBox: CSSProperties = { display: "inline-flex", alignItems: "center", gap: 8, padding: "5px 10px", background: "var(--surface-card)", border: "1px solid var(--hairline)", borderRadius: 10, pointerEvents: "auto" };
 const rowBtn: CSSProperties = { justifyContent: "space-between", textAlign: "left", fontWeight: 500 };
 const trayCard: CSSProperties = { display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left", background: "var(--surface-raised)", border: "1px solid var(--hairline)", borderRadius: "var(--radius-sm)", padding: "8px 10px", color: "var(--text-primary)" };
 const closeBtn: CSSProperties = { background: "transparent", color: "var(--text-secondary)", border: 0, cursor: "pointer", fontSize: 14, lineHeight: 1 };

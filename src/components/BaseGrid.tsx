@@ -62,13 +62,15 @@ export interface BaseGridProps {
   showTraps?: boolean;
   /** battle playback: render troops + structure damage from this frame */
   frame?: BattleFrame | null;
+  /** fill the positioned parent edge-to-edge (immersive full-screen shell) instead of a boxed card */
+  fill?: boolean;
 }
 
 function num(n: number): string {
   return Math.floor(n).toLocaleString();
 }
 
-export function BaseGrid({ base, tick, readOnly, selected, placing, wallMode, moveFrom, canPlace, onSelectBuilding, onTile, onCancelPlace, deployMode, deployMarkers, placingTrap, showTraps, frame }: BaseGridProps) {
+export function BaseGrid({ base, tick, readOnly, selected, placing, wallMode, moveFrom, canPlace, onSelectBuilding, onTile, onCancelPlace, deployMode, deployMarkers, placingTrap, showTraps, frame, fill }: BaseGridProps) {
   const tilePlacing = wallMode || deployMode || !!placingTrap;
   const wrapRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState({ x: 0, y: 0, scale: 1 });
@@ -148,10 +150,15 @@ export function BaseGrid({ base, tick, readOnly, selected, placing, wallMode, mo
       return;
     }
     if (pan.current) {
-      const dx = e.clientX - pan.current.x;
-      const dy = e.clientY - pan.current.y;
-      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) pan.current.moved = true;
-      setView((v) => ({ ...v, x: pan.current!.vx + dx, y: pan.current!.vy + dy }));
+      // Capture the pan origin *now*. The setView updater runs asynchronously, and a fast
+      // pan→release can null pan.current before it executes — reading it inside the closure
+      // then throws "Cannot read properties of null (reading 'vx')".
+      const p = pan.current;
+      const dx = e.clientX - p.x;
+      const dy = e.clientY - p.y;
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) p.moved = true;
+      const nx = p.vx + dx, ny = p.vy + dy;
+      setView((v) => ({ ...v, x: nx, y: ny }));
     }
   };
 
@@ -284,7 +291,7 @@ export function BaseGrid({ base, tick, readOnly, selected, placing, wallMode, mo
   return (
     <div
       ref={wrapRef}
-      style={wrap}
+      style={fill ? { ...wrap, height: "100%", position: "absolute", inset: 0, borderRadius: 0, border: "none" } : wrap}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
