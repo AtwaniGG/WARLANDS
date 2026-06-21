@@ -1,5 +1,5 @@
 import React from "react";
-import { AbsoluteFill, Audio, staticFile } from "remotion";
+import { AbsoluteFill, Audio, interpolate, staticFile } from "remotion";
 import { TransitionSeries, linearTiming } from "@remotion/transitions";
 import { fade } from "@remotion/transitions/fade";
 import { slide } from "@remotion/transitions/slide";
@@ -23,7 +23,18 @@ const timing = linearTiming({ durationInFrames: T });
 
 export const Trailer: React.FC = () => (
   <AbsoluteFill style={{ background: "#070a10" }}>
-    {HAS_AUDIO && <Audio src={staticFile(MUSIC_SRC)} volume={MUSIC_VOLUME} />}
+    {HAS_AUDIO && (
+      <Audio
+        src={staticFile(MUSIC_SRC)}
+        // Low background level with a 0.5s fade-in and a 1s fade-out so it never spikes or cuts abruptly.
+        volume={(f) =>
+          interpolate(f, [0, 15, TOTAL_FRAMES - 30, TOTAL_FRAMES], [0, MUSIC_VOLUME, MUSIC_VOLUME, 0], {
+            extrapolateLeft: "clamp",
+            extrapolateRight: "clamp",
+          })
+        }
+      />
+    )}
     <TransitionSeries>
       <TransitionSeries.Sequence durationInFrames={SCENE_FRAMES.s1}>
         <S1ColdOpen />
