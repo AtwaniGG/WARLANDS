@@ -1,5 +1,5 @@
 // Plot / terrain definitions — mirrors GDD §4 (Plot Types) and §3 (Terrain).
-// Stake amounts are in $WAR and are LOCKED (never spent) to secure a plot.
+// Stake amounts are in $HEXAR and are LOCKED (never spent) to secure a plot.
 
 import type { ResourceId } from "./resources";
 
@@ -17,7 +17,7 @@ export type TerrainId =
 export interface PlotTypeDef {
   id: TerrainId;
   name: string;
-  stake: number; // $WAR locked to claim
+  stake: number; // $HEXAR locked to claim
   color: string; // map fill
   /** Per-resource production multipliers vs the base rate (1.0 = baseline, absent = baseline). */
   yields: Partial<Record<ResourceId, number>>;

@@ -157,7 +157,7 @@ export function RaidPanel({ npcKey }: { npcKey: string }) {
               <div className="mt-1" style={{ color: "var(--text-muted)" }}>Loot: {Object.entries(npc.stock).filter(([, v]) => (v as number) > 0).map(([k]) => RESOURCES[k as ResourceId].icon).join(" ")}</div>
             </div>
           ) : (
-            <p style={{ fontSize: "12px", color: "var(--text-lo)" }}>Unknown strength. Scout first (50 $WAR) to reveal the garrison.</p>
+            <p style={{ fontSize: "12px", color: "var(--text-lo)" }}>Unknown strength. Scout first (50 $HEXAR) to reveal the garrison.</p>
           )}
 
           <div className="flex gap-1">
@@ -248,7 +248,7 @@ export function EmpirePlotPanel({ hexKey }: { hexKey: string }) {
           ))}
         </div>
       ) : (
-        <p style={{ fontSize: "12px", color: "var(--text-lo)" }}>Strength unknown. Run espionage (80 $WAR) to reveal garrisons.</p>
+        <p style={{ fontSize: "12px", color: "var(--text-lo)" }}>Strength unknown. Run espionage (80 $HEXAR) to reveal garrisons.</p>
       )}
 
       <div className="flex flex-wrap gap-1">

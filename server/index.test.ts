@@ -71,4 +71,14 @@ describe("server", () => {
     expect(b.first.state.bases[id]?.location).toBe("2,-1"); // base survived the reconnect
     b.ws.close();
   });
+
+  it("supersedes a stale socket when the same identity reconnects (last-connection-wins)", async () => {
+    const id = "supersededidentity000001";
+    const a = await connect(id);
+    const closedCode = new Promise<number>((resolve) => a.ws.on("close", (code) => resolve(code)));
+    const b = await connect(id); // a second live socket for the same identity
+    expect(b.first.playerId).toBe(id);
+    expect(await closedCode).toBe(4000); // server kicked the stale socket so only one stays live
+    b.ws.close();
+  });
 });

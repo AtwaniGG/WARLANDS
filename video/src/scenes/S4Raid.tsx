@@ -17,7 +17,8 @@ const BUILDINGS: { kind: BuildingKind; col: number; row: number }[] = [
   { kind: "factory", col: 1, row: 0 },
   { kind: "hq", col: 1, row: 1 },
   { kind: "barracks", col: 0, row: 1 },
-].sort((a, b) => a.col + a.row - (b.col + b.row));
+];
+BUILDINGS.sort((a, b) => a.col + a.row - (b.col + b.row));
 
 const IMPACTS = [
   { col: 1, row: 1, at: 46 },
@@ -91,7 +92,7 @@ export const S4Raid: React.FC = () => {
 
       {/* loot balance */}
       <div style={{ position: "absolute", bottom: 150, left: 110, display: "flex", alignItems: "center", gap: 14, padding: "16px 22px", background: "rgba(12,16,24,0.9)", border: `1px solid ${COLORS.hairline}`, borderLeft: `3px solid ${COLORS.amber}`, borderRadius: 10, opacity: interpolate(frame, [80, 92], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }) }}>
-        <ResourceCounter from={0} to={1840} startFrame={86} durationInFrames={40} label="$WAR looted" accent={COLORS.amber} glyph={<span style={{ width: 16, height: 16, borderRadius: 999, background: COLORS.amber }} />} />
+        <ResourceCounter from={0} to={1840} startFrame={86} durationInFrames={40} label="$HEXAR looted" accent={COLORS.amber} glyph={<span style={{ width: 16, height: 16, borderRadius: 999, background: COLORS.amber }} />} />
       </div>
 
       {/* VICTORY stamp */}
@@ -120,7 +121,7 @@ export const S4Raid: React.FC = () => {
         startFrame={8}
         lines={[
           { text: "Raid rivals.", size: 60 },
-          { text: "Take their $WAR.", size: 60, accent: COLORS.bloodText },
+          { text: "Take their $HEXAR.", size: 60, accent: COLORS.bloodText },
         ]}
       />
     </Scene>

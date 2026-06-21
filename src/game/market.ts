@@ -4,7 +4,7 @@
 
 import { RESOURCES, RESOURCE_IDS, type ResourceId } from "./resources";
 
-/** Baseline reference price in $WAR per unit, derived from tier + recipe depth. */
+/** Baseline reference price in $HEXAR per unit, derived from tier + recipe depth. */
 export const BASE_PRICE: Record<ResourceId, number> = (() => {
   const p = {} as Record<ResourceId, number>;
   for (const id of RESOURCE_IDS) {
@@ -24,12 +24,12 @@ export interface MarketOrder {
   side: "buy" | "sell";
   item: ResourceId;
   qty: number;
-  price: number; // $WAR per unit
+  price: number; // $HEXAR per unit
   owner: "player" | "ai";
 }
 
 export const MARKET_FEE = 0.04; // 4% transaction fee (GDD §13 #2)
-export const LISTING_FEE = 5; // flat $WAR listing fee (GDD §13 #10)
+export const LISTING_FEE = 5; // flat $HEXAR listing fee (GDD §13 #10)
 export const FEE_BURN_SHARE = 0.5; // half of fees burned, half to season pool (§12.3)
 
 // deterministic-ish RNG for AI book generation

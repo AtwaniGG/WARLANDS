@@ -59,7 +59,7 @@ export const WORLD_RADIUS = 9;
 export const RECRUIT_REROLL_COST = 500; // §13 sink
 export const TICK_MS = 1000; // 1 real second = 1 game tick (prototype speed)
 export const STORAGE_BASE_CAP = 1500;
-export const STARTING_WAR = 200_000; // mocked $WAR balance
+export const STARTING_HEXAR = 200_000; // mocked $HEXAR balance
 export const CREATE_ALLEGIANCE_COST = 5000; // §13 #21
 export const SEASON_TICKS = 300; // demo season length (GDD §15: 30 days live)
 
@@ -132,9 +132,9 @@ export interface NpcCamp {
 
 interface GameState {
   world: World;
-  war: number; // mocked $WAR balance
+  war: number; // mocked $HEXAR balance
   warStaked: number;
-  warBurned: number; // total $WAR removed via sinks (GDD §13)
+  warBurned: number; // total $HEXAR removed via sinks (GDD §13)
   seasonPool: number; // sink revenue routed to the season reward pool (GDD §12.3, §14)
   plots: Record<string, Plot>; // keyed by hexKey
   npcs: Record<string, NpcCamp>;
@@ -354,7 +354,7 @@ function checkProgress(state: { stats: Stats; unlockedAchievements: string[]; co
       newQuests.push(q.id);
       questChanged = true;
       rewardWar += q.reward;
-      msgs.push(`✅ Quest complete: ${q.name} (+${q.reward.toLocaleString()} $WAR)`);
+      msgs.push(`✅ Quest complete: ${q.name} (+${q.reward.toLocaleString()} $HEXAR)`);
     }
   }
   return { newAch, newQuests, rewardWar, msgs, achChanged, questChanged };
@@ -367,7 +367,7 @@ function freshState() {
   const npcs = generateNpcs(INITIAL_WORLD);
   const empires = generateEmpires(INITIAL_WORLD, new Set(Object.keys(npcs)));
   return {
-    war: STARTING_WAR,
+    war: STARTING_HEXAR,
     warStaked: 0,
     warBurned: 0,
     seasonPool: 0,
@@ -389,7 +389,7 @@ function freshState() {
     selectedHex: null as string | null,
     tick: 0,
     battleReport: null as (BattleResult & { target: string }) | null,
-    log: ["Welcome, Commander. Stake $WAR to claim your first plot."],
+    log: ["Welcome, Commander. Stake $HEXAR to claim your first plot."],
   };
 }
 
@@ -428,7 +428,7 @@ export const useGame = create<GameState>()(
     if (!hex) return;
     const def = PLOT_TYPES[hex.terrain];
     if (state.war < def.stake) {
-      set({ log: [`Not enough $WAR to stake ${def.name} (need ${def.stake.toLocaleString()}).`, ...state.log].slice(0, 50) });
+      set({ log: [`Not enough $HEXAR to stake ${def.name} (need ${def.stake.toLocaleString()}).`, ...state.log].slice(0, 50) });
       return;
     }
     const claimIndex = Object.keys(state.plots).length + 1;
@@ -452,7 +452,7 @@ export const useGame = create<GameState>()(
       warStaked: state.warStaked + def.stake,
       stats: { ...state.stats, plotsClaimed: state.stats.plotsClaimed + 1 },
       selectedHex: key,
-      log: [`Staked ${def.stake.toLocaleString()} $WAR → claimed ${def.name}. (DR ×${diminishingReturns(claimIndex).toFixed(2)})`, ...state.log].slice(0, 50),
+      log: [`Staked ${def.stake.toLocaleString()} $HEXAR → claimed ${def.name}. (DR ×${diminishingReturns(claimIndex).toFixed(2)})`, ...state.log].slice(0, 50),
     });
   },
 
@@ -473,7 +473,7 @@ export const useGame = create<GameState>()(
       return;
     }
     if (state.war < def.baseCost) {
-      set({ log: [`Need ${def.baseCost.toLocaleString()} $WAR to build ${def.name}.`, ...state.log].slice(0, 50) });
+      set({ log: [`Need ${def.baseCost.toLocaleString()} $HEXAR to build ${def.name}.`, ...state.log].slice(0, 50) });
       return;
     }
     if (!hasResources(plot.resources, def.baseResourceCost)) {
@@ -507,7 +507,7 @@ export const useGame = create<GameState>()(
     if (b.level >= def.maxLevel) return;
     const cost = upgradeCost(def.baseCost || 200, b.level + 1);
     if (state.war < cost) {
-      set({ log: [`Need ${cost.toLocaleString()} $WAR to upgrade ${def.name}.`, ...state.log].slice(0, 50) });
+      set({ log: [`Need ${cost.toLocaleString()} $HEXAR to upgrade ${def.name}.`, ...state.log].slice(0, 50) });
       return;
     }
     const buildings = plot.buildings.map((x, i) => (i === index ? { ...x, level: x.level + 1 } : x));
@@ -540,7 +540,7 @@ export const useGame = create<GameState>()(
       warStaked: state.warStaked - plot.stakeLocked,
       warBurned: state.warBurned + fee,
       selectedHex: state.selectedHex === key ? null : state.selectedHex,
-      log: [`Unstaked ${plot.name}. Returned ${(plot.stakeLocked - fee).toLocaleString()} $WAR (3% early-unstake fee burned).`, ...state.log].slice(0, 50),
+      log: [`Unstaked ${plot.name}. Returned ${(plot.stakeLocked - fee).toLocaleString()} $HEXAR (3% early-unstake fee burned).`, ...state.log].slice(0, 50),
     });
   },
 
@@ -551,7 +551,7 @@ export const useGame = create<GameState>()(
     if (!plot) return;
     const u = UNITS[unit];
     if (state.war < u.costWar) {
-      set({ log: [`Need ${u.costWar} $WAR to train ${u.name}.`, ...state.log].slice(0, 50) });
+      set({ log: [`Need ${u.costWar} $HEXAR to train ${u.name}.`, ...state.log].slice(0, 50) });
       return;
     }
     if (!hasResources(plot.resources, u.cost)) {
@@ -576,7 +576,7 @@ export const useGame = create<GameState>()(
     if (!npc || !plot) return;
     const cost = 50; // §13 #16 scouting sink
     if (state.war < cost) {
-      set({ log: [`Need ${cost} $WAR to scout.`, ...state.log].slice(0, 50) });
+      set({ log: [`Need ${cost} $HEXAR to scout.`, ...state.log].slice(0, 50) });
       return;
     }
     set({
@@ -680,7 +680,7 @@ export const useGame = create<GameState>()(
     const fee = Math.ceil(cost * MARKET_FEE * (1 - Math.min(0.8, get().allegianceBuffs().marketFeeDiscount + get().techBonuses().marketFee)));
     const total = Math.ceil(cost) + fee;
     if (state.war < total) {
-      set({ log: [`Need ${total.toLocaleString()} $WAR (incl. ${fee} fee) to buy ${filled} ${item}.`, ...state.log].slice(0, 50) });
+      set({ log: [`Need ${total.toLocaleString()} $HEXAR (incl. ${fee} fee) to buy ${filled} ${item}.`, ...state.log].slice(0, 50) });
       return;
     }
     // deposit goods into the player's plots (fill those with free capacity first)
@@ -692,7 +692,7 @@ export const useGame = create<GameState>()(
       warBurned: state.warBurned + Math.round(fee * FEE_BURN_SHARE),
       seasonPool: state.seasonPool + (fee - Math.round(fee * FEE_BURN_SHARE)),
       stats: { ...state.stats, trades: state.stats.trades + 1 },
-      log: [`Bought ${filled} ${item} for ${Math.ceil(cost).toLocaleString()} $WAR (+${fee} fee).`, ...state.log].slice(0, 50),
+      log: [`Bought ${filled} ${item} for ${Math.ceil(cost).toLocaleString()} $HEXAR (+${fee} fee).`, ...state.log].slice(0, 50),
     });
   },
 
@@ -737,7 +737,7 @@ export const useGame = create<GameState>()(
       seasonPool: state.seasonPool + (fee - Math.round(fee * FEE_BURN_SHARE)),
       season: { ...state.season, scoreEcon: state.season.scoreEcon + net },
       stats: { ...state.stats, trades: state.stats.trades + 1 },
-      log: [`Sold ${sold} ${item} for ${net.toLocaleString()} $WAR (after ${fee} fee).`, ...state.log].slice(0, 50),
+      log: [`Sold ${sold} ${item} for ${net.toLocaleString()} $HEXAR (after ${fee} fee).`, ...state.log].slice(0, 50),
     });
   },
 
@@ -756,7 +756,7 @@ export const useGame = create<GameState>()(
       plots,
       war: state.war - LISTING_FEE,
       warBurned: state.warBurned + LISTING_FEE, // listing fee burned (§13 #10)
-      log: [`Listed ${qty} ${item} @ ${round2(price)} $WAR (−${LISTING_FEE} listing fee).`, ...state.log].slice(0, 50),
+      log: [`Listed ${qty} ${item} @ ${round2(price)} $HEXAR (−${LISTING_FEE} listing fee).`, ...state.log].slice(0, 50),
     });
   },
 
@@ -800,7 +800,7 @@ export const useGame = create<GameState>()(
       // new map opens: refresh hostile camps & market liquidity (player keeps plots/stake & account progression)
       npcs: generateNpcs(state.world),
       log: [
-        `🏆 Season ${state.season.index} ended. Reward share ${(share * 100).toFixed(1)}% → +${payout.toLocaleString()} $WAR (from sink-funded pool).`,
+        `🏆 Season ${state.season.index} ended. Reward share ${(share * 100).toFixed(1)}% → +${payout.toLocaleString()} $HEXAR (from sink-funded pool).`,
         ...state.log,
       ].slice(0, 50),
     });
@@ -832,7 +832,7 @@ export const useGame = create<GameState>()(
     if (!e || !state.plots[fromPlot]) return;
     const cost = 80;
     if (state.war < cost) {
-      set({ log: [`Need ${cost} $WAR to run espionage.`, ...state.log].slice(0, 50) });
+      set({ log: [`Need ${cost} $HEXAR to run espionage.`, ...state.log].slice(0, 50) });
       return;
     }
     set({
@@ -935,7 +935,7 @@ export const useGame = create<GameState>()(
   rerollRecruits: () => {
     const state = get();
     if (state.war < RECRUIT_REROLL_COST) {
-      set({ log: [`Need ${RECRUIT_REROLL_COST} $WAR to recruit new candidates.`, ...state.log].slice(0, 50) });
+      set({ log: [`Need ${RECRUIT_REROLL_COST} $HEXAR to recruit new candidates.`, ...state.log].slice(0, 50) });
       return;
     }
     set({
@@ -952,7 +952,7 @@ export const useGame = create<GameState>()(
     if (!c) return;
     const cost = RARITY_META[c.rarity].recruitCost;
     if (state.war < cost) {
-      set({ log: [`Need ${cost.toLocaleString()} $WAR to recruit ${c.name}.`, ...state.log].slice(0, 50) });
+      set({ log: [`Need ${cost.toLocaleString()} $HEXAR to recruit ${c.name}.`, ...state.log].slice(0, 50) });
       return;
     }
     set({
@@ -987,7 +987,7 @@ export const useGame = create<GameState>()(
     const t = TECHS[id];
     const haveData = get().resourceTotal(RESEARCH_RESOURCE);
     if (state.war < t.costWar || haveData < t.costData) {
-      set({ log: [`Need ${t.costWar.toLocaleString()} $WAR + ${t.costData} Data Chips to research ${t.name}.`, ...state.log].slice(0, 50) });
+      set({ log: [`Need ${t.costWar.toLocaleString()} $HEXAR + ${t.costData} Data Chips to research ${t.name}.`, ...state.log].slice(0, 50) });
       return;
     }
     const plots = withdrawFromPlots(state, RESEARCH_RESOURCE, t.costData);
@@ -1003,7 +1003,7 @@ export const useGame = create<GameState>()(
 
   resetGame: () => {
     // commanders are permanent (GDD §15) — freshState omits them so they survive.
-    set({ ...freshState(), log: ["New world generated. Stake $WAR to claim your first plot."] });
+    set({ ...freshState(), log: ["New world generated. Stake $HEXAR to claim your first plot."] });
   },
 
   // ---------- Allegiances (GDD §10-11) ----------
@@ -1025,7 +1025,7 @@ export const useGame = create<GameState>()(
     const state = get();
     if (state.playerAllegianceId) return;
     if (state.war < CREATE_ALLEGIANCE_COST) {
-      set({ log: [`Need ${CREATE_ALLEGIANCE_COST.toLocaleString()} $WAR to found an Allegiance.`, ...state.log].slice(0, 50) });
+      set({ log: [`Need ${CREATE_ALLEGIANCE_COST.toLocaleString()} $HEXAR to found an Allegiance.`, ...state.log].slice(0, 50) });
       return;
     }
     const id = `player-${state.tick}`;
@@ -1039,7 +1039,7 @@ export const useGame = create<GameState>()(
       playerAllegianceId: id,
       war: state.war - CREATE_ALLEGIANCE_COST,
       warBurned: state.warBurned + CREATE_ALLEGIANCE_COST,
-      log: [`Founded Allegiance "${allegiance.name}" (${govModel}). −${CREATE_ALLEGIANCE_COST.toLocaleString()} $WAR.`, ...state.log].slice(0, 50),
+      log: [`Founded Allegiance "${allegiance.name}" (${govModel}). −${CREATE_ALLEGIANCE_COST.toLocaleString()} $HEXAR.`, ...state.log].slice(0, 50),
     });
   },
 
@@ -1079,7 +1079,7 @@ export const useGame = create<GameState>()(
     set({
       war: state.war - amount,
       allegiances: { ...state.allegiances, [id]: { ...a, treasuryWar: a.treasuryWar + amount, members } },
-      log: [`Contributed ${amount.toLocaleString()} $WAR to the treasury (+${(amount / 100).toFixed(0)} CS).`, ...state.log].slice(0, 50),
+      log: [`Contributed ${amount.toLocaleString()} $HEXAR to the treasury (+${(amount / 100).toFixed(0)} CS).`, ...state.log].slice(0, 50),
     });
   },
 
@@ -1096,7 +1096,7 @@ export const useGame = create<GameState>()(
     const proposal: Proposal = {
       id: `prop-${state.tick}-${building}`,
       kind: "build",
-      label: `Build ${def.name} (${def.cost.toLocaleString()} $WAR from treasury)`,
+      label: `Build ${def.name} (${def.cost.toLocaleString()} $HEXAR from treasury)`,
       payload: { building },
       votesFor: 0, votesAgainst: 0, playerVoted: false,
       closesAtTick: state.tick + 8, resolved: false,
@@ -1386,7 +1386,7 @@ export const useGame = create<GameState>()(
       history = [...state.history, point].slice(-48);
     }
 
-    const marketLog = marketWar > 0 ? [`Market: limit orders filled for +${marketWar.toLocaleString()} $WAR.`] : [];
+    const marketLog = marketWar > 0 ? [`Market: limit orders filled for +${marketWar.toLocaleString()} $HEXAR.`] : [];
     const nextLog = prog.msgs.length || eventMsgs.length || empLog.length || marketLog.length
       ? [...prog.msgs, ...eventMsgs, ...empLog, ...marketLog, ...state.log].slice(0, 50)
       : state.log;

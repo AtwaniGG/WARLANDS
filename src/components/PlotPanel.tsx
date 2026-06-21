@@ -69,17 +69,17 @@ export function PlotPanel() {
           className="space-y-1 p-3"
           style={{ borderRadius: "var(--radius-md)", background: "rgba(26,32,48,0.5)", fontSize: "12px" }}
         >
-          <Row label="Stake to claim" value={`${num(def.stake)} $WAR`} />
+          <Row label="Stake to claim" value={`${num(def.stake)} $HEXAR`} />
           <Row label="Defense mult" value={`×${def.defenseMult}`} />
           <Row label="Reward mult" value={`×${def.rewardMult}`} />
           <Row label="This would be plot #" value={`${claimIndex} (yield DR ×${diminishingReturns(claimIndex).toFixed(2)})`} />
           <Row label="Protection" value={def.protectable ? "eligible" : "never (warzone)"} />
         </div>
         <Button variant="primary" full icon="⚔️" disabled={!canAfford} onClick={() => claimPlot(hex.q, hex.r)}>
-          {canAfford ? `Stake ${num(def.stake)} $WAR & Claim` : "Insufficient $WAR"}
+          {canAfford ? `Stake ${num(def.stake)} $HEXAR & Claim` : "Insufficient $HEXAR"}
         </Button>
         <p style={{ fontSize: "11px", color: "var(--text-muted)" }}>
-          Staked $WAR is <span style={{ color: "var(--text-secondary)" }}>locked, never spent</span>. You get it back
+          Staked $HEXAR is <span style={{ color: "var(--text-secondary)" }}>locked, never spent</span>. You get it back
           on unstake (minus a small early-unstake fee). It can never be looted by other players.
         </p>
       </div>
@@ -107,7 +107,7 @@ export function PlotPanel() {
           <Badge tone="amber">Owned</Badge>
         </div>
         <div style={{ fontSize: "12px", color: "var(--text-lo)" }}>
-          {def.name} · staked {num(plot.stakeLocked)} $WAR · plot #{plot.claimIndex} (DR ×{diminishingReturns(plot.claimIndex).toFixed(2)})
+          {def.name} · staked {num(plot.stakeLocked)} $HEXAR · plot #{plot.claimIndex} (DR ×{diminishingReturns(plot.claimIndex).toFixed(2)})
         </div>
         <div className="mt-1" style={{ fontSize: "12px" }}>
           Defense: <span style={{ color: plot.defensePct < 0.6 ? "var(--blood-text)" : "var(--emerald-text)" }}>{Math.round(plot.defensePct * 100)}%</span>
@@ -224,7 +224,7 @@ export function PlotPanel() {
       </div>
 
       <Button variant="outline" full size="sm" onClick={() => unstake(selected)}>
-        Unstake plot (return {num(plot.stakeLocked * 0.97)} $WAR · 3% fee)
+        Unstake plot (return {num(plot.stakeLocked * 0.97)} $HEXAR · 3% fee)
       </Button>
     </div>
   );

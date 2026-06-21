@@ -24,7 +24,7 @@ const main = async () => {
   console.log("event totals (all time):");
   for (const r of totals) console.log(`  ${String(r.type).padEnd(14)} ${r.n}`);
   console.log(`\nlast 24h:  active players ${dau[0]?.n ?? 0} · joins ${joins[0]?.n ?? 0} · raids ${raids[0]?.n ?? 0} (${raids[0]?.stars ?? 0}★)`);
-  console.log(`$WAR claims (all time): ${claims[0]?.n ?? 0} totaling ${claims[0]?.amt ?? 0} $WAR`);
+  console.log(`$HEXAR claims (all time): ${claims[0]?.n ?? 0} totaling ${claims[0]?.amt ?? 0} $HEXAR`);
   console.log("\nrecent client errors:");
   if (!errs.length) console.log("  none 🎉");
   else for (const e of errs) console.log(`  ${new Date(e.ts).toISOString()}  ${String(e.player ?? "?").slice(0, 8)}  ${e.msg}`);

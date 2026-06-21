@@ -9,7 +9,7 @@ const NAV: { id: string; n: string; label: string }[] = [
   { id: "market", n: "04", label: "Marketplace" },
   { id: "allegiances", n: "05", label: "Allegiances & Governance" },
   { id: "seasons", n: "06", label: "Seasons & Rewards" },
-  { id: "token", n: "07", label: "Tokenomics · $WAR" },
+  { id: "token", n: "07", label: "Tokenomics · $HEXAR" },
   { id: "architecture", n: "08", label: "Architecture" },
   { id: "onchain", n: "09", label: "On-Chain Layer" },
   { id: "integrity", n: "10", label: "Engineering Integrity" },
@@ -39,17 +39,17 @@ const UNITS = [
 ];
 
 const CONTRACTS = [
-  ["WarToken", "0x317e64c59E84b958629C4F0CCFbe9F14d0bF9c0B", "Fixed-supply (1B) burnable ERC-20. The $WAR token."],
-  ["StakingManager", "0xF0814Ec2822160B6c4d3156F5b8ba95648b422bF", "Principal-safe land staking + conquest settlement."],
-  ["SinkRouter", "0x76A246e04Ab8aFAac33B09417acdd4a0F37830fc", "Splits collected sinks: burn / reward pool / region tax."],
-  ["RewardDistributor", "0x7344D6F92dC5639f1bCde83c0b6DE8141b9A7560", "Merkle reward claims; claimable ≤ pool. No mint power."],
+  ["$HEXAR token (Solana)", "BHdvBpziU37TjyNCxjrFy4FFQ1DP2TButgrZyP9Qi8pT", "Live Token-2022 SPL · fixed 1B supply. Holder gate: hold ≥1,000 to deploy."],
+  ["Treasury / payouts", "DQ4NGW79Vs8DNqyJniMbx8E1v3ZEvarsHB7m1N6pNNUJ", "Settles sink-funded season rewards. Pays only pool-earned $HEXAR, capped per commander."],
+  ["StakingManager (EVM, planned)", "0xF0814Ec2822160B6c4d3156F5b8ba95648b422bF", "Principal-safe land staking + conquest settlement."],
+  ["SinkRouter (EVM, planned)", "0x76A246e04Ab8aFAac33B09417acdd4a0F37830fc", "Splits collected sinks: burn / reward pool / region tax."],
 ];
 
 const SLICES = [
   ["01", "Pipeline", "Pure sim core, Node+ws server, /world route, Postgres snapshots, stake + build."],
   ["02", "Economy", "Factories (raw→intermediate→finished), upgrades, unstake with burn sink."],
   ["03", "Military", "Unit training + seeded deterministic PvP raids/sieges, loot, defense damage."],
-  ["04", "Marketplace", "Shared P2P order book — list/buy/cancel, buyer→seller $WAR, fee sinks."],
+  ["04", "Marketplace", "Shared P2P order book — list/buy/cancel, buyer→seller $HEXAR, fee sinks."],
   ["05", "Allegiances", "Shared treasury, contributions, treasury-funded buildings that buff members."],
   ["06", "Governance", "Propose → vote → auto-resolve building proposals, settled in the tick."],
 ];
@@ -140,7 +140,7 @@ export default function Whitepaper() {
             </p>
             <div className="wp-statstrip wp-fade" style={{ animationDelay: "320ms" }}>
               {[
-                ["1,000,000,000", "fixed $WAR supply"],
+                ["1,000,000,000", "fixed $HEXAR supply"],
                 ["~250,000", "plots / season"],
                 ["9", "plot types"],
                 ["20", "resources"],
@@ -162,14 +162,14 @@ export default function Whitepaper() {
           <Section id="abstract" n="00" title="Abstract">
             <p>
               Most token-incentivised games die because they mint rewards faster than they burn them; the token
-              inflates to zero. <strong>WARLANDS inverts the model.</strong> Every unit of $WAR paid out as a seasonal
+              inflates to zero. <strong>WARLANDS inverts the model.</strong> Every unit of $HEXAR paid out as a seasonal
               reward is first collected from a real sink — staking fees, market fees, upkeep, construction, training —
               <em> in that same season</em>. The protocol can never distribute more than it took in:
             </p>
             <div className="wp-eq">Σ Rewards(season) &nbsp;≤&nbsp; Σ Sinks(season) − Σ Burns(season)</div>
             <p>
               Players earn by being economically and militarily productive <em>relative to other players</em>, never by
-              extracting freshly printed supply. The result is a closed, conserved economy: a fixed 1,000,000,000 $WAR
+              extracting freshly printed supply. The result is a closed, conserved economy: a fixed 1,000,000,000 $HEXAR
               supply that only ever moves between players, locked stake, allegiance treasuries, and the burn furnace —
               an invariant we enforce in code and verify with over a million randomized simulation steps (§10).
             </p>
@@ -185,12 +185,12 @@ export default function Whitepaper() {
               not everyone gets a Warzone plot.
             </p>
             <p>
-              You secure a plot by <strong>staking $WAR</strong> against it (locked, never spent). Higher-tier terrain
+              You secure a plot by <strong>staking $HEXAR</strong> against it (locked, never spent). Higher-tier terrain
               demands more stake and yields more — and is harder to defend. Unstaking returns your principal minus a
               small early-exit fee (a sink); losing a plot to conquest is <em>principal-safe</em> — you lose built
               assets and stored goods, not your locked stake.
             </p>
-            <DataTable head={["Plot type", "Stake ($WAR)", "Trait"]} rows={PLOTS} mono={[1]} />
+            <DataTable head={["Plot type", "Stake ($HEXAR)", "Trait"]} rows={PLOTS} mono={[1]} />
           </Section>
 
           {/* 02 ECONOMY */}
@@ -209,7 +209,7 @@ export default function Whitepaper() {
             <p>
               <strong>Food and Water are universal upkeep</strong> — armies and workforces consume them every tick,
               creating permanent demand for farmers. Storage is capped (warehouses raise the ceiling), and starvation
-              softly degrades a plot's defenses, so a war machine without a food economy rots from within.
+              softly degrades a plot’s defenses, so a war machine without a food economy rots from within.
             </p>
           </Section>
 
@@ -241,9 +241,9 @@ export default function Whitepaper() {
           <Section id="market" n="04" title="Marketplace">
             <p>
               A single shared, player-driven order book. Sellers <strong>list</strong> goods (escrowed into the order for
-              a flat listing fee); buyers <strong>sweep the cheapest asks</strong>, and $WAR flows directly from buyer to
+              a flat listing fee); buyers <strong>sweep the cheapest asks</strong>, and $HEXAR flows directly from buyer to
               seller. A transaction fee skims every trade into the sink router — split between the burn furnace, the
-              season reward pool, and allegiance/region tax. The market is the economy's primary sink engine and its
+              season reward pool, and allegiance/region tax. The market is the economy’s primary sink engine and its
               price-discovery layer: scarcity and war shocks ripple straight into prices.
             </p>
           </Section>
@@ -251,8 +251,8 @@ export default function Whitepaper() {
           {/* 05 ALLEGIANCES */}
           <Section id="allegiances" n="05" title="Allegiances & Governance">
             <p>
-              Players band into <strong>allegiances</strong> with a shared treasury. Members contribute $WAR (raising
-              their contribution score) to fund <strong>allegiance buildings</strong> that buff every member's plots —
+              Players band into <strong>allegiances</strong> with a shared treasury. Members contribute $HEXAR (raising
+              their contribution score) to fund <strong>allegiance buildings</strong> that buff every member’s plots —
               a Research Center grants +12% production, a Fortress +15% defense, a Trade Hub −25% market fees.
             </p>
             <p>
@@ -267,7 +267,7 @@ export default function Whitepaper() {
           <Section id="seasons" n="06" title="Seasons & Rewards">
             <p>
               The world runs in <strong>30-day seasons</strong>. Throughout a season, sinks fill a reward pool. At
-              season's end, a four-factor score — <em>economy</em> (value produced &amp; traded), <em>military</em>
+              season’s end, a four-factor score — <em>economy</em> (value produced &amp; traded), <em>military</em>
               (raids/sieges won), <em>territory</em> (control, weighted by plot tier), and <em>allegiance</em>
               (contribution) — ranks every commander, and the sink-funded pool is distributed accordingly. Then the map
               resets and the meta shifts, while account-permanent layers (commanders, reputation) carry forward.
@@ -279,16 +279,18 @@ export default function Whitepaper() {
           </Section>
 
           {/* 07 TOKEN */}
-          <Section id="token" n="07" title="Tokenomics · $WAR">
+          <Section id="token" n="07" title="Tokenomics · $HEXAR">
             <div className="wp-token-grid">
-              <Fact k="Supply" v="1,000,000,000 $WAR — fixed, minted once at genesis" />
+              <Fact k="Supply" v="1,000,000,000 $HEXAR — fixed, minted once at genesis (Solana Token-2022)" />
               <Fact k="Emissions" v="None. No staking yield, no liquidity mining, no inflation." />
               <Fact k="Reward source" v="Sinks only, redistributed each season" />
               <Fact k="Deflation" v="A configurable burn share permanently removes a fraction of every sink" />
+              <Fact k="Access" v="Holder-gated — hold ≥1,000 $HEXAR to deploy onto the map" />
+              <Fact k="Withdrawals" v="Only pool-earned $HEXAR is claimable on-chain, capped per commander — the free starting balance is in-game only" />
             </div>
             <p>
               Every fee, upkeep charge, construction, training order and early-unstake penalty routes through the
-              <strong> Sink Router</strong>, which splits collected $WAR three ways:
+              <strong> Sink Router</strong>, which splits collected $HEXAR three ways:
             </p>
             <div className="wp-router">
               <div className="wp-router-in">PLAYERS → fees · upkeep · build · train · listings</div>
@@ -348,8 +350,8 @@ export default function Whitepaper() {
             <p>
               Staking is <strong>principal-safe</strong>: the StakingManager escrows stake and only ever returns it to the
               owner (minus sinks) or transfers a plot via conquest — it has no power to seize principal. The
-              RewardDistributor can only pay from a sink-funded pool via Merkle claims, never mint. Genesis supply is
-              fixed in WarToken and burnable through the SinkRouter.
+              treasury settles claims only from a sink-funded pool — paying out solely pool-earned $HEXAR, capped per
+              commander, never minting. Genesis supply is fixed at the $HEXAR mint and burnable through the sink router.
             </p>
           </Section>
 
@@ -361,14 +363,14 @@ export default function Whitepaper() {
               command streams at it, asserting after <em>every step</em> that:
             </p>
             <ul className="wp-list">
-              <li><strong>$WAR is conserved</strong>: Σ balances + Σ locked stake + Σ treasuries + burned = constant.</li>
+              <li><strong>$HEXAR is conserved</strong>: Σ balances + Σ locked stake + Σ treasuries + burned = constant.</li>
               <li>resources never go negative, no value is NaN, structural integrity holds, and no input ever throws.</li>
               <li>a JSON snapshot round-trips to an identical subsequent tick (persistence safety).</li>
             </ul>
             <p>
-              A <strong>1.2-million-step</strong> run across many seeds and players surfaced five places where $WAR was
+              A <strong>1.2-million-step</strong> run across many seeds and players surfaced five places where $HEXAR was
               silently destroyed without being recorded as burned — building, upgrading, training, a market rounding
-              residue, and treasury loss on disband. All five are fixed (the spent $WAR is now correctly booked as a sink
+              residue, and treasury loss on disband. All five are fixed (the spent $HEXAR is now correctly booked as a sink
               or refunded), and the fuzzer is a permanent regression guard. The supply is now provably conserved under a
               million-plus randomized operations.
             </p>

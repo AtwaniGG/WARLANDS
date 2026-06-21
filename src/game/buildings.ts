@@ -31,7 +31,7 @@ export interface BuildingDef {
   extracts?: ResourceId;
   /** Finished/intermediate products this factory can make (factories only). */
   makes?: ResourceId[];
-  /** Base $WAR cost to build at level 1. Upgrades scale with UPGRADE_COST_GROWTH. */
+  /** Base $HEXAR cost to build at level 1. Upgrades scale with UPGRADE_COST_GROWTH. */
   baseCost: number;
   /** Base resource cost to build at level 1. */
   baseResourceCost: Partial<Record<ResourceId, number>>;

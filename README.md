@@ -1,6 +1,6 @@
 # WARLANDS — AAA Web3 Strategy MMO
 
-A persistent-world, PvP-first strategy MMO where players stake a native token (`$WAR`) to
+A persistent-world, PvP-first strategy MMO where players stake a native token (`$HEXAR`) to
 secure finite land on one shared live map, build economies, and wage war — solo or in
 **Allegiances**. Built directly from [`docs/GDD.md`](docs/GDD.md), the full 24-section design
 doc covering tokenomics, balancing math, architecture, and roadmap.
@@ -64,7 +64,6 @@ authoritatively in a Node + `ws` server; multiple clients share one map and comm
 client → validate → apply → broadcast → persist (Postgres JSONB snapshots, restore on boot).
 Authoritative today: **stake/build**, **economy** (extractors + factories, upgrade, unstake with
 burn sink), **military** (unit training + seeded **PvP raids/sieges** with loot & defense damage),
-a **shared player marketplace** (P2P order book, buyer→seller `$WAR` transfer, fee/listing sinks),
 and **allegiances + governance** (shared treasury, member contributions, treasury-funded buildings
 that buff every member's plots — research +12% production, fortress +15% defense, tradeHub −25%
 market fee — plus propose→vote→auto-resolve building governance). That's the **full single-player

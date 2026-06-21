@@ -1,4 +1,4 @@
-// Commanders — account-permanent hero units (GDD §8.4). Recruited with $WAR, assigned to a
+// Commanders — account-permanent hero units (GDD §8.4). Recruited with $HEXAR, assigned to a
 // plot, they buff combat (CommanderFactor in the win formula) and economy. They survive
 // season resets — part of the permanent identity layer (GDD §15).
 

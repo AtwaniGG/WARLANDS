@@ -8,7 +8,7 @@ export const VOTE_WINDOW = 20; // ticks a proposal stays open
 /**
  * Resolve any proposals whose voting window has closed: a simple majority of
  * votes cast passes; a passed build is constructed if the treasury affords it.
- * Returns the updated allegiance and the $WAR spent (sink) this resolution.
+ * Returns the updated allegiance and the $HEXAR spent (sink) this resolution.
  */
 export function resolveProposals(ally: Allegiance, tick: number): { ally: Allegiance; spent: number } {
   if (!ally.proposals?.length) return { ally, spent: 0 };

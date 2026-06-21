@@ -1,6 +1,6 @@
 import type { CocBuildingId, CocResource, CocTrapId, CocUnitId, Objective, ObjectiveKind } from "./types";
 
-export const STARTING_WAR = 200_000;
+export const STARTING_HEXAR = 200_000;
 export const STARTING_GOLD = 500;
 export const STARTING_ELIXIR = 500;
 export const STARTING_BUILDERS = 2;
@@ -161,7 +161,7 @@ export const BUILDINGS: Record<CocBuildingId, BuildingDef> = {
     name: "Builder's Hut",
     category: "builder",
     footprint: { w: 2, h: 2 },
-    // Placed instantly for $WAR (see commands); the building IS a builder.
+    // Placed instantly for $HEXAR (see commands); the building IS a builder.
     levels: [{ cost: {}, buildTimeSec: 0, hp: 250 }],
   },
   clanCastle: {
@@ -207,21 +207,37 @@ export const LOOT_PCT = 0.2;
 export const SHIELD_SECS_PER_PCT = 6;
 export const SHIELD_MAX_SECS = 8 * 3600;
 
-// ---- $WAR premium economy (in-game balance; on-chain bridge is later infra) ----
+// ---- $HEXAR premium economy (in-game balance; on-chain bridge is later infra) ----
 export const MAX_BUILDERS = 5;
-export const WAR_FINISH_PER_SEC = 1; // $WAR to instant-finish, per remaining second
-export const WAR_MIN_FINISH = 10;
-export const WAR_BUILDER_BASE = 2000; // 3rd builder costs 2000, 4th 4000, 5th 6000
-export const WAR_SHIELD_PER_HOUR = 500;
-export const WAR_RAID_REWARD_PER_STAR = 50;
+export const HEXAR_FINISH_PER_SEC = 1; // $HEXAR to instant-finish, per remaining second
+export const HEXAR_MIN_FINISH = 10;
+export const HEXAR_BUILDER_BASE = 2000; // 3rd builder costs 2000, 4th 4000, 5th 6000
+export const HEXAR_SHIELD_PER_HOUR = 500;
+export const HEXAR_RAID_REWARD_PER_STAR = 50;
 
-/** $WAR to instant-finish a job with `remainingSecs` left. */
-export function finishCost(remainingSecs: number): number {
-  return Math.max(WAR_MIN_FINISH, Math.ceil(remainingSecs * WAR_FINISH_PER_SEC));
+/** Per-player lifetime ceiling on on-chain $HEXAR withdrawals (defense-in-depth treasury cap). */
+export const HEXAR_CLAIM_CAP = 50_000;
+/**
+ * In-game $HEXAR a player may withdraw on-chain right now. Only $HEXAR *earned* from the season pool
+ * (raids + objectives) is withdrawable — the free starting grant and spendable balance are soft /
+ * in-game only — and total lifetime withdrawals are capped at HEXAR_CLAIM_CAP. Keeps the treasury
+ * solvent: outflow can never exceed what the sink-funded pool actually distributed.
+ */
+export function claimableHexar(p: { hexar: number; earned?: number; claimed?: number }): number {
+  const earned = p.earned ?? 0;
+  const claimed = p.claimed ?? 0;
+  const withdrawable = Math.max(0, earned - claimed);
+  const capRemaining = Math.max(0, HEXAR_CLAIM_CAP - claimed);
+  return Math.max(0, Math.min(p.hexar, withdrawable, capRemaining));
 }
-/** $WAR to buy the next builder (place a Builder's Hut), given the current builder count. */
+
+/** $HEXAR to instant-finish a job with `remainingSecs` left. */
+export function finishCost(remainingSecs: number): number {
+  return Math.max(HEXAR_MIN_FINISH, Math.ceil(remainingSecs * HEXAR_FINISH_PER_SEC));
+}
+/** $HEXAR to buy the next builder (place a Builder's Hut), given the current builder count. */
 export function builderCost(currentBuilders: number): number {
-  return WAR_BUILDER_BASE * (currentBuilders - 1);
+  return HEXAR_BUILDER_BASE * (currentBuilders - 1);
 }
 
 /** Walls are 1×1 tiles: instant, gold-only, no builder. */
@@ -366,7 +382,7 @@ export function leagueFor(trophies: number): League {
   return r;
 }
 
-// ---- rotating objectives (reward $WAR from the season pool) ----
+// ---- rotating objectives (reward $HEXAR from the season pool) ----
 export const OBJECTIVE_KINDS: ObjectiveKind[] = ["raidWins", "collectGold", "trainTroops"];
 const OBJ_BASE: Record<ObjectiveKind, { target: number; reward: number }> = {
   raidWins: { target: 3, reward: 400 },
@@ -394,7 +410,7 @@ export function nextObjective(prev: Objective): Objective {
   return makeObjective(kind, tier, `${prev.id}#${prev.target}`);
 }
 
-// ---- sink-funded season economy ($WAR) ----
+// ---- sink-funded season economy ($HEXAR) ----
 export const STARTING_SEASON_POOL = 1_000_000;
 export const SEASON_LENGTH = 7 * 24 * 3600; // ticks (≈7 days at 1 Hz)
 export const SEASON_TROPHY_KEEP = 0.5; // soft trophy reset fraction at season rollover

@@ -4,11 +4,11 @@ import { useCallback, useEffect, useState } from "react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { PublicKey } from "@solana/web3.js";
 import { getAssociatedTokenAddressSync, TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
-import { WAR_MINT, WAR_SYMBOL, SOLANA_CONFIGURED, explorerAddress } from "@/web3/solana";
+import { HEXAR_MINT, HEXAR_SYMBOL, SOLANA_CONFIGURED, explorerAddress } from "@/web3/solana";
 import { WalletButton } from "./WalletButton";
 import { Panel, Stat, type StatAccent } from "./ui";
 
-const MINT = SOLANA_CONFIGURED ? new PublicKey(WAR_MINT) : null;
+const MINT = SOLANA_CONFIGURED ? new PublicKey(HEXAR_MINT) : null;
 
 function fmt(n: number | null): string {
   return n === null ? "—" : n.toLocaleString(undefined, { maximumFractionDigits: 4 });
@@ -18,7 +18,7 @@ export function WalletPanel() {
   const { connection } = useConnection();
   const { publicKey, connected } = useWallet();
   const [sol, setSol] = useState<number | null>(null);
-  const [war, setWar] = useState<number | null>(null);
+  const [hexar, setHexar] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
 
   const refresh = useCallback(async () => {
@@ -33,15 +33,19 @@ export function WalletPanel() {
     try {
       const ata = getAssociatedTokenAddressSync(MINT, publicKey, false, TOKEN_2022_PROGRAM_ID);
       const bal = await connection.getTokenAccountBalance(ata);
-      setWar(bal.value.uiAmount ?? 0);
+      setHexar(bal.value.uiAmount ?? 0);
     } catch {
-      setWar(0); // no WAR token account yet
+      setHexar(0); // no $HEXAR token account yet
     }
     setLoading(false);
   }, [publicKey, connection]);
 
   useEffect(() => {
-    if (!connected) { setSol(null); setWar(null); return; }
+    // Subscribes balance state to the external wallet connection + a 12s polling timer.
+    // Clearing balances on disconnect is part of that external sync (the wallet went away),
+    // not a derived-state loop.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (!connected) { setSol(null); setHexar(null); return; }
     refresh();
     const t = setInterval(refresh, 12000);
     return () => clearInterval(t);
@@ -54,32 +58,32 @@ export function WalletPanel() {
         <WalletButton />
       </div>
       <p className="mb-4" style={{ fontSize: "12px", color: "var(--text-muted)" }}>
-        $WAR is an SPL token on <b>Solana devnet</b>. Connect a Solana wallet (Phantom) set to devnet to see
+        $HEXAR is an SPL token on <b>Solana devnet</b>. Connect a Solana wallet (Phantom) set to devnet to see
         your balance. This on-chain layer is separate from the in-browser mock economy.
       </p>
 
       <div className="mb-3 p-3" style={{ borderRadius: "var(--radius-lg)", border: "1px solid var(--hairline)", background: "var(--panel)", fontSize: "12px" }}>
         <Row label="Wallet" value={connected && publicKey ? publicKey.toBase58() : "not connected"} />
         <Row label="Network" value="Solana devnet" />
-        <Row label="WAR mint" value={WAR_MINT} link={explorerAddress(WAR_MINT)} />
+        <Row label="$HEXAR mint" value={HEXAR_MINT} link={explorerAddress(HEXAR_MINT)} />
       </div>
 
       <div className="mb-4 grid grid-cols-2 gap-3">
-        <ChainStat label={`Your ${WAR_SYMBOL}`} value={connected ? fmt(war) : "—"} accent="amber" />
+        <ChainStat label={`Your ${HEXAR_SYMBOL}`} value={connected ? fmt(hexar) : "—"} accent="amber" />
         <ChainStat label="Your SOL" value={connected ? fmt(sol) : "—"} accent="sky" />
       </div>
 
       <Panel title="Solana devnet">
         <div style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-          WAR token ({WAR_SYMBOL}) is live on devnet — Token-2022, 9 decimals, 1,000,000,000 supply.{" "}
-          <a href={explorerAddress(WAR_MINT)} target="_blank" rel="noreferrer" style={{ color: "var(--teal-text)" }}>View the mint ↗</a>
+          ${HEXAR_SYMBOL} is live on devnet — Token-2022, 9 decimals, 1,000,000,000 supply.{" "}
+          <a href={explorerAddress(HEXAR_MINT)} target="_blank" rel="noreferrer" style={{ color: "var(--teal-text)" }}>View the mint ↗</a>
         </div>
         <p className="mt-3" style={{ fontSize: "11px", color: "var(--text-muted)" }}>
           On-chain staking (an Anchor program with a principal-safe vault) is the next step. For now this panel
-          reads your live devnet $WAR balance. {loading ? "Refreshing…" : ""}
+          reads your live devnet $HEXAR balance. {loading ? "Refreshing…" : ""}
         </p>
         <p className="mt-2" style={{ fontSize: "11px", color: "var(--text-muted)" }}>
-          Need test $WAR? Send some to your address from the deployer wallet, or import the deployer key into
+          Need test $HEXAR? Send some to your address from the deployer wallet, or import the deployer key into
           Phantom (it holds the supply). Get devnet SOL for gas from a faucet.
         </p>
       </Panel>

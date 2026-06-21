@@ -75,28 +75,30 @@ export interface CocBase {
 }
 
 export type ObjectiveKind = "raidWins" | "collectGold" | "trainTroops";
-/** A rotating goal that pays $WAR (from the season pool) when completed + claimed. */
+/** A rotating goal that pays $HEXAR (from the season pool) when completed + claimed. */
 export interface Objective {
   id: string;
   kind: ObjectiveKind;
   target: number;
   progress: number;
-  reward: number; // $WAR, paid from the season pool
+  reward: number; // $HEXAR, paid from the season pool
   claimed: boolean;
 }
 
 export interface CocPlayer {
   id: string;
-  war: number;
+  hexar: number;
   joinedTick: number;
   clanId?: string | null;
   /** AI-controlled village seeded to populate the world (always a valid raid target). */
   isBot?: boolean;
   /** rotating daily-style objectives (assigned on join, replaced on claim). */
   objectives?: Objective[];
-  /** total $WAR the player has claimed for on-chain withdrawal (real transfer is treasury-side). */
+  /** total $HEXAR the player has claimed for on-chain withdrawal (real transfer is treasury-side). */
   claimed?: number;
-  /** linked Solana wallet (base58 pubkey) — destination for on-chain $WAR payouts. */
+  /** cumulative $HEXAR earned from the season pool (raids + objectives) — the only $HEXAR withdrawable on-chain. */
+  earned?: number;
+  /** linked Solana wallet (base58 pubkey) — destination for on-chain $HEXAR payouts. */
   wallet?: string;
 }
 
@@ -119,7 +121,7 @@ export interface CocWorld {
   nextClanId: number;
   /** defense reports queued for offline players (raided while away) — delivered on connect. */
   pendingReports?: Record<string, BattleReport[]>;
-  /** sink-funded $WAR treasury: every $WAR sink flows in, every reward is paid out of it (never minted beyond it). */
+  /** sink-funded $HEXAR treasury: every $HEXAR sink flows in, every reward is paid out of it (never minted beyond it). */
   seasonPool?: number;
   /** current season id + when it rolls over (trophy soft-reset). */
   season?: { id: number; endsAtTick: number };

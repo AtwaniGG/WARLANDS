@@ -5,7 +5,7 @@ import type { Market, SimPlot, SimPlayer, WorldState } from "./types";
 
 export const WORLD_RADIUS = 9;
 export const STORAGE_BASE_CAP = 1500;
-export const STARTING_WAR = 200_000;
+export const STARTING_HEXAR = 200_000;
 
 function freshMarket(): Market {
   return { refPrices: { ...BASE_PRICE }, book: [], nextOrderId: 1 };
@@ -31,7 +31,7 @@ export function createWorld(seed: number): WorldState {
 
 export function addPlayer(state: WorldState, id: string): WorldState {
   if (state.players[id]) return state;
-  const player: SimPlayer = { id, war: STARTING_WAR, joinedTick: state.tick };
+  const player: SimPlayer = { id, war: STARTING_HEXAR, joinedTick: state.tick };
   return { ...state, players: { ...state.players, [id]: player } };
 }
 

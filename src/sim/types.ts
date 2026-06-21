@@ -41,7 +41,7 @@ export interface Allegiance {
   founder: string; // SimPlayer.id
   members: string[]; // SimPlayer.ids
   treasuryWar: number;
-  contributions: Record<string, number>; // playerId -> cumulative $WAR contributed
+  contributions: Record<string, number>; // playerId -> cumulative $HEXAR contributed
   buildings: AllegianceBuildingId[];
   proposals: AllegianceProposal[];
   nextProposalId: number;
@@ -74,7 +74,7 @@ export interface MarketOrder {
   id: string;
   item: ResourceId;
   qty: number;
-  price: number; // $WAR per unit
+  price: number; // $HEXAR per unit
   owner: string; // SimPlayer.id
 }
 
@@ -91,7 +91,7 @@ export interface WorldState {
   hexes: Record<string, Hex>; // serializable (was Map)
   plots: Record<string, SimPlot>; // keyed by "q,r"
   players: Record<string, SimPlayer>;
-  /** total $WAR removed via sinks (early-unstake fees, etc.) — GDD §13 */
+  /** total $HEXAR removed via sinks (early-unstake fees, etc.) — GDD §13 */
   burned: number;
   market: Market;
   allegiances: Record<string, Allegiance>;

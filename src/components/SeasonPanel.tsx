@@ -37,10 +37,10 @@ export function SeasonPanel() {
 
       <div className="mb-4 grid grid-cols-2 gap-3">
         <Panel padding="12px">
-          <Stat label="Season Reward Pool (sink-funded)" value={`${num(pool)} $WAR`} accent="emerald" align="stack" size="lg" />
+          <Stat label="Season Reward Pool (sink-funded)" value={`${num(pool)} $HEXAR`} accent="emerald" align="stack" size="lg" />
         </Panel>
         <Panel padding="12px">
-          <Stat label="Total $WAR Burned (all sinks)" value={`${num(burned)} $WAR`} accent="blood" align="stack" size="lg" />
+          <Stat label="Total $HEXAR Burned (all sinks)" value={`${num(burned)} $HEXAR`} accent="blood" align="stack" size="lg" />
         </Panel>
       </div>
 
@@ -63,7 +63,7 @@ export function SeasonPanel() {
           className="mt-4 p-3"
           style={{ borderRadius: "var(--radius-lg)", border: "1px solid rgba(52,211,153,0.3)", background: "rgba(52,211,153,0.08)", fontSize: "14px", color: "var(--emerald-text)" }}
         >
-          Last season payout: <span style={{ fontWeight: 700 }}>{num(season.lastPayout)} $WAR</span> (your reward share of the pool).
+          Last season payout: <span style={{ fontWeight: 700 }}>{num(season.lastPayout)} $HEXAR</span> (your reward share of the pool).
         </div>
       )}
 

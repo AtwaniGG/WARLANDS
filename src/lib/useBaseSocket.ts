@@ -37,20 +37,28 @@ export function useBaseSocket(url: string): BaseSocket {
     const id = getIdentity();
     const ws = new WebSocket(id ? `${url}?id=${encodeURIComponent(id)}` : url);
     ref.current = ws;
+    let errTimer: ReturnType<typeof setTimeout> | undefined;
     ws.onopen = () => setConnected(true);
     ws.onclose = () => setConnected(false);
     ws.onmessage = (e) => {
-      const msg = JSON.parse(e.data);
+      let msg: { type?: string; playerId?: string; state?: CocWorld; message?: string; report?: BattleReport };
+      try {
+        msg = JSON.parse(e.data); // a malformed frame must not throw out of the handler (it would surface
+                                  // as a window 'error' that we'd then forward back to the server)
+      } catch {
+        return;
+      }
       if (msg.type === "welcome") {
-        setPlayerId(msg.playerId);
-        setState(msg.state);
+        setPlayerId(msg.playerId ?? null);
+        setState(msg.state ?? null);
       } else if (msg.type === "state") {
-        setState(msg.state);
+        setState(msg.state ?? null);
       } else if (msg.type === "error") {
-        setError(msg.message);
-        setTimeout(() => setError(null), 4000);
+        setError(msg.message ?? "error");
+        clearTimeout(errTimer);
+        errTimer = setTimeout(() => setError(null), 4000);
       } else if (msg.type === "report") {
-        setReport(msg.report);
+        setReport(msg.report ?? null);
       }
     };
 
@@ -62,6 +70,7 @@ export function useBaseSocket(url: string): BaseSocket {
     window.addEventListener("unhandledrejection", onRej);
 
     return () => {
+      clearTimeout(errTimer);
       window.removeEventListener("error", onErr);
       window.removeEventListener("unhandledrejection", onRej);
       ws.close();

@@ -85,7 +85,7 @@ export function CommandersPanel() {
       {/* Recruit pool */}
       <Panel
         title="Recruit Candidates"
-        headerRight={<Button size="sm" variant="ghost" onClick={reroll}>↻ Reroll (500 $WAR)</Button>}
+        headerRight={<Button size="sm" variant="ghost" onClick={reroll}>↻ Reroll (500 $HEXAR)</Button>}
       >
         <div className="grid gap-2 sm:grid-cols-2">
           {pool.map((c) => {
@@ -100,7 +100,7 @@ export function CommandersPanel() {
                 </div>
                 <div className="mt-1" style={{ fontSize: "11px", color: "var(--text-lo)" }}>{s.icon} {s.name} — {s.desc}</div>
                 <Button size="sm" variant="primary" full className="mt-2" onClick={() => recruit(c.id)}>
-                  Recruit · {RARITY_META[c.rarity].recruitCost.toLocaleString()} $WAR
+                  Recruit · {RARITY_META[c.rarity].recruitCost.toLocaleString()} $HEXAR
                 </Button>
               </div>
             );

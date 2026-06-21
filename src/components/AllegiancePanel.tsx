@@ -55,7 +55,7 @@ export function AllegiancePanel() {
       {!mine ? (
         <div className="space-y-5">
           {/* Found one */}
-          <Panel title="Found an Allegiance (5,000 $WAR sink)">
+          <Panel title="Found an Allegiance (5,000 $HEXAR sink)">
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -98,7 +98,7 @@ export function AllegiancePanel() {
                   <div>
                     <div style={{ fontWeight: 600 }}>{a.name} <span className="wl-label">{a.govModel}</span></div>
                     <div className="flex items-center gap-1" style={{ fontSize: "12px", color: "var(--text-muted)" }}>
-                      {a.members.length} members · treasury {num(a.treasuryWar)} $WAR ·
+                      {a.members.length} members · treasury {num(a.treasuryWar)} $HEXAR ·
                       {a.buildings.map((b) => <AllegianceBuildingIcon key={b} id={b} size={15} />)}
                     </div>
                   </div>
@@ -120,7 +120,7 @@ export function AllegiancePanel() {
               <Button variant="outline" size="sm" style={{ color: "var(--blood-text)", borderColor: "rgba(220,38,38,0.4)" }} onClick={leave}>Leave</Button>
             </div>
             <div className="mt-2 flex flex-wrap gap-2">
-              <Badge tone="neutral">Treasury: {num(mine.treasuryWar)} $WAR</Badge>
+              <Badge tone="neutral">Treasury: {num(mine.treasuryWar)} $HEXAR</Badge>
               {buffs.production > 0 && <Badge tone="emerald">+{Math.round(buffs.production * 100)}% production</Badge>}
               {buffs.defense > 0 && <Badge tone="sky">+{Math.round(buffs.defense * 100)}% defense</Badge>}
               {buffs.marketFeeDiscount > 0 && <Badge tone="amber">−{Math.round(buffs.marketFeeDiscount * 100)}% market fees</Badge>}
@@ -132,7 +132,7 @@ export function AllegiancePanel() {
           <Panel title="Contribute to Treasury (raises your CS)">
             <div className="flex gap-2">
               <input type="number" value={contribAmt} min={1} onChange={(e) => setContribAmt(Math.max(1, Number(e.target.value) || 1))} className="wl-num w-32 px-3 py-1.5 text-right" style={{ ...inputStyle, fontSize: "13px" }} />
-              <Button variant="success" onClick={() => contribute(contribAmt)}>Contribute $WAR</Button>
+              <Button variant="success" onClick={() => contribute(contribAmt)}>Contribute $HEXAR</Button>
             </div>
           </Panel>
 
@@ -162,7 +162,7 @@ export function AllegiancePanel() {
                     >
                       <div className="flex items-center gap-1.5" style={{ fontWeight: 600 }}><AllegianceBuildingIcon id={b} size={18} /> {def.name} {built && "✓"}</div>
                       <div style={{ fontSize: "10px", color: "var(--text-lo)" }}>{def.benefit}</div>
-                      <div className="wl-num" style={{ fontSize: "10px", color: "var(--amber-text)" }}>{num(def.cost)} $WAR treasury</div>
+                      <div className="wl-num" style={{ fontSize: "10px", color: "var(--amber-text)" }}>{num(def.cost)} $HEXAR treasury</div>
                     </button>
                   );
                 })}

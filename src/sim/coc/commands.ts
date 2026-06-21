@@ -1,5 +1,5 @@
 import { hexKey } from "@/game/world";
-import { builderCost, BUILDINGS, ccTier, finishCost, levelDef, maxLevelOf, maxWallLevel, MAX_BUILDERS, nextObjective, SHIELD_MAX_SECS, SHIELD_SECS_PER_PCT, STARTING_ELIXIR, STARTING_GOLD, TRAPS, UNITS, WALL, WAR_RAID_REWARD_PER_STAR, WAR_SHIELD_PER_HOUR } from "./config";
+import { builderCost, BUILDINGS, ccTier, claimableHexar, finishCost, levelDef, maxLevelOf, maxWallLevel, MAX_BUILDERS, nextObjective, SHIELD_MAX_SECS, SHIELD_SECS_PER_PCT, STARTING_ELIXIR, STARTING_GOLD, TRAPS, UNITS, WALL, HEXAR_RAID_REWARD_PER_STAR, HEXAR_SHIELD_PER_HOUR } from "./config";
 import { builderCount, ccLevel, fitsInGrid, footprintTiles, freeBuilders, garrisonCap, garrisonUsed, hasBarracks, housingCap, housingUsed, inGrid, occupiedTiles, parseTile, storageCap } from "./world";
 import { resolveRaid } from "./battle";
 import type { Army, Clan, CocBase, CocBuildingId, CocCommand, CocResource, CocTrapId, CocUnitId, CocWorld, CommandResult, Deployment, ObjectiveKind, PlacedBuilding } from "./types";
@@ -26,16 +26,15 @@ function spend(base: CocBase, cost: Partial<Record<CocResource, number>>): { gol
   return { gold: base.gold - (cost.gold ?? 0), elixir: base.elixir - (cost.elixir ?? 0) };
 }
 
-// ---- sink-funded $WAR economy: every sink flows into the season pool; every reward is paid out of it ----
-function sinkToPool(state: CocWorld, amount: number): CocWorld {
-  return { ...state, seasonPool: (state.seasonPool ?? 0) + amount };
-}
+// ---- sink-funded $HEXAR economy: every sink flows into the season pool; every reward is paid out of it ----
+// (Sinks add to seasonPool inline at each call site; payouts come back through payFromPool.)
 function payFromPool(state: CocWorld, playerId: string, want: number): { state: CocWorld; paid: number } {
   const pool = state.seasonPool ?? 0;
   const player = state.players[playerId];
   if (!player || want <= 0 || pool <= 0) return { state, paid: 0 };
   const paid = Math.min(pool, want);
-  return { state: { ...state, seasonPool: pool - paid, players: { ...state.players, [playerId]: { ...player, war: player.war + paid } } }, paid };
+  // Track pool earnings separately — only this is withdrawable on-chain (see claim()).
+  return { state: { ...state, seasonPool: pool - paid, players: { ...state.players, [playerId]: { ...player, hexar: player.hexar + paid, earned: (player.earned ?? 0) + paid } } }, paid };
 }
 function bumpObjectives(state: CocWorld, playerId: string, kind: ObjectiveKind, amount: number): CocWorld {
   const player = state.players[playerId];
@@ -89,21 +88,24 @@ function placeBuilding(state: CocWorld, playerId: string, anchorKey: string, bui
   if (!fitsInGrid(anchorKey, buildingId)) return fail(state, "That doesn't fit in the village.");
   if (collides(base, anchorKey, buildingId)) return fail(state, "Those tiles are occupied.");
 
-  // Builder's Hut: instant, paid in $WAR, no builder consumed, capped at MAX_BUILDERS.
+  // Builder's Hut: instant, paid in $HEXAR, no builder consumed, capped at MAX_BUILDERS.
   if (buildingId === "builderHut") {
     const player = state.players[playerId];
     if (!player) return fail(state, "Unknown player.");
     const count = builderCount(base);
     if (count >= MAX_BUILDERS) return fail(state, "You already have the maximum builders.");
     const cost = builderCost(count);
-    if (player.war < cost) return fail(state, `Not enough $WAR (need ${cost.toLocaleString()}).`);
+    // Defense-in-depth: a base always starts with 2 huts so cost is always ≥ HEXAR_BUILDER_BASE,
+    // but never hand out a free/negative-cost builder if that invariant ever changes.
+    if (cost <= 0) return fail(state, "Builder unavailable.");
+    if (player.hexar < cost) return fail(state, `Not enough $HEXAR (need ${cost.toLocaleString()}).`);
     const newBase: CocBase = { ...base, buildings: { ...base.buildings, [anchorKey]: { id: "builderHut", level: 1 } } };
     return {
       state: {
         ...state,
-        players: { ...state.players, [playerId]: { ...player, war: player.war - cost } },
+        players: { ...state.players, [playerId]: { ...player, hexar: player.hexar - cost } },
         bases: { ...state.bases, [playerId]: newBase },
-        seasonPool: (state.seasonPool ?? 0) + cost, // $WAR sink → treasury
+        seasonPool: (state.seasonPool ?? 0) + cost, // $HEXAR sink → treasury
       },
     };
   }
@@ -289,6 +291,10 @@ function raid(state: CocWorld, playerId: string, targetOwner: string, deploy: De
   const counts: Partial<Record<CocUnitId, number>> = {};
   for (const d of deploy) {
     if (!UNITS[d.unit]) return fail(state, "Unknown unit.");
+    // Reject off-grid / non-finite coords: a malicious client could otherwise crash the
+    // battle resolver or corrupt pathfinding with x:-9999 / NaN deployments.
+    if (!Number.isFinite(d.x) || !Number.isFinite(d.y) || !inGrid(Math.floor(d.x), Math.floor(d.y)))
+      return fail(state, "Deployment off the battlefield.");
     counts[d.unit] = (counts[d.unit] ?? 0) + 1;
   }
   for (const [u, n] of Object.entries(counts)) {
@@ -322,9 +328,9 @@ function raid(state: CocWorld, playerId: string, targetOwner: string, deploy: De
     shieldUntil: result.destructionPct > 0 ? state.tick + shieldSecs : defender.shieldUntil,
   };
 
-  // $WAR reward for the attacker, scaled by stars — PAID FROM THE SEASON POOL (never minted).
+  // $HEXAR reward for the attacker, scaled by stars — PAID FROM THE SEASON POOL (never minted).
   let next: CocWorld = { ...state, bases: { ...state.bases, [playerId]: newAttacker, [targetOwner]: newDefender } };
-  next = payFromPool(next, playerId, result.stars * WAR_RAID_REWARD_PER_STAR).state;
+  next = payFromPool(next, playerId, result.stars * HEXAR_RAID_REWARD_PER_STAR).state;
   if (result.stars > 0) next = bumpObjectives(next, playerId, "raidWins", 1);
 
   return {
@@ -350,16 +356,16 @@ function finishNow(state: CocWorld, playerId: string, key: string): CommandResul
   const job = base.jobs.find((j) => j.tileKey === key);
   if (!job) return fail(state, "Nothing is building there.");
   const cost = finishCost(Math.max(0, job.finishesAtTick - state.tick));
-  if (player.war < cost) return fail(state, `Not enough $WAR (need ${cost.toLocaleString()}).`);
+  if (player.hexar < cost) return fail(state, `Not enough $HEXAR (need ${cost.toLocaleString()}).`);
   const buildings = { ...base.buildings };
   if (buildings[key]) buildings[key] = { ...buildings[key], level: job.toLevel };
   const newBase: CocBase = { ...base, buildings, jobs: base.jobs.filter((j) => j !== job) };
   return {
     state: {
       ...state,
-      players: { ...state.players, [playerId]: { ...player, war: player.war - cost } },
+      players: { ...state.players, [playerId]: { ...player, hexar: player.hexar - cost } },
       bases: { ...state.bases, [playerId]: newBase },
-      seasonPool: (state.seasonPool ?? 0) + cost, // $WAR sink → treasury
+      seasonPool: (state.seasonPool ?? 0) + cost, // $HEXAR sink → treasury
     },
   };
 }
@@ -369,15 +375,15 @@ function extendShield(state: CocWorld, playerId: string, hours: number): Command
   const player = state.players[playerId];
   if (!base || !player) return fail(state, "You have no base.");
   if (hours <= 0 || hours > 24) return fail(state, "Pick 1–24 hours.");
-  const cost = Math.round(hours * WAR_SHIELD_PER_HOUR);
-  if (player.war < cost) return fail(state, `Not enough $WAR (need ${cost.toLocaleString()}).`);
+  const cost = Math.round(hours * HEXAR_SHIELD_PER_HOUR);
+  if (player.hexar < cost) return fail(state, `Not enough $HEXAR (need ${cost.toLocaleString()}).`);
   const from = Math.max(state.tick, base.shieldUntil);
   return {
     state: {
       ...state,
-      players: { ...state.players, [playerId]: { ...player, war: player.war - cost } },
+      players: { ...state.players, [playerId]: { ...player, hexar: player.hexar - cost } },
       bases: { ...state.bases, [playerId]: { ...base, shieldUntil: from + hours * 3600 } },
-      seasonPool: (state.seasonPool ?? 0) + cost, // $WAR sink → treasury
+      seasonPool: (state.seasonPool ?? 0) + cost, // $HEXAR sink → treasury
     },
   };
 }
@@ -485,14 +491,15 @@ function claimObjective(state: CocWorld, playerId: string, id: string): CommandR
   return { state: next };
 }
 
-/** Withdraw in-game $WAR for on-chain payout. The real Solana transfer is treasury-side
- *  (see docs/runbooks/onchain-war-payout.md); here we only record the claimed amount. */
+/** Withdraw in-game $HEXAR for on-chain payout. The real Solana transfer is treasury-side
+ *  (see docs/runbooks/onchain-hexar-payout.md); here we only record the claimed amount. */
 function claim(state: CocWorld, playerId: string, amount: number): CommandResult {
   const player = state.players[playerId];
   if (!player) return fail(state, "Unknown player.");
-  const amt = Math.min(player.war, Math.max(0, Math.floor(amount)));
-  if (amt <= 0) return fail(state, "Nothing to claim.");
-  return { state: { ...state, players: { ...state.players, [playerId]: { ...player, war: player.war - amt, claimed: (player.claimed ?? 0) + amt } } } };
+  // Only $HEXAR earned from the season pool is withdrawable, capped at HEXAR_CLAIM_CAP per player.
+  const amt = Math.min(claimableHexar(player), Math.max(0, Math.floor(amount)));
+  if (amt <= 0) return fail(state, "Nothing to withdraw — only $HEXAR earned from raids and objectives can be claimed on-chain, up to the cap.");
+  return { state: { ...state, players: { ...state.players, [playerId]: { ...player, hexar: player.hexar - amt, claimed: (player.claimed ?? 0) + amt } } } };
 }
 
 export function applyCommand(state: CocWorld, playerId: string, cmd: CocCommand): CommandResult {

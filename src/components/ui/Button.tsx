@@ -39,7 +39,7 @@ const PALETTES: Record<ButtonVariant, { bg: string; bgHover: string; fg: string;
 };
 
 /**
- * Tactical action control. Amber `primary` is the claim / $WAR CTA.
+ * Tactical action control. Amber `primary` is the claim / $HEXAR CTA.
  * Focus-visible amber ring is inherited from the global `:focus-visible` rule.
  */
 export function Button({

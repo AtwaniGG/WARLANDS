@@ -30,7 +30,7 @@ function rimFor(col: number, row: number): Rim {
   return "neutral";
 }
 
-/** S2 — One live map: finite land, stake $WAR to claim it. */
+/** S2 — One live map: finite land, stake $HEXAR to claim it. */
 export const S2OneMap: React.FC = () => {
   const frame = useCurrentFrame();
 
@@ -83,7 +83,7 @@ export const S2OneMap: React.FC = () => {
 
       {/* stake callout chip */}
       <div style={{ position: "absolute", top: 150, right: 120, opacity: interpolate(frame, [60, 80], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }) }}>
-        <HUDChip label="Plot claimed" value="STAKE 250 $WAR" accent={COLORS.amber} />
+        <HUDChip label="Plot claimed" value="STAKE 250 $HEXAR" accent={COLORS.amber} />
       </div>
       <div style={{ position: "absolute", top: 150, left: 120, opacity: interpolate(frame, [30, 50], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }) }}>
         <HUDChip label="Contested" value="1,024 PLAYERS" accent={COLORS.bloodStrong} />
@@ -94,7 +94,7 @@ export const S2OneMap: React.FC = () => {
         startFrame={40}
         lines={[
           { text: "Finite land.", size: 60 },
-          { text: "Stake $WAR to claim it.", size: 60, accent: COLORS.amber },
+          { text: "Stake $HEXAR to claim it.", size: 60, accent: COLORS.amber },
         ]}
       />
     </Scene>

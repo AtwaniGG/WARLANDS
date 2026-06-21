@@ -11,7 +11,7 @@ export interface AllegianceBuildingDef {
   id: AllegianceBuildingId;
   name: string;
   icon: string;
-  cost: number; // $WAR from treasury
+  cost: number; // $HEXAR from treasury
   benefit: string;
 }
 

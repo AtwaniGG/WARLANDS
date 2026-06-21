@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, type CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 import { Panel } from "@/components/ui";
 import { BUILDINGS, type CocBase } from "@/sim/coc";
 
@@ -23,7 +23,13 @@ export function BaseTutorial({ base }: { base: CocBase | null }) {
   const [expanded, setExpanded] = useState(true);
   const hasBase = !!base;
   // Collapse to the chip the moment a base exists; nothing to guide on the map until then.
-  useEffect(() => { setExpanded(!hasBase); }, [hasBase]);
+  // Adjust during render on the hasBase transition (React's documented "reset state when a
+  // prop changes" pattern) — no effect, so no extra commit/flash of the expanded card.
+  const [prevHasBase, setPrevHasBase] = useState(hasBase);
+  if (prevHasBase !== hasBase) {
+    setPrevHasBase(hasBase);
+    setExpanded(!hasBase);
+  }
 
   const s = currentStep(base);
   if (!s) return null;

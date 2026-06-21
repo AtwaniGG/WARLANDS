@@ -8,7 +8,6 @@ import { PlotPanel } from "./PlotPanel";
 import { EventLog } from "./EventLog";
 import { GameClock } from "./GameClock";
 import { BattleReport } from "./BattleReport";
-import { MarketPanel } from "./MarketPanel";
 import { AllegiancePanel } from "./AllegiancePanel";
 import { SeasonPanel } from "./SeasonPanel";
 import { WalletPanel } from "./WalletPanel";
@@ -25,11 +24,10 @@ import { Toaster } from "./Toaster";
 import { TutorialOverlay } from "./TutorialOverlay";
 import { Tabs, type TabItem } from "./ui";
 
-type View = "map" | "market" | "research" | "allegiance" | "diplomacy" | "commanders" | "quests" | "stats" | "leaderboard" | "codex" | "season" | "wallet";
+type View = "map" | "research" | "allegiance" | "diplomacy" | "commanders" | "quests" | "stats" | "leaderboard" | "codex" | "season" | "wallet";
 
 const TABS: TabItem<View>[] = [
   { id: "map", label: "World", icon: "🗺️" },
-  { id: "market", label: "Market", icon: "💱" },
   { id: "research", label: "Research", icon: "🔬" },
   { id: "allegiance", label: "Allegiance", icon: "🤝" },
   { id: "diplomacy", label: "Diplomacy", icon: "⚔️" },
@@ -92,7 +90,6 @@ export function GameShell() {
           </>
         ) : (
           <div className="min-h-0 flex-1 overflow-y-auto">
-            {view === "market" && <MarketPanel />}
             {view === "research" && <ResearchPanel />}
             {view === "allegiance" && <AllegiancePanel />}
             {view === "diplomacy" && <DiplomacyPanel />}

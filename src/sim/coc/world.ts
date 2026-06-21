@@ -1,5 +1,5 @@
 import { generateWorld, hexKey } from "@/game/world";
-import { BASE_STORAGE_CAP, BUILDINGS, GRID_H, GRID_W, SEASON_LENGTH, STARTING_SEASON_POOL, STARTING_WAR, UNITS, makeObjectives } from "./config";
+import { BASE_STORAGE_CAP, BUILDINGS, GRID_H, GRID_W, SEASON_LENGTH, STARTING_SEASON_POOL, STARTING_HEXAR, UNITS, makeObjectives } from "./config";
 import type { CocBase, CocBuildingId, CocPlayer, CocResource, CocWorld } from "./types";
 
 export const WORLD_RADIUS = 9;
@@ -15,7 +15,7 @@ export function createWorld(seed: number): CocWorld {
 
 export function addPlayer(state: CocWorld, id: string): CocWorld {
   if (state.players[id]) return state;
-  const player: CocPlayer = { id, war: STARTING_WAR, joinedTick: state.tick, objectives: makeObjectives(id), claimed: 0 };
+  const player: CocPlayer = { id, hexar: STARTING_HEXAR, joinedTick: state.tick, objectives: makeObjectives(id), claimed: 0, earned: 0 };
   return { ...state, players: { ...state.players, [id]: player } };
 }
 
@@ -164,7 +164,10 @@ export function normalizeWorld(state: CocWorld): CocWorld {
   }
   const players: CocWorld["players"] = {};
   for (const [id, p] of Object.entries(state.players ?? {})) {
-    players[id] = { ...p, objectives: p.objectives ?? (p.isBot ? undefined : makeObjectives(id)), claimed: p.claimed ?? 0 };
+    const legacyWar = (p as { war?: number }).war; // pre-rename snapshots stored the balance as `war`
+    const player = { ...p, objectives: p.objectives ?? (p.isBot ? undefined : makeObjectives(id)), claimed: p.claimed ?? 0, earned: p.earned ?? 0, hexar: p.hexar ?? legacyWar ?? STARTING_HEXAR };
+    delete (player as { war?: number }).war; // drop the old field name
+    players[id] = player;
   }
   return {
     ...state,
@@ -177,6 +180,43 @@ export function normalizeWorld(state: CocWorld): CocWorld {
     seasonPool: state.seasonPool ?? STARTING_SEASON_POOL,
     season: state.season ?? { id: 1, endsAtTick: (state.tick ?? 0) + SEASON_LENGTH },
   };
+}
+
+/**
+ * Structural sanity check for a (normalized) restored world. Catches irrecoverable corruption
+ * — wrong shape, NaN tick, missing core maps, negative balances — so the server can refuse to
+ * boot a garbage snapshot instead of silently serving a broken world. Returns the first handful
+ * of problems; empty `errors` ⇒ safe to serve.
+ */
+export function validateWorld(state: unknown): { ok: boolean; errors: string[] } {
+  const errors: string[] = [];
+  const push = (e: string) => { if (errors.length < 20) errors.push(e); };
+
+  if (typeof state !== "object" || state === null) return { ok: false, errors: ["world is not an object"] };
+  const s = state as Partial<CocWorld>;
+
+  if (!Number.isFinite(s.tick) || (s.tick as number) < 0) push(`invalid tick: ${s.tick}`);
+  for (const key of ["hexes", "players", "bases", "claimedHexes", "clans"] as const) {
+    if (typeof s[key] !== "object" || s[key] === null) push(`missing/invalid map: ${key}`);
+  }
+  if (!Number.isFinite(s.seasonPool) || (s.seasonPool as number) < 0) push(`invalid seasonPool: ${s.seasonPool}`);
+  if (!s.season || !Number.isFinite(s.season.endsAtTick)) push("invalid season");
+
+  for (const [id, p] of Object.entries(s.players ?? {})) {
+    if (!p || typeof p !== "object") { push(`player ${id} is not an object`); continue; }
+    if (!Number.isFinite(p.hexar) || (p.hexar as number) < 0) push(`player ${id} has invalid hexar: ${p.hexar}`);
+    if (!Number.isFinite(p.claimed ?? 0) || (p.claimed ?? 0) < 0) push(`player ${id} has invalid claimed`);
+    if (!Number.isFinite(p.earned ?? 0) || (p.earned ?? 0) < 0) push(`player ${id} has invalid earned`);
+    if ((p.claimed ?? 0) > (p.earned ?? 0) + 1e-6) push(`player ${id} claimed > earned (treasury invariant)`);
+  }
+  for (const [owner, b] of Object.entries(s.bases ?? {})) {
+    if (!b || typeof b !== "object") { push(`base ${owner} is not an object`); continue; }
+    if (typeof b.location !== "string" || !b.location) push(`base ${owner} has no location`);
+    if (!Number.isFinite(b.gold) || (b.gold as number) < 0) push(`base ${owner} has invalid gold`);
+    if (!Number.isFinite(b.elixir) || (b.elixir as number) < 0) push(`base ${owner} has invalid elixir`);
+  }
+
+  return { ok: errors.length === 0, errors };
 }
 
 export { hexKey };

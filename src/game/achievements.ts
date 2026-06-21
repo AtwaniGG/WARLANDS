@@ -44,7 +44,7 @@ export interface Quest {
   desc: string;
   stat: keyof Stats;
   target: number;
-  reward: number; // $WAR (one-time, sink-funded grant)
+  reward: number; // $HEXAR (one-time, sink-funded grant)
 }
 
 export const QUESTS: Quest[] = [

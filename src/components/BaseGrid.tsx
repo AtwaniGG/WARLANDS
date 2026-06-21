@@ -97,8 +97,14 @@ export function BaseGrid({ base, tick, readOnly, selected, placing, wallMode, mo
     setView({ x: w / 2 - cx * scale, y: h / 2 - cy * scale, scale });
   }, [stageW, stageH]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // drop any pending placement when the active build/move intent changes
-  useEffect(() => { setPending(null); }, [placing, moveFrom, wallMode, placingTrap]);
+  // drop any pending placement when the active build/move intent changes.
+  // Adjust during render on the intent transition (no effect → no extra commit).
+  const intentKey = `${placing ?? ""}|${moveFrom ?? ""}|${wallMode ? 1 : 0}|${placingTrap ?? ""}`;
+  const [prevIntent, setPrevIntent] = useState(intentKey);
+  if (prevIntent !== intentKey) {
+    setPrevIntent(intentKey);
+    if (pending !== null) setPending(null);
+  }
 
   // tile under a client point, honoring the current pan/zoom
   const tileAt = useCallback((clientX: number, clientY: number): { tx: number; ty: number } | null => {
@@ -209,6 +215,10 @@ export function BaseGrid({ base, tick, readOnly, selected, placing, wallMode, mo
   const prevFrame = useRef<BattleFrame | null>(null);
   const fxId = useRef(0);
   useEffect(() => {
+    // Synchronizes transient combat FX with the external battle-frame stream by diffing
+    // consecutive frames; clearing fx when playback ends is part of that sync, not a
+    // derived-state loop (guarded by fx.length so it can't re-trigger).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!frame) { prevFrame.current = null; if (fx.length) setFx([]); return; }
     const prev = prevFrame.current;
     prevFrame.current = frame;

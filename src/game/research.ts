@@ -1,4 +1,4 @@
-// Tech research tree (GDD §6.4) — spend Data Chips + $WAR to permanently unlock empire-wide
+// Tech research tree (GDD §6.4) — spend Data Chips + $HEXAR to permanently unlock empire-wide
 // bonuses. Four branches (Production / Industry / Military / Economy) with prerequisites.
 
 import type { ResourceId } from "./resources";

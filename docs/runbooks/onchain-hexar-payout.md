@@ -1,10 +1,10 @@
-# Runbook — On-chain $WAR payout (Solana devnet treasury)
+# Runbook — On-chain $HEXAR payout (Solana devnet treasury)
 
 **Status:** the agent environment has **no network egress and no signer access**, so it cannot run
-this. These are the exact steps for *you* to settle in-game $WAR claims to real on-chain $WAR.
+this. These are the exact steps for *you* to settle in-game $HEXAR claims to real on-chain $HEXAR.
 
 ## How the loop works
-- `$WAR` is sink-funded in-game: every $WAR **sink** (finish-now / extra builders / shield extend)
+- `$HEXAR` is sink-funded in-game: every $HEXAR **sink** (finish-now / extra builders / shield extend)
   flows into `world.seasonPool`; every **reward** (raid stars, objectives) is paid **out of the
   pool** (never minted beyond it). See `src/sim/coc/commands.ts` (`sinkToPool` / `payFromPool`).
 - When a player taps **CLAIM** (`{ type: "claim", amount }` → `commands.ts` `claim()`), their
@@ -13,12 +13,12 @@ this. These are the exact steps for *you* to settle in-game $WAR claims to real 
 
 ## Prerequisites (one-time)
 - Solana CLI on PATH, devnet config, treasury keypair **in a no-space path** (the repo path has
-  spaces and breaks the CLIs): `~/.config/solana/id.json` (holds the 1B $WAR supply).
+  spaces and breaks the CLIs): `~/.config/solana/id.json` (holds the 1B $HEXAR supply).
   - `solana config set --url https://api.devnet.solana.com --keypair ~/.config/solana/id.json`
 - WAR mint (Token-2022, 9 decimals): `BHdvBpziU37TjyNCxjrFy4FFQ1DP2TButgrZyP9Qi8pT`.
 
 ## Wallet association — DONE
-Players now link a payout wallet in-game (the **$WAR** panel → "PAYOUT WALLET" → LINK), which sends a
+Players now link a payout wallet in-game (the **$HEXAR** panel → "PAYOUT WALLET" → LINK), which sends a
 `{ type: "link", wallet }` ws message; the server stores `players[id].wallet` (`setWallet` in
 `src/sim/coc/world.ts`, base58-validated) and it's persisted in the snapshot. `claim` records the
 owed amount in `players[id].claimed`. So the snapshot now has everything the treasury needs:
@@ -26,7 +26,7 @@ owed amount in `players[id].claimed`. So the snapshot now has everything the tre
 
 ## Settle with the script (recommended)
 `scripts/payout-war.mjs` reads the latest snapshot, pays each player `(claimed − already-settled)`
-$WAR, and keeps a local ledger so nobody is paid twice. **Copy it to a NO-SPACE path first.**
+$HEXAR, and keeps a local ledger so nobody is paid twice. **Copy it to a NO-SPACE path first.**
 ```bash
 cp scripts/payout-war.mjs ~/warlands-payout/ && cd ~/warlands-payout
 npm i pg @solana/web3.js @solana/spl-token
@@ -47,5 +47,5 @@ spl-token transfer BHdvBpziU37TjyNCxjrFy4FFQ1DP2TButgrZyP9Qi8pT <AMOUNT> <RECIPI
 
 ## Notes
 - Keep the treasury keypair off any space-containing path (Anchor/Solana CLI footgun).
-- Devnet airdrops are rate-limited; the treasury already holds enough SOL + the 1B $WAR.
-- This settles **devnet** $WAR; mainnet would require a fresh mint + audited treasury custody.
+- Devnet airdrops are rate-limited; the treasury already holds enough SOL + the 1B $HEXAR.
+- This settles **devnet** $HEXAR; mainnet would require a fresh mint + audited treasury custody.

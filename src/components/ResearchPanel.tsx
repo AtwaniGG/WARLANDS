@@ -21,7 +21,7 @@ export function ResearchPanel() {
         <span className="wl-num" style={{ fontSize: "12px", color: "var(--text-lo)" }}>💽 {Math.floor(data).toLocaleString()} Data Chips</span>
       </div>
       <p className="mb-3" style={{ fontSize: "12px", color: "var(--text-muted)" }}>
-        Spend $WAR + Data Chips (mined on Tech Ruins terrain) to permanently unlock empire-wide
+        Spend $HEXAR + Data Chips (mined on Tech Ruins terrain) to permanently unlock empire-wide
         bonuses (GDD §6.4). Prerequisites gate the deeper techs.
       </p>
 

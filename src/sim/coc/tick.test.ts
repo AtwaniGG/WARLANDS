@@ -25,7 +25,7 @@ function worldWith(b: CocBase): CocWorld {
   const w = createWorld(1);
   return {
     ...w,
-    players: { p1: { id: "p1", war: 0, joinedTick: 0 } },
+    players: { p1: { id: "p1", hexar: 0, joinedTick: 0 } },
     bases: { p1: b },
     claimedHexes: { [b.location]: "p1" },
   };
@@ -68,7 +68,7 @@ describe("applyTick", () => {
     let w = createWorld(5);
     w = {
       ...w,
-      players: { bot0: { id: "bot0", war: 0, joinedTick: 0, isBot: true }, p1: { id: "p1", war: 0, joinedTick: 0 } },
+      players: { bot0: { id: "bot0", hexar: 0, joinedTick: 0, isBot: true }, p1: { id: "p1", hexar: 0, joinedTick: 0 } },
       bases: {
         bot0: makeBotBase("bot0", "1,0", 2, () => 0.5),
         p1: baseWith({ location: "0,0", gold: 5000, elixir: 5000, buildings: { "8,8": { id: "commandCenter", level: 1 } } }),

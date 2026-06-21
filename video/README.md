@@ -37,9 +37,9 @@ src/
 | # | Scene | Beat | Message |
 |---|-------|------|---------|
 | 1 | Cold open | hook | "Clash of Clans had no stakes. WARLANDS does." |
-| 2 | One live map | stakes | "Finite land. Stake $WAR to claim it." |
+| 2 | One live map | stakes | "Finite land. Stake $HEXAR to claim it." |
 | 3 | Build | loop | "Build your economy." |
-| 4 | Raid | loop | "Raid rivals. Take their $WAR." |
+| 4 | Raid | loop | "Raid rivals. Take their $HEXAR." |
 | 5 | Earn | payoff | "Real tokens. Real seasons." |
 | 6 | CTA | action | "Build. Raid. Earn. For real." → warlands.net |
 

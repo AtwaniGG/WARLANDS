@@ -13,7 +13,7 @@ import { useCountUp } from "@/components/useCountUp";
 const buzz = (p: number | number[]) => { try { (navigator as Navigator & { vibrate?: (p: number | number[]) => boolean }).vibrate?.(p); } catch { /* unsupported */ } };
 import {
   BUILDINGS, LOOT_PCT, MAX_BUILDERS, TRAPS, TRAP_IDS, UNITS, UNIT_IDS, WALL,
-  builderCost, builderCount, ccLevel, ccTier, fitsInGrid, finishCost, freeBuilders, garrisonCap, garrisonUsed, housingCap, housingUsed, leagueFor, levelDef, maxLevelOf, maxWallLevel, objectiveLabel, occupiedTiles, resolveRaid, storageCap,
+  builderCost, builderCount, ccLevel, ccTier, claimableHexar, fitsInGrid, finishCost, freeBuilders, garrisonCap, garrisonUsed, housingCap, housingUsed, leagueFor, levelDef, maxLevelOf, objectiveLabel, occupiedTiles, resolveRaid, storageCap, HEXAR_CLAIM_CAP,
   type Army, type BattleFrame, type BattleReport, type CocBase, type CocBuildingId, type CocPlayer, type CocResource, type CocTrapId, type CocUnitId, type CocWorld, type Deployment, type PlacedBuilding,
 } from "@/sim/coc";
 
@@ -50,7 +50,7 @@ function footprint(anchorKey: string, id: CocBuildingId): [number, number][] {
 }
 
 export default function WorldPage() {
-  // Gate the game behind holding $WAR: connect a Solana wallet with ≥ 1,000 $WAR to enter.
+  // Gate the game behind holding $HEXAR: connect a Solana wallet with ≥ 1,000 $HEXAR to enter.
   return (
     <Web3Provider>
       <TokenGate>
@@ -71,7 +71,7 @@ function WorldGame() {
   const [armyOpen, setArmyOpen] = useState(false);
   const [clanOpen, setClanOpen] = useState(false);
   const [objectivesOpen, setObjectivesOpen] = useState(false);
-  const [warOpen, setWarOpen] = useState(false);
+  const [hexarOpen, setHexarOpen] = useState(false);
   const [scout, setScout] = useState<string | null>(null);
   // ---- raid (deploy + playback) ----
   const [raidTarget, setRaidTarget] = useState<string | null>(null);
@@ -109,7 +109,7 @@ function WorldGame() {
   // smooth HUD counters (never jitter while ticking)
   const goldC = useCountUp(state && playerId ? state.bases[playerId]?.gold ?? 0 : 0);
   const elixirC = useCountUp(state && playerId ? state.bases[playerId]?.elixir ?? 0 : 0);
-  const warC = useCountUp(state && playerId ? state.players[playerId]?.war ?? 0 : 0);
+  const hexarC = useCountUp(state && playerId ? state.players[playerId]?.hexar ?? 0 : 0);
   const trophyC = useCountUp(state && playerId ? state.bases[playerId]?.trophies ?? 0 : 0, 400);
 
   // Fit the SVG viewBox to the generated world so it fills the map frame instead of floating tiny.
@@ -278,7 +278,7 @@ function WorldGame() {
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
               <HudResBar kind="gold" value={goldC} cap={storageCap(myBase, "gold")} />
               <HudResBar kind="elixir" value={elixirC} cap={storageCap(myBase, "elixir")} />
-              <WarChip value={num(warC)} />
+              <HexarChip value={num(hexarC)} />
               <Badge tone={leagueFor(myBase.trophies).tone as BadgeTone} variant="soft">{leagueFor(myBase.trophies).name.toUpperCase()}</Badge>
               <span style={{ flex: 1 }} />
               {myBase.shieldUntil > state.tick
@@ -327,7 +327,7 @@ function WorldGame() {
           <RailBtn icon="⚔️" label="ARMY" onClick={() => setArmyOpen(true)} />
           <RailBtn icon="🤝" label="CLAN" onClick={() => setClanOpen(true)} />
           <RailBtn icon="🎯" label="GOALS" badge={claimableCount} onClick={() => setObjectivesOpen(true)} />
-          <RailBtn icon="💰" label="$WAR" onClick={() => setWarOpen(true)} />
+          <RailBtn icon="💰" label="$HEXAR" onClick={() => setHexarOpen(true)} />
         </div>
       )}
 
@@ -357,7 +357,7 @@ function WorldGame() {
       {view === "base" && myBase && mode === "build" && !placing && !placingTrap && (
         <div style={sheet}>
           <Panel title="BUILD" accent padding="12px 14px" headerRight={<button onClick={resetBaseUi} style={closeBtn}>✕</button>}>
-            <BuildTray base={myBase} war={me?.war ?? 0}
+            <BuildTray base={myBase} hexar={me?.hexar ?? 0}
               onPick={(id) => { setPlacing(id); setPlacingTrap(null); }}
               onPickTrap={(t) => { setPlacingTrap(t); setPlacing(null); }}
               active={placing} activeTrap={placingTrap} />
@@ -368,7 +368,7 @@ function WorldGame() {
         <div style={sheet}>
           <Panel title={BUILDINGS[myBase.buildings[selected].id].name} accent padding="12px 14px"
             headerRight={<button onClick={() => setSelected(null)} style={closeBtn}>✕</button>}>
-            <BuildingInfo base={myBase} anchor={selected} building={myBase.buildings[selected]} tick={state.tick} war={me?.war ?? 0}
+            <BuildingInfo base={myBase} anchor={selected} building={myBase.buildings[selected]} tick={state.tick} hexar={me?.hexar ?? 0}
               onUpgrade={() => send({ type: "upgradeBuilding", tileKey: selected })}
               onFinish={() => send({ type: "finishNow", tileKey: selected })}
               onMove={() => { setMoveFrom(selected); setSelected(null); }}
@@ -393,9 +393,9 @@ function WorldGame() {
           <ObjectivesPanel me={me} onClaim={(id) => { send({ type: "claimObjective", id }); buzz(12); }} onClose={() => setObjectivesOpen(false)} />
         </Overlay>
       )}
-      {myBase && warOpen && me && (
-        <Overlay onClose={() => setWarOpen(false)}>
-          <WarPanel me={me} state={state} onClaim={(amt) => { send({ type: "claim", amount: amt }); buzz(20); }} onLink={(a) => { link(a); buzz(8); }} onClose={() => setWarOpen(false)} />
+      {myBase && hexarOpen && me && (
+        <Overlay onClose={() => setHexarOpen(false)}>
+          <HexarPanel me={me} state={state} onClaim={(amt) => { send({ type: "claim", amount: amt }); buzz(20); }} onLink={(a) => { link(a); buzz(8); }} onClose={() => setHexarOpen(false)} />
         </Overlay>
       )}
       {scout && state.bases[scout] && myBase && (
@@ -474,7 +474,7 @@ function Overlay({ children, onClose }: { children: React.ReactNode; onClose: ()
   );
 }
 
-function BuildTray({ base, war, onPick, onPickTrap, active, activeTrap }: { base: CocBase; war: number; onPick: (id: CocBuildingId) => void; onPickTrap: (t: CocTrapId) => void; active: CocBuildingId | null; activeTrap: CocTrapId | null }) {
+function BuildTray({ base, hexar, onPick, onPickTrap, active, activeTrap }: { base: CocBase; hexar: number; onPick: (id: CocBuildingId) => void; onPickTrap: (t: CocTrapId) => void; active: CocBuildingId | null; activeTrap: CocTrapId | null }) {
   const tier = ccTier(ccLevel(base));
   const inCaps = Object.keys(tier.caps) as CocBuildingId[];
   const countOf = (id: CocBuildingId) => Object.values(base.buildings).filter((b) => b.id === id).length;
@@ -494,7 +494,7 @@ function BuildTray({ base, war, onPick, onPickTrap, active, activeTrap }: { base
     if (id === "builderHut") {
       const cost = builderCost(builderCount(base));
       const atMax = builderCount(base) >= MAX_BUILDERS;
-      return <TrayCard key={id} id={id} name={def.name} sub={atMax ? "MAX BUILDERS" : `💎${num(cost)} · instant`} ok={!atMax && war >= cost} activeId={active} onPick={onPick} />;
+      return <TrayCard key={id} id={id} name={def.name} sub={atMax ? "MAX BUILDERS" : `💎${num(cost)} · instant`} ok={!atMax && hexar >= cost} activeId={active} onPick={onPick} />;
     }
     const atCap = countOf(id) >= tier.caps[id]!.maxCount;
     const afford = base.gold >= (lv.cost.gold ?? 0) && base.elixir >= (lv.cost.elixir ?? 0);
@@ -549,8 +549,8 @@ function TrayCard({ id, name, sub, ok, activeId, onPick }: { id: CocBuildingId; 
   );
 }
 
-function BuildingInfo({ base, anchor, building, tick, war, onUpgrade, onFinish, onMove }: {
-  base: CocBase; anchor: string; building: PlacedBuilding; tick: number; war: number; onUpgrade: () => void; onFinish: () => void; onMove: () => void;
+function BuildingInfo({ base, anchor, building, tick, hexar, onUpgrade, onFinish, onMove }: {
+  base: CocBase; anchor: string; building: PlacedBuilding; tick: number; hexar: number; onUpgrade: () => void; onFinish: () => void; onMove: () => void;
 }) {
   const def = BUILDINGS[building.id];
   const job = base.jobs.find((j) => j.tileKey === anchor);
@@ -577,7 +577,7 @@ function BuildingInfo({ base, anchor, building, tick, war, onUpgrade, onFinish, 
       {job ? (
         <div style={{ display: "grid", gap: 8 }}>
           <ProgressBar tone="amber" label="BUILDING" valueText={`${remaining}s`} value={total - remaining} max={total} />
-          <Button variant="outline" full icon="💎" disabled={war < finishCost(remaining)} onClick={onFinish}>FINISH NOW · 💎{finishCost(remaining).toLocaleString()}</Button>
+          <Button variant="outline" full icon="💎" disabled={hexar < finishCost(remaining)} onClick={onFinish}>FINISH NOW · 💎{finishCost(remaining).toLocaleString()}</Button>
         </div>
       ) : maxed ? <Badge tone="neutral" variant="soft">MAX LEVEL</Badge>
         : <Button variant="primary" full disabled={!ok} icon="⬆" onClick={onUpgrade}>UPGRADE → L{next} · {costStr(cost)} · {lv?.buildTimeSec}s{ccBlocked ? "  · RAISE TH" : ""}</Button>}
@@ -754,10 +754,10 @@ function HudResBar({ kind, value, cap }: { kind: "gold" | "elixir"; value: numbe
     </div>
   );
 }
-function WarChip({ value }: { value: string }) {
+function HexarChip({ value }: { value: string }) {
   return (
     <div style={{ ...hudBox, padding: "6px 11px", background: "rgba(245,179,1,0.06)", border: "1px solid rgba(245,179,1,0.35)" }}>
-      <span style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 9, letterSpacing: "0.06em", color: "var(--amber-text)" }}>$WAR</span>
+      <span style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 9, letterSpacing: "0.06em", color: "var(--amber-text)" }}>$HEXAR</span>
       <span className="wl-num" style={{ fontSize: 13, fontWeight: 700, color: "var(--text-hi)" }}>{value}</span>
     </div>
   );
@@ -845,34 +845,36 @@ function ObjectivesPanel({ me, onClaim, onClose }: { me: CocPlayer; onClaim: (id
   );
 }
 
-function WarPanel({ me, state, onClaim, onLink, onClose }: { me: CocPlayer; state: CocWorld; onClaim: (amt: number) => void; onLink: (addr: string) => void; onClose: () => void }) {
+function HexarPanel({ me, state, onClaim, onLink, onClose }: { me: CocPlayer; state: CocWorld; onClaim: (amt: number) => void; onLink: (addr: string) => void; onClose: () => void }) {
   const [addr, setAddr] = useState(me.wallet ?? "");
   const pool = state.seasonPool ?? 0;
   const secsLeft = state.season ? Math.max(0, state.season.endsAtTick - state.tick) : 0;
   const validAddr = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(addr.trim());
   const linked = !!me.wallet;
+  const withdrawable = claimableHexar(me);
   return (
-    <Panel title="$WAR · SEASON" accent padding="14px" headerRight={<button onClick={onClose} style={closeBtn}>✕</button>}>
+    <Panel title="$HEXAR · SEASON" accent padding="14px" headerRight={<button onClick={onClose} style={closeBtn}>✕</button>}>
       <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 10 }}>
         <Stat label="SEASON" value={`#${state.season?.id ?? 1}`} accent="sky" />
         <Stat label="ENDS IN" value={fmtDur(secsLeft)} accent="amber" />
         <Stat label="🏦 POOL" value={num(pool)} accent="amber" />
       </div>
       <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 10 }}>
-        <Stat label="💎 YOUR $WAR" value={num(me.war)} accent="amber" />
-        <Stat label="CLAIMED" value={num(me.claimed ?? 0)} accent="emerald" />
+        <Stat label="💎 YOUR $HEXAR" value={num(me.hexar)} accent="amber" />
+        <Stat label="WITHDRAWABLE" value={num(withdrawable)} accent="emerald" />
+        <Stat label="CLAIMED" value={`${num(me.claimed ?? 0)} / ${num(HEXAR_CLAIM_CAP)}`} accent="sky" />
       </div>
       <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "0 0 10px", lineHeight: 1.4 }}>
-        Rewards are paid from the season pool, which fills only from $WAR sinks — no minting. Claiming records an on-chain withdrawal; the treasury settles it to your Solana wallet.
+        Only $HEXAR <strong style={{ color: "var(--text-secondary)" }}>earned from raids &amp; objectives</strong> can be withdrawn on-chain (capped at {num(HEXAR_CLAIM_CAP)} per commander) — your starting balance is in-game spend only. Rewards come from the season pool, which fills from $HEXAR sinks; nothing is minted. The treasury settles claims to your Solana wallet.
       </p>
       <span className="wl-label">PAYOUT WALLET (SOLANA)</span>
       <div style={{ display: "flex", gap: 6, margin: "8px 0 12px" }}>
-        <input value={addr} onChange={(e) => setAddr(e.target.value)} placeholder="Your $WAR wallet address" style={{ ...input, fontFamily: "var(--font-mono)", fontSize: 11 }} />
+        <input value={addr} onChange={(e) => setAddr(e.target.value)} placeholder="Your $HEXAR wallet address" style={{ ...input, fontFamily: "var(--font-mono)", fontSize: 11 }} />
         <Button variant="secondary" disabled={!validAddr || addr.trim() === me.wallet} onClick={() => onLink(addr.trim())}>{linked ? "UPDATE" : "LINK"}</Button>
       </div>
       {linked && <div style={{ fontSize: 11, color: "var(--emerald-text)", marginBottom: 10 }}>✓ Linked — payouts settle to {me.wallet!.slice(0, 4)}…{me.wallet!.slice(-4)}</div>}
-      <Button variant="primary" full icon="💰" disabled={me.war <= 0 || !linked} onClick={() => onClaim(me.war)}>
-        {linked ? `CLAIM ${num(me.war)} $WAR ON-CHAIN` : "LINK A WALLET TO CLAIM"}
+      <Button variant="primary" full icon="💰" disabled={withdrawable <= 0 || !linked} onClick={() => onClaim(withdrawable)}>
+        {!linked ? "LINK A WALLET TO CLAIM" : withdrawable <= 0 ? "NOTHING TO WITHDRAW YET" : `CLAIM ${num(withdrawable)} $HEXAR ON-CHAIN`}
       </Button>
     </Panel>
   );

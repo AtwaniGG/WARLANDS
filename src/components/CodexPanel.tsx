@@ -83,7 +83,7 @@ export function CodexPanel() {
 
       <Panel title="Core Doctrine">
         <ul style={{ fontSize: "12px", color: "var(--text-lo)", lineHeight: 1.6, paddingLeft: 16, listStyle: "disc" }}>
-          <li><b style={{ color: "var(--text-hi)" }}>Staking</b> locks $WAR to secure land — never spent, never lootable. Conquest returns your full principal.</li>
+          <li><b style={{ color: "var(--text-hi)" }}>Staking</b> locks $HEXAR to secure land — never spent, never lootable. Conquest returns your full principal.</li>
           <li><b style={{ color: "var(--text-hi)" }}>Specialize & trade</b> — no plot makes everything; sell surplus, buy what you lack.</li>
           <li><b style={{ color: "var(--text-hi)" }}>Sinks fund rewards</b> — fees/upkeep are burned or pooled; payouts never exceed what sinks collected.</li>
           <li><b style={{ color: "var(--text-hi)" }}>Counters &gt; numbers</b> — a smart smaller force beats a blind bigger one.</li>

@@ -86,7 +86,7 @@ export const S5Earn: React.FC = () => {
         {/* big balance */}
         <div style={{ opacity: interpolate(frame, [20, 36], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }) }}>
           <div style={{ fontFamily: FONTS.display, fontWeight: 600, fontSize: 16, letterSpacing: "0.24em", color: COLORS.textLo, textTransform: "uppercase", textAlign: "right" }}>
-            $WAR earned this season
+            $HEXAR earned this season
           </div>
           <div style={{ fontFamily: FONTS.mono, fontWeight: 700, fontSize: 96, color: COLORS.amber, lineHeight: 1.05, textAlign: "right" }}>
             {Math.round(interpolate(climb, [0, 1], [8400, 24900])).toLocaleString("en-US")}

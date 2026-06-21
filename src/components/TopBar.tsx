@@ -38,7 +38,7 @@ export function TopBar({ onOpenSettings }: { onOpenSettings: () => void }) {
         </span>
       </div>
       <div className="no-scrollbar flex min-w-0 flex-1 items-center gap-3 overflow-x-auto sm:gap-4">
-        <Stat label="$WAR" value={num(war)} accent="amber" />
+        <Stat label="$HEXAR" value={num(war)} accent="amber" />
         <Stat label="Staked" value={num(staked)} accent="sky" />
         <Stat label="Burned" value={num(burned)} accent="blood" />
         <Stat label="Pool" value={num(pool)} accent="emerald" />

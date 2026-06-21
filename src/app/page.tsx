@@ -7,7 +7,7 @@ const PILLARS = [
   {
     no: "01",
     title: "Land is staked, not bought",
-    body: "Lock $WAR to secure a plot — never spent, always returnable. Conquest transfers the right to the land, never your principal. Skin in the game without loot in the game.",
+    body: "Lock $HEXAR to secure a plot — never spent, always returnable. Conquest transfers the right to the land, never your principal. Skin in the game without loot in the game.",
     accent: "var(--amber)",
   },
   {
@@ -19,7 +19,7 @@ const PILLARS = [
   {
     no: "03",
     title: "War funded by sinks, not emissions",
-    body: "Every reward $WAR is first collected from a real sink. The protocol can never pay out more than it took in. No infinite emissions. No death spiral.",
+    body: "Every reward $HEXAR is first collected from a real sink. The protocol can never pay out more than it took in. No infinite emissions. No death spiral.",
     accent: "var(--blood)",
   },
 ];
@@ -46,7 +46,7 @@ export default function Landing() {
           <a href="#loop" className="hover:text-amber-400">The Loop</a>
           <a href="#pillars" className="hover:text-amber-400">Doctrine</a>
           <a href="#land" className="hover:text-amber-400">Land</a>
-          <a href="#token" className="hover:text-amber-400">$WAR</a>
+          <a href="#token" className="hover:text-amber-400">$HEXAR</a>
           <Link href="/whitepaper" className="hover:text-amber-400">Whitepaper</Link>
         </div>
         <Link href="/play" className="border border-amber-500/60 bg-amber-500/10 px-4 py-2 text-xs font-bold uppercase tracking-widest text-amber-300 transition hover:bg-amber-500 hover:text-black">
@@ -92,7 +92,7 @@ export default function Landing() {
           {[
             ["WORLD", "ONLINE"],
             ["LAND PLOTS", "~250,000"],
-            ["TOKEN", "$WAR"],
+            ["TOKEN", "$HEXAR"],
             ["SEASON", "30 DAYS"],
           ].map(([k, v]) => (
             <div key={k} className="px-4 py-3" style={{ background: "var(--panel-void)" }}>
@@ -158,7 +158,7 @@ export default function Landing() {
                   <span className="text-[10px] uppercase tracking-widest text-zinc-600">DEF ×{d.defenseMult}</span>
                 </div>
                 <div className="mt-3 text-sm font-bold text-zinc-200">{d.name}</div>
-                <div className="mt-1 text-amber-300">{d.stake.toLocaleString()} <span className="text-[10px] text-zinc-500">$WAR</span></div>
+                <div className="mt-1 text-amber-300">{d.stake.toLocaleString()} <span className="text-[10px] text-zinc-500">$HEXAR</span></div>
               </div>
             );
           })}
@@ -167,7 +167,7 @@ export default function Landing() {
 
       {/* tokenomics sink flow */}
       <section id="token" className="relative z-10 mx-auto max-w-6xl px-6 py-16">
-        <SectionLabel n="D" title="$WAR · Not a Reward Printer" />
+        <SectionLabel n="D" title="$HEXAR · Not a Reward Printer" />
         <div className="mt-8 grid gap-6 md:grid-cols-2">
           <div>
             <p className="text-sm leading-relaxed text-zinc-400">

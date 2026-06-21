@@ -76,7 +76,7 @@ export function seedBots(world: CocWorld, n: number): CocWorld {
     if (made >= n) break;
     const tier = 1 + Math.floor(rnd() * 3); // TH 1–3
     const owner = `bot${idx++}`;
-    players[owner] = { id: owner, war: 0, joinedTick: world.tick, isBot: true };
+    players[owner] = { id: owner, hexar: 0, joinedTick: world.tick, isBot: true };
     bases[owner] = makeBotBase(owner, hex, tier, rnd);
     claimedHexes[hex] = owner;
     made++;

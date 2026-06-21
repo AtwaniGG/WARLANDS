@@ -21,7 +21,7 @@ const STEPS: Step[] = [
   {
     chapter: "Briefing",
     title: "Welcome, Commander",
-    body: "WARLANDS is a persistent strategy MMO: stake $WAR to claim finite land, build an interlocking war economy, and fight — solo or in allegiances — to climb a season ladder funded entirely by player activity. This tour covers every system in a few minutes. You can leave any time.",
+    body: "WARLANDS is a persistent strategy MMO: stake $HEXAR to claim finite land, build an interlocking war economy, and fight — solo or in allegiances — to climb a season ladder funded entirely by player activity. This tour covers every system in a few minutes. You can leave any time.",
   },
   {
     chapter: "The World",
@@ -39,7 +39,7 @@ const STEPS: Step[] = [
     chapter: "Claim Land",
     title: "Stake your first plot",
     view: "map",
-    body: "Click any unclaimed hex, then press “Stake & Claim”. Your $WAR is locked — never spent — as the right to occupy that plot. Unstaking later returns the principal minus a small fee.",
+    body: "Click any unclaimed hex, then press “Stake & Claim”. Your $HEXAR is locked — never spent — as the right to occupy that plot. Unstaking later returns the principal minus a small fee.",
     objective: { hint: "Stake & claim any plot", done: (p) => p.plots >= 1 },
   },
   {
@@ -77,13 +77,13 @@ const STEPS: Step[] = [
     chapter: "Economy",
     title: "Upgrade everything",
     view: "map",
-    body: "Upgrade buildings to boost output — each level costs $WAR (a token sink) and raises upkeep. Upgrade your Camp to unlock more building slots. Growth is good, but rising upkeep keeps sprawl in check.",
+    body: "Upgrade buildings to boost output — each level costs $HEXAR (a token sink) and raises upkeep. Upgrade your Camp to unlock more building slots. Growth is good, but rising upkeep keeps sprawl in check.",
   },
   {
     chapter: "Military",
     title: "Raise an army",
     view: "map",
-    body: "Train units on a plot that can afford them (units cost $WAR plus finished goods like rifles or tanks). Six classes: Infantry, Tanks, Artillery, Aircraft, Drones, Engineers — each with a role.",
+    body: "Train units on a plot that can afford them (units cost $HEXAR plus finished goods like rifles or tanks). Six classes: Infantry, Tanks, Artillery, Aircraft, Drones, Engineers — each with a role.",
     objective: { hint: "Train any unit", done: (p) => p.hasArmy },
   },
   {
@@ -96,7 +96,7 @@ const STEPS: Step[] = [
     chapter: "Military",
     title: "Raid, siege & conquer",
     view: "map",
-    body: "Send an army from a plot at a 💀 camp, a rival empire, or another player. Battles are seeded and deterministic — same inputs, same result. Raids loot stored goods; sieges break defenses and take land. Conquest is principal-safe: the loser's staked $WAR is refunded; only built assets and loot change hands.",
+    body: "Send an army from a plot at a 💀 camp, a rival empire, or another player. Battles are seeded and deterministic — same inputs, same result. Raids loot stored goods; sieges break defenses and take land. Conquest is principal-safe: the loser's staked $HEXAR is refunded; only built assets and loot change hands.",
   },
   {
     chapter: "Trade",
@@ -130,9 +130,9 @@ const STEPS: Step[] = [
   },
   {
     chapter: "On-Chain",
-    title: "The $WAR token",
+    title: "The $HEXAR token",
     view: "wallet",
-    body: "$WAR is a real SPL token on Solana (devnet today). Value events — staking, market settlement, treasury, reward claims — settle on-chain, while high-frequency gameplay stays off-chain and fast. Fixed 1,000,000,000 supply, deflationary via sinks. Connect a Phantom wallet here to see your on-chain balance.",
+    body: "$HEXAR is a real SPL token on Solana (devnet today). Value events — staking, market settlement, treasury, reward claims — settle on-chain, while high-frequency gameplay stays off-chain and fast. Fixed 1,000,000,000 supply, deflationary via sinks. Connect a Phantom wallet here to see your on-chain balance.",
   },
   {
     chapter: "Ready",

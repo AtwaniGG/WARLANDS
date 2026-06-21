@@ -18,7 +18,8 @@ const PLACEMENTS: { kind: BuildingKind; col: number; row: number; at: number }[]
   { kind: "storage", col: 1, row: 0, at: 54 },
   { kind: "barracks", col: 2, row: 3, at: 66 },
   { kind: "extractor", col: 0, row: 2, at: 78 },
-].sort((a, b) => a.col + a.row - (b.col + b.row));
+];
+PLACEMENTS.sort((a, b) => a.col + a.row - (b.col + b.row));
 
 const TABS = ["BASE", "ARMY", "DEFENSE", "MARKET"];
 

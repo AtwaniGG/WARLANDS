@@ -26,7 +26,7 @@ export function QuestsPanel() {
               <div key={q.id} className="p-2.5" style={{ borderRadius: "var(--radius-sm)", border: `1px solid ${done ? "rgba(52,211,153,0.4)" : "var(--hairline)"}`, background: done ? "rgba(52,211,153,0.06)" : "var(--panel-2)" }}>
                 <div className="flex items-center justify-between">
                   <span style={{ fontSize: "13px", fontWeight: 600 }}>{q.name}</span>
-                  {done ? <Badge tone="emerald">claimed</Badge> : <span className="wl-num" style={{ fontSize: "11px", color: "var(--amber-text)" }}>+{q.reward.toLocaleString()} $WAR</span>}
+                  {done ? <Badge tone="emerald">claimed</Badge> : <span className="wl-num" style={{ fontSize: "11px", color: "var(--amber-text)" }}>+{q.reward.toLocaleString()} $HEXAR</span>}
                 </div>
                 <div style={{ fontSize: "11px", color: "var(--text-lo)" }}>{q.desc}</div>
                 <div className="mt-1.5 flex items-center gap-2">

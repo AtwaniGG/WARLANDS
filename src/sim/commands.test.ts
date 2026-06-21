@@ -35,12 +35,12 @@ describe("stake", () => {
     const key = plainsKey(w);
     const [q, r] = key.split(",").map(Number);
     const { error } = applyCommand(w, "poor", { type: "stake", q, r });
-    expect(error).toMatch(/\$WAR/);
+    expect(error).toMatch(/\$HEXAR/);
   });
 });
 
 describe("build", () => {
-  it("builds a farm on an owned plains plot, spending $WAR + resources", () => {
+  it("builds a farm on an owned plains plot, spending $HEXAR + resources", () => {
     const w0 = addPlayer(createWorld(1), "p1");
     const key = plainsKey(w0);
     const [q, r] = key.split(",").map(Number);
@@ -85,7 +85,8 @@ function ownedPlains(): { state: ReturnType<typeof createWorld>; key: string } {
 
 describe("upgrade", () => {
   it("raises a building level and charges the upgrade cost", () => {
-    let { state, key } = ownedPlains();
+    const { state: s0, key } = ownedPlains();
+    let state = s0;
     // build a farm at index 1 first
     state = { ...state, plots: { ...state.plots, [key]: { ...state.plots[key], resources: { wood: 100 } } } };
     state = applyCommand(state, "p1", { type: "build", key, buildingId: "farm" }).state;
@@ -96,7 +97,8 @@ describe("upgrade", () => {
     expect(after.players.p1.war).toBeLessThan(warBefore);
   });
   it("rejects upgrading on a plot you don't own", () => {
-    let { state, key } = ownedPlains();
+    const { state: s0, key } = ownedPlains();
+    let state = s0;
     state = addPlayer(state, "p2");
     const { error } = applyCommand(state, "p2", { type: "upgrade", key, index: 0 });
     expect(error).toMatch(/not your plot/i);
@@ -105,7 +107,8 @@ describe("upgrade", () => {
 
 describe("setProduct", () => {
   it("changes a factory's active product", () => {
-    let { state, key } = ownedPlains();
+    const { state: s0, key } = ownedPlains();
+    let state = s0;
     state = { ...state, plots: { ...state.plots, [key]: { ...state.plots[key], resources: { stone: 100, iron: 100 } } } };
     state = applyCommand(state, "p1", { type: "build", key, buildingId: "refinery" }).state;
     const idx = state.plots[key].buildings.findIndex((b) => b.id === "refinery");
@@ -128,7 +131,8 @@ describe("unstake", () => {
     expect(after.burned).toBe(fee);
   });
   it("rejects unstaking a plot you don't own", () => {
-    let { state, key } = ownedPlains();
+    const { state: s0, key } = ownedPlains();
+    let state = s0;
     state = addPlayer(state, "p2");
     const { error } = applyCommand(state, "p2", { type: "unstake", key });
     expect(error).toMatch(/not your plot/i);
@@ -136,8 +140,9 @@ describe("unstake", () => {
 });
 
 describe("train", () => {
-  it("queues a unit, charges $WAR + resources, and burns the training fee", () => {
-    let { state, key } = ownedPlains();
+  it("queues a unit, charges $HEXAR + resources, and burns the training fee", () => {
+    const { state: s0, key } = ownedPlains();
+    let state = s0;
     // infantry needs rifles 1 + food 5; give rifles
     state = { ...state, plots: { ...state.plots, [key]: { ...state.plots[key], resources: { rifles: 5, food: 50 } } } };
     const warBefore = state.players.p1.war;
@@ -146,7 +151,7 @@ describe("train", () => {
     expect(error).toBeUndefined();
     expect(after.plots[key].trainQueue.length).toBe(1);
     expect(after.players.p1.war).toBe(warBefore - 20); // infantry costWar
-    expect(after.burned).toBe(burnBefore + 20); // full training cost is a $WAR sink (conserves supply)
+    expect(after.burned).toBe(burnBefore + 20); // full training cost is a $HEXAR sink (conserves supply)
   });
 });
 
@@ -164,7 +169,8 @@ describe("raid (PvP)", () => {
   }
 
   it("a strong army overruns an undefended enemy plot, loots, and damages defense", () => {
-    let { w, attackerKey, targetKey } = twoPlayers();
+    const { w: w0, attackerKey, targetKey } = twoPlayers();
+    let w = w0;
     // give attacker tanks and the target lootable food
     w = {
       ...w,
@@ -226,8 +232,9 @@ describe("market (shared order book)", () => {
     expect(state.burned).toBe(5);
   });
 
-  it("buy transfers $WAR from buyer to seller, burns the fee, and delivers goods", () => {
-    let { w, k1, k2 } = twoWithPlots();
+  it("buy transfers $HEXAR from buyer to seller, burns the fee, and delivers goods", () => {
+    const { w: w0, k1, k2 } = twoWithPlots();
+    let w = w0;
     w = applyCommand(w, "p1", { type: "list", key: k1, item: "food", qty: 50, price: 2 }).state;
     const sellerBefore = w.players.p1.war;
     const buyerBefore = w.players.p2.war;
@@ -251,7 +258,8 @@ describe("market (shared order book)", () => {
   });
 
   it("won't fill against your own listings", () => {
-    let { w, k1 } = twoWithPlots();
+    const { w: w0, k1 } = twoWithPlots();
+    let w = w0;
     w = applyCommand(w, "p1", { type: "list", key: k1, item: "food", qty: 50, price: 2 }).state;
     const { error } = applyCommand(w, "p1", { type: "buy", item: "food", qty: 50, toKey: k1 });
     expect(error).toMatch(/no sell liquidity/i);
@@ -292,7 +300,7 @@ describe("allegiances", () => {
     expect(state.allegiances[id].members).toContain("p2");
   });
 
-  it("contribute moves $WAR to the treasury and raises contribution", () => {
+  it("contribute moves $HEXAR to the treasury and raises contribution", () => {
     let w = addPlayer(createWorld(1), "p1");
     w = applyCommand(w, "p1", { type: "found", name: "Pact" }).state;
     const id = w.players.p1.allegianceId!;
@@ -357,7 +365,8 @@ describe("allegiance governance", () => {
   });
 
   it("a passed proposal builds when its window closes (resolved in tick)", () => {
-    let { w, id } = fundedAllegiance();
+    const { w: w0, id } = fundedAllegiance();
+    let w = w0;
     w = applyCommand(w, "p1", { type: "propose", buildingId: "research" }).state; // p1 yes
     const pid = w.allegiances[id].proposals[0].id;
     w = applyCommand(w, "p2", { type: "vote", proposalId: pid, support: true }).state; // p2 yes -> 2-0
@@ -370,7 +379,8 @@ describe("allegiance governance", () => {
   });
 
   it("a rejected proposal does not build", () => {
-    let { w, id } = fundedAllegiance();
+    const { w: w0, id } = fundedAllegiance();
+    let w = w0;
     w = applyCommand(w, "p1", { type: "propose", buildingId: "fortress" }).state; // p1 yes
     const pid = w.allegiances[id].proposals[0].id;
     w = applyCommand(w, "p2", { type: "vote", proposalId: pid, support: false }).state; // p2 no -> 1-1, not majority

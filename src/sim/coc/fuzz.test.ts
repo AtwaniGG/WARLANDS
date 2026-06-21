@@ -33,8 +33,8 @@ function randomTile(rnd: () => number): string {
 /** Invariants that must hold for any reachable world state. */
 function checkInvariants(w: CocWorld): void {
   for (const p of Object.values(w.players)) {
-    expect(p.war).toBeGreaterThanOrEqual(0);
-    expect(Number.isFinite(p.war)).toBe(true);
+    expect(p.hexar).toBeGreaterThanOrEqual(0);
+    expect(Number.isFinite(p.hexar)).toBe(true);
   }
   for (const [owner, b] of Object.entries(w.bases)) {
     expect(b.gold).toBeGreaterThanOrEqual(0);

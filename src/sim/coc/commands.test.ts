@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { applyCommand } from "./commands";
 import { createWorld, addPlayer, builderCount } from "./world";
-import { STARTING_WAR } from "./config";
+import { STARTING_HEXAR, HEXAR_CLAIM_CAP } from "./config";
 import type { CocBase, CocWorld, PlacedBuilding } from "./types";
 
 const fresh = (): CocWorld => addPlayer(createWorld(1), "p1");
@@ -77,17 +77,17 @@ describe("placeBuilding", () => {
   });
 });
 
-describe("placeBuilding — Builder's Hut (paid in $WAR, instant)", () => {
-  it("adds a builder for $WAR instantly, no builder consumed", () => {
+describe("placeBuilding — Builder's Hut (paid in $HEXAR, instant)", () => {
+  it("adds a builder for $HEXAR instantly, no builder consumed", () => {
     const r = applyCommand(claimed(), "p1", { type: "placeBuilding", tileKey: "0,0", buildingId: "builderHut" });
     expect(r.error).toBeUndefined();
     expect(builderCount(r.state.bases.p1)).toBe(3);
     expect(r.state.bases.p1.buildings["0,0"]).toEqual({ id: "builderHut", level: 1 });
-    expect(r.state.players.p1.war).toBe(STARTING_WAR - 2000 * (2 - 1));
+    expect(r.state.players.p1.hexar).toBe(STARTING_HEXAR - 2000 * (2 - 1));
     expect(r.state.bases.p1.jobs.length).toBe(0);
   });
   it("rejects placing a hut past the maximum builders", () => {
-    let s = withBase(claimed(), {
+    const s = withBase(claimed(), {
       buildings: {
         "8,8": { id: "commandCenter", level: 1 },
         "0,0": { id: "builderHut", level: 1 }, "0,2": { id: "builderHut", level: 1 },
@@ -98,10 +98,10 @@ describe("placeBuilding — Builder's Hut (paid in $WAR, instant)", () => {
     const r = applyCommand(s, "p1", { type: "placeBuilding", tileKey: "15,15", buildingId: "builderHut" });
     expect(r.error).toMatch(/maximum/i);
   });
-  it("rejects without enough $WAR", () => {
-    const s = { ...claimed(), players: { p1: { ...claimed().players.p1, war: 0 } } };
+  it("rejects without enough $HEXAR", () => {
+    const s = { ...claimed(), players: { p1: { ...claimed().players.p1, hexar: 0 } } };
     const r = applyCommand(s, "p1", { type: "placeBuilding", tileKey: "0,0", buildingId: "builderHut" });
-    expect(r.error).toMatch(/\$WAR/i);
+    expect(r.error).toMatch(/\$HEXAR/i);
   });
 });
 
@@ -315,44 +315,58 @@ describe("raid", () => {
     const r = applyCommand(s, "p1", { type: "raid", targetOwner: "p2", deploy: [] });
     expect(r.error).toMatch(/deploy/i);
   });
+  it("rejects off-grid / non-finite deployment coordinates (anti-DoS)", () => {
+    let s = twoBases();
+    s = { ...s, bases: { ...s.bases, p1: { ...s.bases.p1, army: { grunt: 10 } } } };
+    for (const bad of [
+      [{ unit: "grunt" as const, x: -9999, y: 0 }],
+      [{ unit: "grunt" as const, x: 0, y: 9999 }],
+      [{ unit: "grunt" as const, x: Number.NaN, y: 0 }],
+      [{ unit: "grunt" as const, x: 0, y: Number.POSITIVE_INFINITY }],
+    ]) {
+      const r = applyCommand(s, "p1", { type: "raid", targetOwner: "p2", deploy: bad });
+      expect(r.error).toMatch(/battlefield/i);
+      expect(r.state).toBe(s); // unchanged — command rejected before any mutation
+    }
+  });
   it("rejects deploying troops you don't have", () => {
     let s = twoBases();
     s = { ...s, bases: { ...s.bases, p1: { ...s.bases.p1, army: { grunt: 5 } } } };
     const r = applyCommand(s, "p1", { type: "raid", targetOwner: "p2", deploy: dep("grunt", 50) });
     expect(r.error).toMatch(/don't have/i);
   });
-  it("awards $WAR to the attacker scaled by stars", () => {
+  it("awards $HEXAR to the attacker scaled by stars", () => {
     let s = twoBases();
     s = { ...s, bases: { ...s.bases, p1: { ...s.bases.p1, army: { grunt: 80 } } } };
-    const before = s.players.p1.war;
+    const before = s.players.p1.hexar;
     const r = applyCommand(s, "p1", { type: "raid", targetOwner: "p2", deploy: dep("grunt", 80) });
     expect(r.report!.stars).toBe(3);
-    expect(r.state.players.p1.war).toBe(before + 3 * 50);
+    expect(r.state.players.p1.hexar).toBe(before + 3 * 50);
   });
 });
 
-describe("$WAR premium economy", () => {
-  it("finishNow instantly completes a job for $WAR", () => {
+describe("$HEXAR premium economy", () => {
+  it("finishNow instantly completes a job for $HEXAR", () => {
     let s = give(claimed(), 0, 1000);
     s = applyCommand(s, "p1", { type: "placeBuilding", tileKey: "0,0", buildingId: "goldCollector" }).state;
     expect(s.bases.p1.jobs.length).toBe(1);
-    const warBefore = s.players.p1.war;
+    const warBefore = s.players.p1.hexar;
     const r = applyCommand(s, "p1", { type: "finishNow", tileKey: "0,0" });
     expect(r.error).toBeUndefined();
     expect(r.state.bases.p1.jobs.length).toBe(0);
     expect(r.state.bases.p1.buildings["0,0"].level).toBe(1);
-    expect(r.state.players.p1.war).toBeLessThan(warBefore);
+    expect(r.state.players.p1.hexar).toBeLessThan(warBefore);
   });
-  it("extendShield buys shield time for $WAR", () => {
+  it("extendShield buys shield time for $HEXAR", () => {
     const r = applyCommand(claimed(), "p1", { type: "extendShield", hours: 2 });
     expect(r.error).toBeUndefined();
     expect(r.state.bases.p1.shieldUntil).toBe(2 * 3600); // tick 0 + 2h
-    expect(r.state.players.p1.war).toBe(STARTING_WAR - 1000);
+    expect(r.state.players.p1.hexar).toBe(STARTING_HEXAR - 1000);
   });
-  it("rejects premium actions without enough $WAR", () => {
-    const s = { ...claimed(), players: { p1: { ...claimed().players.p1, war: 0 } } };
+  it("rejects premium actions without enough $HEXAR", () => {
+    const s = { ...claimed(), players: { p1: { ...claimed().players.p1, hexar: 0 } } };
     const r = applyCommand(s, "p1", { type: "extendShield", hours: 2 });
-    expect(r.error).toMatch(/\$WAR/i);
+    expect(r.error).toMatch(/\$HEXAR/i);
   });
 });
 
@@ -365,7 +379,7 @@ describe("clans", () => {
     expect(r.state.players.p1.clanId).toBe(clan.id);
   });
   it("lets a second player join", () => {
-    let s = applyCommand(twoBases(), "p1", { type: "createClan", name: "Iron Vanguard" }).state;
+    const s = applyCommand(twoBases(), "p1", { type: "createClan", name: "Iron Vanguard" }).state;
     const clanId = Object.keys(s.clans)[0];
     const r = applyCommand(s, "p2", { type: "joinClan", clanId });
     expect(r.error).toBeUndefined();
@@ -382,7 +396,7 @@ describe("clans", () => {
     expect(r.state.players.p1.clanId).toBeNull();
   });
   it("deletes the clan when the last member leaves", () => {
-    let s = applyCommand(twoBases(), "p1", { type: "createClan", name: "Lone Wolf" }).state;
+    const s = applyCommand(twoBases(), "p1", { type: "createClan", name: "Lone Wolf" }).state;
     const clanId = Object.keys(s.clans)[0];
     const r = applyCommand(s, "p1", { type: "leaveClan" });
     expect(r.state.clans[clanId]).toBeUndefined();
@@ -427,14 +441,14 @@ describe("objectives + sink-funded season pool", () => {
     s = applyCommand(s, "p1", { type: "trainTroop", unit: "grunt" }).state;
     expect(s.players.p1.objectives!.find((o) => o.kind === "trainTroops")!.progress).toBe(before + 1);
   });
-  it("claiming a completed objective pays $WAR from the pool and rotates the slot", () => {
+  it("claiming a completed objective pays $HEXAR from the pool and rotates the slot", () => {
     let s = claimed();
     const obj = s.players.p1.objectives!.find((o) => o.kind === "trainTroops")!;
     s = { ...s, players: { ...s.players, p1: { ...s.players.p1, objectives: s.players.p1.objectives!.map((o) => (o.id === obj.id ? { ...o, progress: o.target } : o)) } } };
-    const warBefore = s.players.p1.war, poolBefore = s.seasonPool!;
+    const warBefore = s.players.p1.hexar, poolBefore = s.seasonPool!;
     const r = applyCommand(s, "p1", { type: "claimObjective", id: obj.id });
     expect(r.error).toBeUndefined();
-    expect(r.state.players.p1.war).toBe(warBefore + obj.reward);
+    expect(r.state.players.p1.hexar).toBe(warBefore + obj.reward);
     expect(r.state.seasonPool).toBe(poolBefore - obj.reward);
     expect(r.state.players.p1.objectives!.some((o) => o.id === obj.id)).toBe(false); // rotated
   });
@@ -443,7 +457,7 @@ describe("objectives + sink-funded season pool", () => {
     const r = applyCommand(s, "p1", { type: "claimObjective", id: s.players.p1.objectives![0].id });
     expect(r.error).toMatch(/not complete/i);
   });
-  it("a $WAR sink flows into the season pool", () => {
+  it("a $HEXAR sink flows into the season pool", () => {
     let s = give(claimed(), 0, 1000);
     s = applyCommand(s, "p1", { type: "placeBuilding", tileKey: "0,0", buildingId: "goldCollector" }).state;
     const poolBefore = s.seasonPool!;
@@ -456,13 +470,48 @@ describe("objectives + sink-funded season pool", () => {
     const r = applyCommand(s, "p1", { type: "raid", targetOwner: "p2", deploy: dep("grunt", 80) });
     expect(r.report!.stars).toBe(3);
     expect(r.state.seasonPool).toBe(0); // pool only had 80 of the 150 desired
-    expect(r.state.players.p1.war).toBe(twoBases().players.p1.war + 80); // capped to the pool
+    expect(r.state.players.p1.hexar).toBe(twoBases().players.p1.hexar + 80); // capped to the pool
   });
-  it("claim records an on-chain withdrawal and reduces in-game $WAR", () => {
-    const s = claimed();
-    const war = s.players.p1.war;
+  it("claim records an on-chain withdrawal and reduces in-game $HEXAR", () => {
+    const base = claimed();
+    const s = { ...base, players: { ...base.players, p1: { ...base.players.p1, earned: 1000 } } };
+    const hexar = s.players.p1.hexar;
     const r = applyCommand(s, "p1", { type: "claim", amount: 1000 });
-    expect(r.state.players.p1.war).toBe(war - 1000);
+    expect(r.state.players.p1.hexar).toBe(hexar - 1000);
     expect(r.state.players.p1.claimed).toBe(1000);
+  });
+});
+
+describe("on-chain $HEXAR claim cap (only pool-earned $HEXAR, capped)", () => {
+  it("credits $HEXAR paid from the season pool as earned (withdrawable)", () => {
+    let s = twoBases();
+    s = { ...s, seasonPool: 1000, bases: { ...s.bases, p1: { ...s.bases.p1, army: { grunt: 80 } } } };
+    const r = applyCommand(s, "p1", { type: "raid", targetOwner: "p2", deploy: dep("grunt", 80) });
+    expect(r.report!.stars).toBeGreaterThan(0);
+    expect(r.state.players.p1.earned).toBe(r.report!.stars * 50); // HEXAR_RAID_REWARD_PER_STAR
+  });
+  it("refuses to withdraw the free starting grant — only earned $HEXAR is claimable", () => {
+    const s = claimed(); // 200k starting balance, earned 0
+    const r = applyCommand(s, "p1", { type: "claim", amount: 1000 });
+    expect(r.error).toMatch(/earn/i);
+    expect(r.state.players.p1.claimed ?? 0).toBe(0);
+    expect(r.state.players.p1.hexar).toBe(STARTING_HEXAR);
+  });
+  it("withdraws at most what was earned from the pool", () => {
+    const base = claimed();
+    const s = { ...base, players: { ...base.players, p1: { ...base.players.p1, earned: 300 } } };
+    const r = applyCommand(s, "p1", { type: "claim", amount: 100_000 });
+    expect(r.error).toBeUndefined();
+    expect(r.state.players.p1.claimed).toBe(300);
+    expect(r.state.players.p1.hexar).toBe(s.players.p1.hexar - 300);
+  });
+  it("caps lifetime withdrawals at HEXAR_CLAIM_CAP", () => {
+    const base = claimed();
+    const s = { ...base, players: { ...base.players, p1: { ...base.players.p1, earned: HEXAR_CLAIM_CAP + 5000 } } };
+    const r = applyCommand(s, "p1", { type: "claim", amount: HEXAR_CLAIM_CAP + 5000 });
+    expect(r.state.players.p1.claimed).toBe(HEXAR_CLAIM_CAP);
+    expect(r.state.players.p1.hexar).toBe(s.players.p1.hexar - HEXAR_CLAIM_CAP);
+    const r2 = applyCommand(r.state, "p1", { type: "claim", amount: 1000 }); // cap reached
+    expect(r2.error).toBeDefined();
   });
 });

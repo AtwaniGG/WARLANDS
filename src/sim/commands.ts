@@ -29,7 +29,7 @@ function stake(state: WorldState, playerId: string, q: number, r: number): Comma
   const player = state.players[playerId];
   if (!player) return fail(state, "Unknown player.");
   const def = PLOT_TYPES[hex.terrain];
-  if (player.war < def.stake) return fail(state, `Not enough $WAR (need ${def.stake.toLocaleString()}).`);
+  if (player.war < def.stake) return fail(state, `Not enough $HEXAR (need ${def.stake.toLocaleString()}).`);
   const claimIndex = Object.values(state.plots).filter((p) => p.owner === playerId).length + 1;
   const plot: SimPlot = {
     q,
@@ -66,7 +66,7 @@ function build(state: WorldState, playerId: string, key: string, buildingId: Pla
   const camp = plot.buildings.find((b) => b.id === "camp");
   const slotCap = 3 + (camp?.level ?? 1) * 2;
   if (plot.buildings.filter((b) => b.id !== "camp").length >= slotCap) return fail(state, "No free building slots.");
-  if (player.war < def.baseCost) return fail(state, `Need ${def.baseCost.toLocaleString()} $WAR.`);
+  if (player.war < def.baseCost) return fail(state, `Need ${def.baseCost.toLocaleString()} $HEXAR.`);
   if (!hasResources(plot.resources, def.baseResourceCost)) return fail(state, `Missing resources for ${def.name}.`);
   const resources = { ...plot.resources };
   spendResources(resources, def.baseResourceCost);
@@ -81,7 +81,7 @@ function build(state: WorldState, playerId: string, key: string, buildingId: Pla
       ...state,
       plots: { ...state.plots, [key]: updated },
       players: { ...state.players, [playerId]: { ...player, war: player.war - def.baseCost } },
-      burned: (state.burned ?? 0) + def.baseCost, // construction cost is a $WAR sink
+      burned: (state.burned ?? 0) + def.baseCost, // construction cost is a $HEXAR sink
     },
   };
 }
@@ -104,14 +104,14 @@ function upgrade(state: WorldState, playerId: string, key: string, index: number
   const def = BUILDINGS[b.id];
   if (b.level >= def.maxLevel) return fail(state, `${def.name} is already max level.`);
   const cost = upgradeCost(def.baseCost || 200, b.level + 1);
-  if (player.war < cost) return fail(state, `Need ${cost.toLocaleString()} $WAR to upgrade ${def.name}.`);
+  if (player.war < cost) return fail(state, `Need ${cost.toLocaleString()} $HEXAR to upgrade ${def.name}.`);
   const buildings = plot.buildings.map((x, i) => (i === index ? { ...x, level: x.level + 1 } : x));
   return {
     state: {
       ...state,
       plots: { ...state.plots, [key]: { ...plot, buildings } },
       players: { ...state.players, [playerId]: { ...player, war: player.war - cost } },
-      burned: (state.burned ?? 0) + cost, // upgrade cost is a $WAR sink
+      burned: (state.burned ?? 0) + cost, // upgrade cost is a $HEXAR sink
     },
   };
 }
@@ -155,7 +155,7 @@ function train(state: WorldState, playerId: string, key: string, unit: keyof typ
   const player = state.players[playerId];
   if (!player) return fail(state, "Unknown player.");
   const u = UNITS[unit];
-  if (player.war < u.costWar) return fail(state, `Need ${u.costWar} $WAR to train ${u.name}.`);
+  if (player.war < u.costWar) return fail(state, `Need ${u.costWar} $HEXAR to train ${u.name}.`);
   if (!hasResources(plot.resources, u.cost)) return fail(state, `Missing resources to train ${u.name}.`);
   const resources = { ...plot.resources };
   spendResources(resources, u.cost);
@@ -165,7 +165,7 @@ function train(state: WorldState, playerId: string, key: string, unit: keyof typ
       ...state,
       plots: { ...state.plots, [key]: { ...plot, resources, trainQueue } },
       players: { ...state.players, [playerId]: { ...player, war: player.war - u.costWar } },
-      burned: (state.burned ?? 0) + u.costWar, // §13 #7 training cost is a full $WAR sink
+      burned: (state.burned ?? 0) + u.costWar, // §13 #7 training cost is a full $HEXAR sink
     },
   };
 }
@@ -238,7 +238,7 @@ function list(state: WorldState, playerId: string, key: string, item: ResourceId
   if (!player) return fail(state, "Unknown player.");
   if (qty <= 0 || price <= 0) return fail(state, "Invalid listing.");
   if ((plot.resources[item] ?? 0) < qty) return fail(state, `Not enough ${item} to list ${qty}.`);
-  if (player.war < LISTING_FEE) return fail(state, `Need ${LISTING_FEE} $WAR listing fee.`);
+  if (player.war < LISTING_FEE) return fail(state, `Need ${LISTING_FEE} $HEXAR listing fee.`);
 
   const resources = { ...plot.resources, [item]: (plot.resources[item] ?? 0) - qty }; // escrow into order
   const order: MarketOrder = { id: `m-${state.market.nextOrderId}`, item, qty, price: round2(price), owner: playerId };
@@ -288,7 +288,7 @@ function buy(state: WorldState, playerId: string, item: ResourceId, qty: number,
   const feeDiscount = allegianceBuffs(state, playerId).marketFee; // tradeHub buff
   const fee = Math.ceil(cost * MARKET_FEE * (1 - feeDiscount));
   const total = Math.ceil(cost) + fee;
-  if (player.war < total) return fail(state, `Need ${total.toLocaleString()} $WAR (incl. ${fee} fee).`);
+  if (player.war < total) return fail(state, `Need ${total.toLocaleString()} $HEXAR (incl. ${fee} fee).`);
 
   // pay sellers, deduct buyer, deposit goods, shrink book
   const players: Record<string, SimPlayer> = { ...state.players, [playerId]: { ...player, war: player.war - total } };
@@ -345,7 +345,7 @@ function found(state: WorldState, playerId: string, name: string): CommandResult
   if (player.allegianceId) return fail(state, "Leave your current allegiance first.");
   const clean = name.trim().slice(0, 32);
   if (!clean) return fail(state, "Name required.");
-  if (player.war < CREATE_ALLEGIANCE_COST) return fail(state, `Need ${CREATE_ALLEGIANCE_COST.toLocaleString()} $WAR to found an allegiance.`);
+  if (player.war < CREATE_ALLEGIANCE_COST) return fail(state, `Need ${CREATE_ALLEGIANCE_COST.toLocaleString()} $HEXAR to found an allegiance.`);
   const id = `a-${state.nextAllegianceId}`;
   const seed = Math.floor(CREATE_ALLEGIANCE_COST / 2); // half seeds the treasury, half is a sink
   const ally: Allegiance = {
@@ -418,7 +418,7 @@ function contribute(state: WorldState, playerId: string, amount: number): Comman
   const id = player.allegianceId;
   if (!id || !state.allegiances[id]) return fail(state, "You're not in an allegiance.");
   if (amount <= 0) return fail(state, "Invalid amount.");
-  if (player.war < amount) return fail(state, "Not enough $WAR.");
+  if (player.war < amount) return fail(state, "Not enough $HEXAR.");
   const ally = state.allegiances[id];
   const updated: Allegiance = {
     ...ally,
@@ -444,7 +444,7 @@ function allegianceBuild(state: WorldState, playerId: string, buildingId: Allegi
   const def = ALLEGIANCE_BUILDINGS[buildingId];
   if (!def) return fail(state, "No such building.");
   if (ally.buildings.includes(buildingId)) return fail(state, `${def.name} already built.`);
-  if (ally.treasuryWar < def.cost) return fail(state, `Treasury needs ${def.cost.toLocaleString()} $WAR for ${def.name}.`);
+  if (ally.treasuryWar < def.cost) return fail(state, `Treasury needs ${def.cost.toLocaleString()} $HEXAR for ${def.name}.`);
   const updated: Allegiance = { ...ally, treasuryWar: ally.treasuryWar - def.cost, buildings: [...ally.buildings, buildingId] };
   return {
     state: {

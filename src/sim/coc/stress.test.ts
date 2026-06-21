@@ -45,7 +45,7 @@ const BUILDABLE: CocBuildingId[] = [
 
 function checkInvariants(w: CocWorld): void {
   for (const p of Object.values(w.players)) {
-    if (!(p.war >= 0) || !Number.isFinite(p.war)) throw new Error(`bad war ${p.war} for ${p.id}`);
+    if (!(p.hexar >= 0) || !Number.isFinite(p.hexar)) throw new Error(`bad hexar ${p.hexar} for ${p.id}`);
   }
   for (const [owner, b] of Object.entries(w.bases)) {
     if (!(b.gold >= 0) || !Number.isFinite(b.gold)) throw new Error(`bad gold ${b.gold}`);

@@ -58,7 +58,7 @@ export const S6CTA: React.FC = () => {
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 4 }}>
             <span style={{ width: 10, height: 10, borderRadius: 999, background: COLORS.toxic, boxShadow: `0 0 8px ${COLORS.toxic}` }} />
             <span style={{ fontFamily: FONTS.display, fontWeight: 600, fontSize: 16, letterSpacing: "0.2em", color: COLORS.toxic, textTransform: "uppercase" }}>
-              $WAR live on Solana
+              $HEXAR live on Solana
             </span>
           </div>
         </div>

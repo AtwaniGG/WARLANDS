@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { createWorld, addPlayer, storageCap, STARTING_WAR } from "./world";
+import { createWorld, addPlayer, storageCap, STARTING_HEXAR } from "./world";
 import { applyCommand } from "./commands";
 import { applyTick } from "./tick";
 import type { Command, WorldState } from "./types";
-import { RESOURCE_IDS, type ResourceId } from "@/game/resources";
+import { RESOURCE_IDS } from "@/game/resources";
 import { UNIT_IDS, UNIT_IDS as UNITS_ALL } from "@/game/units";
 import type { BuildingId } from "@/game/buildings";
 import type { AllegianceBuildingId } from "@/game/allegiance";
@@ -18,7 +18,7 @@ function rng(seed: number) {
 }
 
 // ---- invariants ----
-/** Total $WAR that should be conserved: balances + locked stake + treasuries + burned. */
+/** Total $HEXAR that should be conserved: balances + locked stake + treasuries + burned. */
 function totalWar(s: WorldState): number {
   let t = 0;
   for (const p of Object.values(s.players)) t += p.war;
@@ -144,11 +144,11 @@ function giftResources(s: WorldState, key: string): WorldState {
 }
 
 describe("sim fuzz — invariants under random command streams", () => {
-  it("preserves $WAR conservation, non-negativity, and never throws (200k steps)", () => {
+  it("preserves $HEXAR conservation, non-negativity, and never throws (200k steps)", () => {
     const SEEDS = [1, 2, 7, 42, 1337];
     const STEPS = 40000;
     const PLAYERS = ["A", "B", "C", "D"];
-    const INITIAL = PLAYERS.length * STARTING_WAR;
+    const INITIAL = PLAYERS.length * STARTING_HEXAR;
 
     // record distinct leak/violation signatures across the whole run
     const warLeaks = new Map<string, { delta: number; count: number }>();
@@ -158,6 +158,8 @@ describe("sim fuzz — invariants under random command streams", () => {
       const r = rng(seed);
       let s = createWorld(seed);
       for (const p of PLAYERS) s = addPlayer(s, p);
+      // Anchor the absolute total: conservation below keeps it here for the whole run.
+      expect(totalWar(s)).toBe(INITIAL);
 
       for (let step = 0; step < STEPS; step++) {
         if (r() < 0.06) {
@@ -181,7 +183,7 @@ describe("sim fuzz — invariants under random command streams", () => {
         }
         s = next;
 
-        // 1. $WAR conservation — attribute any leak to the exact action
+        // 1. $HEXAR conservation — attribute any leak to the exact action
         const after = totalWar(s);
         if (Math.abs(after - before) > 1e-6) {
           const key = `${action}`;
@@ -215,7 +217,7 @@ describe("sim fuzz — invariants under random command streams", () => {
   });
 
   // Targeted per-command conservation tests (derived from the fuzzer's findings).
-  describe("per-command $WAR conservation", () => {
+  describe("per-command $HEXAR conservation", () => {
     function stakedPlains(player = "A") {
       let s = addPlayer(createWorld(1), player);
       const key = Object.keys(s.hexes).find((k) => s.hexes[k].terrain === "plains")!;
@@ -225,7 +227,7 @@ describe("sim fuzz — invariants under random command streams", () => {
       return { s, key };
     }
 
-    it("build burns its cost (conserves $WAR)", () => {
+    it("build burns its cost (conserves $HEXAR)", () => {
       const { s, key } = stakedPlains();
       const before = totalWar(s);
       const res = applyCommand(s, "A", { type: "build", key, buildingId: "farm" });
@@ -233,8 +235,9 @@ describe("sim fuzz — invariants under random command streams", () => {
       expect(totalWar(res.state)).toBe(before);
     });
 
-    it("upgrade burns its cost (conserves $WAR)", () => {
-      let { s, key } = stakedPlains();
+    it("upgrade burns its cost (conserves $HEXAR)", () => {
+      const { s: s0, key } = stakedPlains();
+      let s = s0;
       s = applyCommand(s, "A", { type: "build", key, buildingId: "farm" }).state;
       const idx = s.plots[key].buildings.findIndex((b) => b.id === "farm");
       const before = totalWar(s);
@@ -243,7 +246,7 @@ describe("sim fuzz — invariants under random command streams", () => {
       expect(totalWar(res.state)).toBe(before);
     });
 
-    it("train burns the full cost (conserves $WAR)", () => {
+    it("train burns the full cost (conserves $HEXAR)", () => {
       const { s, key } = stakedPlains();
       const before = totalWar(s);
       const res = applyCommand(s, "A", { type: "train", key, unit: "infantry" });
@@ -251,8 +254,8 @@ describe("sim fuzz — invariants under random command streams", () => {
       expect(totalWar(res.state)).toBe(before);
     });
 
-    it("buy conserves $WAR even with fractional prices", () => {
-      let sA = stakedPlains("A");
+    it("buy conserves $HEXAR even with fractional prices", () => {
+      const sA = stakedPlains("A");
       let s = addPlayer(sA.s, "B");
       const k2 = Object.keys(s.hexes).find((k) => s.hexes[k].terrain === "plains" && !s.plots[k])!;
       const [q, r] = k2.split(",").map(Number);
@@ -264,7 +267,7 @@ describe("sim fuzz — invariants under random command streams", () => {
       expect(totalWar(res.state)).toBe(before);
     });
 
-    it("disbanding an allegiance refunds the treasury (conserves $WAR)", () => {
+    it("disbanding an allegiance refunds the treasury (conserves $HEXAR)", () => {
       let s = addPlayer(createWorld(1), "A");
       s = applyCommand(s, "A", { type: "found", name: "Solo" }).state;
       const before = totalWar(s);

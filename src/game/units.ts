@@ -13,7 +13,7 @@ export interface UnitDef {
   defense: number;
   hp: number;
   speed: number;
-  /** $WAR + resource cost to train one unit */
+  /** $HEXAR + resource cost to train one unit */
   costWar: number;
   cost: Partial<Record<ResourceId, number>>;
   trainTicks: number;

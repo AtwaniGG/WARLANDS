@@ -39,7 +39,7 @@ export function StatsPanel() {
   const plots = useGame((s) => Object.keys(s.plots).length);
 
   const charts: { label: string; key: "war" | "staked" | "burned" | "pool" | "plots"; color: string }[] = [
-    { label: "$WAR Balance", key: "war", color: "var(--amber)" },
+    { label: "$HEXAR Balance", key: "war", color: "var(--amber)" },
     { label: "Total Burned (sinks)", key: "burned", color: "var(--blood-text)" },
     { label: "Season Pool", key: "pool", color: "var(--emerald-text)" },
     { label: "Plots Held", key: "plots", color: "var(--sky-text)" },
@@ -54,7 +54,7 @@ export function StatsPanel() {
       </p>
 
       <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Panel padding="12px"><Stat label="$WAR" value={num(war)} accent="amber" align="stack" /></Panel>
+        <Panel padding="12px"><Stat label="$HEXAR" value={num(war)} accent="amber" align="stack" /></Panel>
         <Panel padding="12px"><Stat label="Burned" value={num(burned)} accent="blood" align="stack" /></Panel>
         <Panel padding="12px"><Stat label="Pool" value={num(pool)} accent="emerald" align="stack" /></Panel>
         <Panel padding="12px"><Stat label="Plots" value={String(plots)} accent="sky" align="stack" /></Panel>

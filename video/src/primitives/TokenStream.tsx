@@ -4,7 +4,7 @@ import { COLORS } from "../theme";
 
 type XY = { x: number; y: number };
 
-/** $WAR coins arc from `from` → `to`, staggered. Used for loot / payout. */
+/** $HEXAR coins arc from `from` → `to`, staggered. Used for loot / payout. */
 export const TokenStream: React.FC<{
   from: XY;
   to: XY;
@@ -55,7 +55,7 @@ export const TokenStream: React.FC<{
                 fill="#0c0a04"
                 fontFamily="Oswald, sans-serif"
               >
-                W
+                H
               </text>
             </g>
           </g>

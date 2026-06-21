@@ -3,7 +3,7 @@ import {
   createWorld, addPlayer, storageCap, ccLevel, builderCount, freeBuilders, normalizeWorld,
   footprintTiles, occupiedTiles, fitsInGrid, townHallKey,
 } from "./world";
-import { BASE_STORAGE_CAP, STARTING_WAR } from "./config";
+import { BASE_STORAGE_CAP, STARTING_HEXAR } from "./config";
 import type { CocBase } from "./types";
 
 const base = (over: Partial<CocBase> = {}): CocBase => ({
@@ -41,15 +41,15 @@ describe("createWorld", () => {
 });
 
 describe("addPlayer", () => {
-  it("adds a player with the starting WAR balance", () => {
+  it("adds a player with the starting $HEXAR balance", () => {
     const w = addPlayer(createWorld(1), "p1");
-    expect(w.players.p1.war).toBe(STARTING_WAR);
+    expect(w.players.p1.hexar).toBe(STARTING_HEXAR);
   });
   it("is idempotent", () => {
     let w = addPlayer(createWorld(1), "p1");
-    w = { ...w, players: { ...w.players, p1: { ...w.players.p1, war: 5 } } };
+    w = { ...w, players: { ...w.players, p1: { ...w.players.p1, hexar: 5 } } };
     w = addPlayer(w, "p1");
-    expect(w.players.p1.war).toBe(5);
+    expect(w.players.p1.hexar).toBe(5);
   });
 });
 
