@@ -1,5 +1,5 @@
 import { hexKey } from "@/game/world";
-import { builderCost, BUILDINGS, ccTier, claimableHexar, finishCost, levelDef, maxLevelOf, maxWallLevel, MAX_BUILDERS, nextObjective, SHIELD_MAX_SECS, SHIELD_SECS_PER_PCT, STARTING_ELIXIR, STARTING_GOLD, TRAPS, UNITS, WALL, HEXAR_RAID_REWARD_PER_STAR, HEXAR_SHIELD_PER_HOUR } from "./config";
+import { builderCost, BUILDINGS, ccTier, claimableHexar, dailyClaimable, TICKS_PER_DAY, finishCost, levelDef, maxLevelOf, maxWallLevel, MAX_BUILDERS, nextObjective, SHIELD_MAX_SECS, SHIELD_SECS_PER_PCT, STARTING_ELIXIR, STARTING_GOLD, TRAPS, UNITS, WALL, HEXAR_RAID_REWARD_PER_STAR, HEXAR_SHIELD_PER_HOUR } from "./config";
 import { builderCount, ccLevel, fitsInGrid, footprintTiles, freeBuilders, garrisonCap, garrisonUsed, hasBarracks, housingCap, housingUsed, inGrid, occupiedTiles, parseTile, storageCap } from "./world";
 import { resolveRaid } from "./battle";
 import type { Army, Clan, CocBase, CocBuildingId, CocCommand, CocResource, CocTrapId, CocUnitId, CocWorld, CommandResult, Deployment, ObjectiveKind, PlacedBuilding } from "./types";
@@ -500,10 +500,12 @@ function claimObjective(state: CocWorld, playerId: string, id: string): CommandR
 function claim(state: CocWorld, playerId: string, amount: number): CommandResult {
   const player = state.players[playerId];
   if (!player) return fail(state, "Unknown player.");
-  // Only $HEXAR earned from the season pool is withdrawable, capped at HEXAR_CLAIM_CAP per player.
-  const amt = Math.min(claimableHexar(player), Math.max(0, Math.floor(amount)));
-  if (amt <= 0) return fail(state, "Nothing to withdraw — only $HEXAR earned from raids and objectives can be claimed on-chain, up to the cap.");
-  return { state: { ...state, players: { ...state.players, [playerId]: { ...player, hexar: player.hexar - amt, claimed: (player.claimed ?? 0) + amt } } } };
+  // Only $HEXAR earned from the season pool is withdrawable, and at most HEXAR_DAILY_CLAIM_CAP per day.
+  const day = Math.floor(state.tick / TICKS_PER_DAY);
+  const claimedToday = player.claimDay === day ? (player.claimedToday ?? 0) : 0;
+  const amt = Math.min(dailyClaimable(player, state.tick), Math.max(0, Math.floor(amount)));
+  if (amt <= 0) return fail(state, "Nothing to withdraw right now — only earned $HEXAR is claimable, up to 1,000 $HEXAR/day.");
+  return { state: { ...state, players: { ...state.players, [playerId]: { ...player, hexar: player.hexar - amt, claimed: (player.claimed ?? 0) + amt, claimedToday: claimedToday + amt, claimDay: day } } } };
 }
 
 export function applyCommand(state: CocWorld, playerId: string, cmd: CocCommand, entropy = 0): CommandResult {

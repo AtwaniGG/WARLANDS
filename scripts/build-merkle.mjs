@@ -17,7 +17,7 @@
 import fs from "node:fs";
 import { buildDistribution } from "./merkle.mjs";
 
-const DECIMALS = Number(process.env.HEXAR_DECIMALS ?? 9);
+const DECIMALS = Number(process.env.HEXAR_DECIMALS ?? 6); // $HEXAR is Token-2022, 6 decimals (pump.fun)
 const CLAIM_CAP = Number(process.env.CLAIM_CAP ?? 50_000);
 const OUT = process.env.OUT || "merkle-distribution.json";
 const fileArg = process.argv[process.argv.indexOf("--file") + 1];

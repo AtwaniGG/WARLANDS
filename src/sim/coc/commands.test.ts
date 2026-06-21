@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { applyCommand } from "./commands";
 import { createWorld, addPlayer, builderCount } from "./world";
-import { STARTING_HEXAR, HEXAR_CLAIM_CAP } from "./config";
+import { STARTING_HEXAR, HEXAR_DAILY_CLAIM_CAP, TICKS_PER_DAY } from "./config";
 import type { CocBase, CocWorld, PlacedBuilding } from "./types";
 
 const fresh = (): CocWorld => addPlayer(createWorld(1), "p1");
@@ -517,13 +517,21 @@ describe("on-chain $HEXAR claim cap (only pool-earned $HEXAR, capped)", () => {
     expect(r.state.players.p1.claimed).toBe(300);
     expect(r.state.players.p1.hexar).toBe(s.players.p1.hexar - 300);
   });
-  it("caps lifetime withdrawals at HEXAR_CLAIM_CAP", () => {
+  it("caps withdrawals at HEXAR_DAILY_CLAIM_CAP per day and resets the next day", () => {
     const base = claimed();
-    const s = { ...base, players: { ...base.players, p1: { ...base.players.p1, earned: HEXAR_CLAIM_CAP + 5000 } } };
-    const r = applyCommand(s, "p1", { type: "claim", amount: HEXAR_CLAIM_CAP + 5000 });
-    expect(r.state.players.p1.claimed).toBe(HEXAR_CLAIM_CAP);
-    expect(r.state.players.p1.hexar).toBe(s.players.p1.hexar - HEXAR_CLAIM_CAP);
-    const r2 = applyCommand(r.state, "p1", { type: "claim", amount: 1000 }); // cap reached
+    const s = { ...base, tick: 0, players: { ...base.players, p1: { ...base.players.p1, earned: 50_000 } } };
+    // day 0: a big claim is capped to the daily allowance
+    const r = applyCommand(s, "p1", { type: "claim", amount: 50_000 });
+    expect(r.state.players.p1.claimed).toBe(HEXAR_DAILY_CLAIM_CAP);
+    expect(r.state.players.p1.hexar).toBe(s.players.p1.hexar - HEXAR_DAILY_CLAIM_CAP);
+    // same day: nothing more
+    const r2 = applyCommand(r.state, "p1", { type: "claim", amount: 1000 });
     expect(r2.error).toBeDefined();
+    expect(r2.state.players.p1.claimed).toBe(HEXAR_DAILY_CLAIM_CAP);
+    // next day (tick advanced one full day): another daily allowance unlocks
+    const r3 = applyCommand({ ...r.state, tick: TICKS_PER_DAY }, "p1", { type: "claim", amount: 50_000 });
+    expect(r3.error).toBeUndefined();
+    expect(r3.state.players.p1.claimed).toBe(HEXAR_DAILY_CLAIM_CAP * 2);
+    expect(r3.state.players.p1.claimedToday).toBe(HEXAR_DAILY_CLAIM_CAP);
   });
 });

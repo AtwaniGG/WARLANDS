@@ -231,6 +231,21 @@ export function claimableHexar(p: { hexar: number; earned?: number; claimed?: nu
   return Math.max(0, Math.min(p.hexar, withdrawable, capRemaining));
 }
 
+/** Per-player on-chain claim cap PER DAY — a rate limit that bounds treasury outflow. The world runs
+ *  at 1 Hz, so a "day" is 86,400 ticks of server uptime (deterministic; survives restarts via the tick). */
+export const HEXAR_DAILY_CLAIM_CAP = 1000;
+export const TICKS_PER_DAY = 24 * 3600;
+/** $HEXAR a player may withdraw RIGHT NOW: min(earned/lifetime claimable, remaining daily allowance). */
+export function dailyClaimable(
+  p: { hexar: number; earned?: number; claimed?: number; claimedToday?: number; claimDay?: number },
+  tick: number,
+): number {
+  const day = Math.floor(tick / TICKS_PER_DAY);
+  const claimedToday = p.claimDay === day ? (p.claimedToday ?? 0) : 0;
+  const dailyRemaining = Math.max(0, HEXAR_DAILY_CLAIM_CAP - claimedToday);
+  return Math.max(0, Math.min(claimableHexar(p), dailyRemaining));
+}
+
 /** $HEXAR to instant-finish a job with `remainingSecs` left. */
 export function finishCost(remainingSecs: number): number {
   return Math.max(HEXAR_MIN_FINISH, Math.ceil(remainingSecs * HEXAR_FINISH_PER_SEC));

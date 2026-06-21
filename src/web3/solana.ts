@@ -25,7 +25,7 @@ export const SOLANA_RPC = process.env.NEXT_PUBLIC_SOLANA_RPC ?? DEFAULT_RPC[SOLA
 // your real mint, so production can never silently point at the throwaway devnet token.
 const DEVNET_DEFAULT_MINT = "BHdvBpziU37TjyNCxjrFy4FFQ1DP2TButgrZyP9Qi8pT";
 export const HEXAR_MINT = process.env.NEXT_PUBLIC_HEXAR_MINT ?? (IS_MAINNET ? "" : DEVNET_DEFAULT_MINT);
-export const HEXAR_DECIMALS = Number(process.env.NEXT_PUBLIC_HEXAR_DECIMALS ?? 9);
+export const HEXAR_DECIMALS = Number(process.env.NEXT_PUBLIC_HEXAR_DECIMALS ?? 6);
 export const HEXAR_SYMBOL = "HEXAR";
 
 /** Whether the Solana on-chain layer is wired (a real mint is set). */

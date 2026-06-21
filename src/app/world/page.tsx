@@ -8,13 +8,14 @@ import { Web3Provider } from "@/web3/Web3Provider";
 import { TokenGate } from "@/components/TokenGate";
 import { Badge, Button, Panel, ProgressBar, Stat, type BadgeTone } from "@/components/ui";
 import { BaseTutorial } from "@/components/BaseTutorial";
+import { GameMusic } from "@/components/GameMusic";
 import { BaseGrid, buildingArt, UNIT_COLOR } from "@/components/BaseGrid";
 import { useCountUp } from "@/components/useCountUp";
 
 const buzz = (p: number | number[]) => { try { (navigator as Navigator & { vibrate?: (p: number | number[]) => boolean }).vibrate?.(p); } catch { /* unsupported */ } };
 import {
   BUILDINGS, LOOT_PCT, MAX_BUILDERS, TRAPS, TRAP_IDS, UNITS, UNIT_IDS, WALL,
-  builderCost, builderCount, ccLevel, ccTier, claimableHexar, fitsInGrid, finishCost, freeBuilders, garrisonCap, garrisonUsed, housingCap, housingUsed, leagueFor, levelDef, maxLevelOf, objectiveLabel, occupiedTiles, resolveRaid, storageCap, HEXAR_CLAIM_CAP,
+  builderCost, builderCount, ccLevel, ccTier, claimableHexar, dailyClaimable, fitsInGrid, finishCost, freeBuilders, garrisonCap, garrisonUsed, housingCap, housingUsed, leagueFor, levelDef, maxLevelOf, objectiveLabel, occupiedTiles, resolveRaid, storageCap, HEXAR_DAILY_CLAIM_CAP, TICKS_PER_DAY,
   type Army, type BattleFrame, type BattleReport, type CocBase, type CocBuildingId, type CocPlayer, type CocResource, type CocTrapId, type CocUnitId, type CocWorld, type Deployment, type PlacedBuilding,
 } from "@/sim/coc";
 
@@ -58,6 +59,7 @@ export default function WorldPage() {
   return (
     <Web3Provider>
       <TokenGate>
+        <GameMusic />
         <WorldGame />
       </TokenGate>
     </Web3Provider>
@@ -861,7 +863,9 @@ function HexarPanel({ me, state, onClaim, onLink, onClose }: { me: CocPlayer; st
   const linked = !!me.wallet;
   // Wallet-authed identity ⇒ id === proven pubkey === payout wallet (locked, not editable).
   const walletAuthed = !!me.wallet && me.wallet === me.id;
-  const withdrawable = claimableHexar(me);
+  const withdrawable = claimableHexar(me); // total earned $HEXAR owed (lifetime)
+  const claimableNow = dailyClaimable(me, state.tick); // claimable right now (daily-capped)
+  const claimedToday = me.claimDay === Math.floor(state.tick / TICKS_PER_DAY) ? (me.claimedToday ?? 0) : 0;
   return (
     <Panel title="$HEXAR · SEASON" accent padding="14px" headerRight={<button onClick={onClose} style={closeBtn}>✕</button>}>
       <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 10 }}>
@@ -872,10 +876,10 @@ function HexarPanel({ me, state, onClaim, onLink, onClose }: { me: CocPlayer; st
       <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 10 }}>
         <Stat label="💎 YOUR $HEXAR" value={num(me.hexar)} accent="amber" />
         <Stat label="WITHDRAWABLE" value={num(withdrawable)} accent="emerald" />
-        <Stat label="CLAIMED" value={`${num(me.claimed ?? 0)} / ${num(HEXAR_CLAIM_CAP)}`} accent="sky" />
+        <Stat label="TODAY" value={`${num(claimedToday)} / ${num(HEXAR_DAILY_CLAIM_CAP)}`} accent="sky" />
       </div>
       <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "0 0 10px", lineHeight: 1.4 }}>
-        Only $HEXAR <strong style={{ color: "var(--text-secondary)" }}>earned from raids &amp; objectives</strong> can be withdrawn on-chain (capped at {num(HEXAR_CLAIM_CAP)} per commander) — your starting balance is in-game spend only. Rewards come from the season pool, which fills from $HEXAR sinks; nothing is minted. The treasury settles claims to your Solana wallet.
+        Only $HEXAR <strong style={{ color: "var(--text-secondary)" }}>earned from raids &amp; objectives</strong> can be withdrawn on-chain (up to {num(HEXAR_DAILY_CLAIM_CAP)} $HEXAR/day per commander) — your starting balance is in-game spend only. Rewards come from the season pool, which fills from $HEXAR sinks; nothing is minted. The treasury settles claims to your Solana wallet.
       </p>
       {walletAuthed ? (
         <div style={{ marginBottom: 12 }}>
@@ -895,8 +899,8 @@ function HexarPanel({ me, state, onClaim, onLink, onClose }: { me: CocPlayer; st
         </>
       )}
       {CLAIMS_ENABLED ? (
-        <Button variant="primary" full icon="💰" disabled={withdrawable <= 0 || !linked} onClick={() => onClaim(withdrawable)}>
-          {!linked ? "LINK A WALLET TO CLAIM" : withdrawable <= 0 ? "NOTHING TO WITHDRAW YET" : `CLAIM ${num(withdrawable)} $HEXAR ON-CHAIN`}
+        <Button variant="primary" full icon="💰" disabled={claimableNow <= 0 || !linked} onClick={() => onClaim(claimableNow)}>
+          {!linked ? "LINK A WALLET TO CLAIM" : withdrawable <= 0 ? "NOTHING TO WITHDRAW YET" : claimableNow <= 0 ? "DAILY LIMIT REACHED — BACK TOMORROW" : `CLAIM ${num(claimableNow)} $HEXAR ON-CHAIN`}
         </Button>
       ) : (
         <>

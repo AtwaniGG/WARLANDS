@@ -98,6 +98,10 @@ export interface CocPlayer {
   claimed?: number;
   /** cumulative $HEXAR earned from the season pool (raids + objectives) — the only $HEXAR withdrawable on-chain. */
   earned?: number;
+  /** $HEXAR claimed so far on the current day (drives the per-day claim cap). */
+  claimedToday?: number;
+  /** day index (floor(tick / TICKS_PER_DAY)) the claimedToday counter belongs to. */
+  claimDay?: number;
   /** linked Solana wallet (base58 pubkey) — destination for on-chain $HEXAR payouts. */
   wallet?: string;
 }

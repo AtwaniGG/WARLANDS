@@ -39,7 +39,7 @@ import { hashLeaf, verifyProof, fromHex } from "./merkle.mjs";
 
 // Mint is env-driven so mainnet launch = paste your mint. No default → forces an explicit choice.
 const HEXAR_MINT = process.env.HEXAR_MINT || process.env.NEXT_PUBLIC_HEXAR_MINT || "";
-const DECIMALS = Number(process.env.HEXAR_DECIMALS ?? 9);
+const DECIMALS = Number(process.env.HEXAR_DECIMALS ?? 6); // $HEXAR is Token-2022, 6 decimals (pump.fun)
 const RPC = process.env.SOLANA_RPC || "https://api.devnet.solana.com";
 const LEDGER = process.env.LEDGER || "./payout-ledger.json";
 
