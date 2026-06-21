@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { randomUUID, randomInt } from "node:crypto";
 import { WebSocketServer, WebSocket } from "ws";
 import { createWorld, addPlayer, normalizeWorld, setWallet, validateWorld } from "@/sim/coc/world";
 import { ensureBots } from "@/sim/coc/bots";
@@ -165,7 +165,10 @@ export function startServer(opts: Options = {}): ServerHandle {
         ws.send(JSON.stringify({ type: "error", message: "Rate limit — slow down." }));
         return;
       }
-      const result = applyCommand(state, pid, parsed.cmd);
+      // Real player raids get fresh CSPRNG entropy so the outcome can't be precomputed before
+      // deploying. Other commands (and bot raids) stay deterministic (entropy 0).
+      const entropy = parsed.cmd.type === "raid" ? randomInt(0xffffffff) : 0;
+      const result = applyCommand(state, pid, parsed.cmd, entropy);
       if (result.error) {
         ws.send(JSON.stringify({ type: "error", message: result.error }));
         return;

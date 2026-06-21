@@ -329,6 +329,18 @@ describe("raid", () => {
       expect(r.state).toBe(s); // unchanged — command rejected before any mutation
     }
   });
+  it("server entropy makes the raid seed unpredictable but stays deterministic per input", () => {
+    let s = twoBases();
+    s = { ...s, bases: { ...s.bases, p1: { ...s.bases.p1, gold: 500, army: { grunt: 80 } } } };
+    const cmd = { type: "raid" as const, targetOwner: "p2", deploy: dep("grunt", 80) };
+    const a = applyCommand(s, "p1", cmd, 12345);
+    const b = applyCommand(s, "p1", cmd, 67890);
+    const c = applyCommand(s, "p1", cmd, 12345);
+    expect(a.report!.seed).not.toBe(b.report!.seed); // different entropy → different seed
+    expect(a.report!.seed).toBe(c.report!.seed); // same inputs+entropy → reproducible (replay-safe)
+    // default (no entropy arg) === entropy 0 → unchanged legacy behavior
+    expect(applyCommand(s, "p1", cmd).report!.seed).toBe(applyCommand(s, "p1", cmd, 0).report!.seed);
+  });
   it("rejects deploying troops you don't have", () => {
     let s = twoBases();
     s = { ...s, bases: { ...s.bases, p1: { ...s.bases.p1, army: { grunt: 5 } } } };

@@ -278,7 +278,7 @@ function fnv1a(s: string): number {
   return h >>> 0;
 }
 
-function raid(state: CocWorld, playerId: string, targetOwner: string, deploy: Deployment[]): CommandResult {
+function raid(state: CocWorld, playerId: string, targetOwner: string, deploy: Deployment[], entropy = 0): CommandResult {
   const attacker = state.bases[playerId];
   if (!attacker) return fail(state, "You have no base.");
   if (targetOwner === playerId) return fail(state, "You cannot raid your own base.");
@@ -301,7 +301,11 @@ function raid(state: CocWorld, playerId: string, targetOwner: string, deploy: De
     if ((attacker.army[u as CocUnitId] ?? 0) < (n ?? 0)) return fail(state, "You don't have those troops.");
   }
 
-  const seed = ((state.tick + 1) * 2654435761 + fnv1a(playerId) + fnv1a(targetOwner)) >>> 0;
+  // Mix in server-supplied entropy so the outcome can't be precomputed offline before deploying
+  // (the deterministic part alone is public: tick + player ids). entropy defaults to 0 → the sim
+  // stays fully deterministic for tests, fuzzing, bot raids, and replay (the resolved seed is
+  // stored in the report and reused verbatim).
+  const seed = ((state.tick + 1) * 2654435761 + fnv1a(playerId) + fnv1a(targetOwner) + (entropy >>> 0)) >>> 0;
   const result = resolveRaid(deploy, defender, seed);
 
   const lootGold = Math.min(defender.gold, result.loot.gold);
@@ -502,7 +506,7 @@ function claim(state: CocWorld, playerId: string, amount: number): CommandResult
   return { state: { ...state, players: { ...state.players, [playerId]: { ...player, hexar: player.hexar - amt, claimed: (player.claimed ?? 0) + amt } } } };
 }
 
-export function applyCommand(state: CocWorld, playerId: string, cmd: CocCommand): CommandResult {
+export function applyCommand(state: CocWorld, playerId: string, cmd: CocCommand, entropy = 0): CommandResult {
   switch (cmd.type) {
     case "claimBase":
       return claimBase(state, playerId, cmd.q, cmd.r);
@@ -523,7 +527,7 @@ export function applyCommand(state: CocWorld, playerId: string, cmd: CocCommand)
     case "trainTroop":
       return trainTroop(state, playerId, cmd.unit);
     case "raid":
-      return raid(state, playerId, cmd.targetOwner, cmd.deploy);
+      return raid(state, playerId, cmd.targetOwner, cmd.deploy, entropy);
     case "finishNow":
       return finishNow(state, playerId, cmd.tileKey);
     case "extendShield":

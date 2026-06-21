@@ -7,7 +7,14 @@ mint. This file is the single source of truth for that flip.
 
 ## TL;DR — the one step
 
-When your $HEXAR token is live on Solana mainnet, set these and redeploy:
+Easiest path — feed your mint to the orchestrator, which assembles all env + runs preflight:
+
+```bash
+node scripts/go-live.mjs --mint <YOUR_MINT> --rpc <PAID_RPC> --write
+node scripts/preflight-mainnet.mjs --env .env.mainnet   # GO / NO-GO
+```
+
+Or set them by hand. When your $HEXAR token is live on Solana mainnet, set these and redeploy:
 
 ```bash
 # Vercel (frontend) — Production env
@@ -44,7 +51,7 @@ real-money beta until ALL of these are true (none are solved by setting the mint
 | **Merkle claim pipeline** | On-chain claims must be provable/tamper-evident | ✅ DONE — `build-merkle.mjs` + `--merkle` gate |
 | **Multisig treasury** (Squads/Realms) holds $HEXAR, not a hot key | Today the payout signer is a single hot key — one leak = total loss | ❌ TODO |
 | **Timelock** on treasury withdrawals | Lets a quorum cancel a malicious/erroneous payout | ❌ TODO |
-| **On-chain claim distributor** (Anchor) verifying the Merkle root | Today the root is verified off-chain by the payout script; full trustlessness needs the program | ❌ TODO |
+| **On-chain claim distributor** (Anchor) verifying the Merkle root | Full trustlessness | ✅ BUILT ([onchain/](../../onchain/), compiles + cross-language test) — needs **audit + deploy** |
 | **Contract/treasury audit** | No third-party review yet | ❌ TODO |
 | **Paid mainnet RPC** | Public RPC will rate-limit/drop under load | ⚠️ set `NEXT_PUBLIC_SOLANA_RPC` |
 

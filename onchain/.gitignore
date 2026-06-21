@@ -1,0 +1,8 @@
+target
+.anchor
+node_modules
+test-ledger
+*.log
+# program keypair is generated locally; keep it OUT of git (it controls program upgrades)
+program-keypair.json
+.program-id
