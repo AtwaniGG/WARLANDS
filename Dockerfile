@@ -4,12 +4,19 @@
 FROM node:24-slim
 WORKDIR /app
 
+# Deps imported by the SHARED src/ (wallet-sig crypto: src/sim/coc/auth.ts). Node resolves a
+# module relative to the importing FILE, so /app/src/* resolves from /app/node_modules (its
+# ancestor) — NOT the sibling server/node_modules. These must live at /app or the server crashes
+# on boot (Cannot find module '@noble/curves'). Pinned to match the root app.
+RUN npm init -y >/dev/null 2>&1 \
+ && npm install --no-audit --no-fund @noble/curves@1.9.1 bs58@6.0.0 \
+ && node -e "require('node:fs').accessSync('node_modules/@noble/curves'); require('node:fs').accessSync('node_modules/bs58')" \
+ && echo "src deps verified"
+
 # Shared simulation + game rules consumed by the server at runtime.
 COPY src ./src
 
-# Server deps. The server resolves modules ONLY from server/node_modules, so assert the wallet-sig
-# runtime deps actually installed — failing at BUILD beats a runtime crash-loop. The assertion also
-# keys this layer to its command so the install can't be served from a stale cache.
+# Server deps (server/index.ts resolves pg/ws/tsx from server/node_modules).
 COPY server/package.json server/package-lock.json ./server/
 WORKDIR /app/server
 RUN npm ci \
