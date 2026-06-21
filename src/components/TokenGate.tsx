@@ -10,7 +10,7 @@
 
 import { useCallback, useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
-import { PublicKey } from "@solana/web3.js";
+import { TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
 import { HEXAR_MINT, HEXAR_SYMBOL, SOLANA_CONFIGURED, explorerAddress } from "@/web3/solana";
 import { WalletButton } from "./WalletButton";
 import { Button } from "./ui";
@@ -33,10 +33,16 @@ export function TokenGate({ children }: { children: ReactNode }) {
     if (!publicKey || !SOLANA_CONFIGURED) { setBal(null); return; }
     setLoading(true);
     try {
-      const res = await connection.getParsedTokenAccountsByOwner(publicKey, { mint: new PublicKey(HEXAR_MINT) });
+      // Query BOTH token programs by program id, then sum accounts matching our mint. The {mint}
+      // filter alone MISSES Token-2022 balances — $HEXAR is a Token-2022 (pump.fun) mint.
+      const [legacy, t22] = await Promise.all([
+        connection.getParsedTokenAccountsByOwner(publicKey, { programId: TOKEN_PROGRAM_ID }),
+        connection.getParsedTokenAccountsByOwner(publicKey, { programId: TOKEN_2022_PROGRAM_ID }),
+      ]);
       let total = 0;
-      for (const { account } of res.value) {
-        total += account.data.parsed?.info?.tokenAmount?.uiAmount ?? 0;
+      for (const { account } of [...legacy.value, ...t22.value]) {
+        const info = account.data.parsed?.info;
+        if (info?.mint === HEXAR_MINT) total += info?.tokenAmount?.uiAmount ?? 0;
       }
       setBal(total);
     } catch {
