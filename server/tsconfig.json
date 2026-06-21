@@ -9,5 +9,6 @@
     "baseUrl": ".",
     "paths": { "@/*": ["../src/*"] }
   },
-  "include": ["**/*.ts", "../src/sim/**/*.ts", "../src/game/**/*.ts"]
+  "include": ["**/*.ts", "../src/sim/**/*.ts", "../src/game/**/*.ts"],
+  "exclude": ["**/*.test.ts", "../src/**/*.test.ts"]
 }

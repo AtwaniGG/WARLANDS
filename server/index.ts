@@ -35,6 +35,9 @@ export function startServer(opts: Options = {}): ServerHandle {
   const persistEvery = opts.persistEvery ?? Number(process.env.PERSIST_EVERY ?? 3);
   // Require wallet-signature identity (kills anonymous/sybil play). On for mainnet.
   const AUTH_REQUIRED = opts.authRequired ?? (process.env.AUTH_REQUIRED === "1" || process.env.AUTH_REQUIRED === "true");
+  // On-chain $HEXAR withdrawals are OFF until post-launch payouts are armed (multisig + funded
+  // treasury). Flip CLAIMS_ENABLED=1 to open them — no code change needed.
+  const CLAIMS_ENABLED = process.env.CLAIMS_ENABLED === "1" || process.env.CLAIMS_ENABLED === "true";
   let state: CocWorld = opts.initial ?? createWorld(opts.seed ?? Number(process.env.WORLD_SEED ?? 1));
   const sockets = new Map<WebSocket, string>();
   const wss = new WebSocketServer({ port: opts.port ?? Number(process.env.PORT ?? 8080) });
@@ -167,6 +170,10 @@ export function startServer(opts: Options = {}): ServerHandle {
       }
       // Real player raids get fresh CSPRNG entropy so the outcome can't be precomputed before
       // deploying. Other commands (and bot raids) stay deterministic (entropy 0).
+      if (parsed.cmd.type === "claim" && !CLAIMS_ENABLED) {
+        ws.send(JSON.stringify({ type: "error", message: "On-chain $HEXAR claims open shortly after launch — your rewards are saved." }));
+        return;
+      }
       const entropy = parsed.cmd.type === "raid" ? randomInt(0xffffffff) : 0;
       const result = applyCommand(state, pid, parsed.cmd, entropy);
       if (result.error) {

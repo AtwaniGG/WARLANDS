@@ -19,6 +19,9 @@ import {
 } from "@/sim/coc";
 
 const SERVER_URL = process.env.NEXT_PUBLIC_GAME_SERVER_URL ?? "ws://localhost:8080";
+// On-chain $HEXAR withdrawals are disabled during the non-custodial beta (opens post-launch).
+// Flip NEXT_PUBLIC_CLAIMS_ENABLED=1 to re-enable the CLAIM button (server also gates via CLAIMS_ENABLED).
+const CLAIMS_ENABLED = process.env.NEXT_PUBLIC_CLAIMS_ENABLED === "1" || process.env.NEXT_PUBLIC_CLAIMS_ENABLED === "true";
 const HEX = 16;
 const UNIT_ICON: Record<CocUnitId, string> = { grunt: "🪖", marksman: "🎯", breacher: "🧨", juggernaut: "🛡️", gunship: "🚁" };
 
@@ -891,9 +894,18 @@ function HexarPanel({ me, state, onClaim, onLink, onClose }: { me: CocPlayer; st
           {linked && <div style={{ fontSize: 11, color: "var(--emerald-text)", marginBottom: 10 }}>✓ Linked — payouts settle to {me.wallet!.slice(0, 4)}…{me.wallet!.slice(-4)}</div>}
         </>
       )}
-      <Button variant="primary" full icon="💰" disabled={withdrawable <= 0 || !linked} onClick={() => onClaim(withdrawable)}>
-        {!linked ? "LINK A WALLET TO CLAIM" : withdrawable <= 0 ? "NOTHING TO WITHDRAW YET" : `CLAIM ${num(withdrawable)} $HEXAR ON-CHAIN`}
-      </Button>
+      {CLAIMS_ENABLED ? (
+        <Button variant="primary" full icon="💰" disabled={withdrawable <= 0 || !linked} onClick={() => onClaim(withdrawable)}>
+          {!linked ? "LINK A WALLET TO CLAIM" : withdrawable <= 0 ? "NOTHING TO WITHDRAW YET" : `CLAIM ${num(withdrawable)} $HEXAR ON-CHAIN`}
+        </Button>
+      ) : (
+        <>
+          <Button variant="primary" full icon="🔒" disabled>ON-CHAIN CLAIMS OPEN SOON</Button>
+          <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 8, lineHeight: 1.4 }}>
+            You&apos;re banking <strong style={{ color: "var(--emerald-text)" }}>{num(withdrawable)} $HEXAR</strong> in withdrawable rewards. Withdrawals open a couple of days after launch — your balance is saved and will be claimable then.
+          </p>
+        </>
+      )}
     </Panel>
   );
 }
