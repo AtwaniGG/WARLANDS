@@ -8,6 +8,8 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@noble/curves": "^1.9.1",
+    "bs58": "^6.0.0",
     "pg": "^8.13.1",
     "tsx": "^4.19.2",
     "ws": "^8.18.0"
