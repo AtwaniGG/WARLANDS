@@ -1164,7 +1164,7 @@ UpkeepTotal = Σ_{i=1}^{n} BaseUpkeep · (1 + β·(i−1))     β = 0.15
 | Solana | high TPS, low fee | non-EVM, different tooling | alt option |
 | **Polygon PoS/zkEVM** | cheap, mature | — | viable alternative |
 
-**Decision (updated):** Launch on **Solana** for low fees + high throughput. `$WAR` is an **SPL token (Token-2022)** — live on **devnet** today (mint `BHdvBpziU37TjyNCxjrFy4FFQ1DP2TButgrZyP9Qi8pT`). Keep most gameplay **off-chain** (server-authoritative); use the chain only for **value events**: staking, market settlement of high-value/withdrawable assets, treasury, reward claims, governance, and economy checkpoints. On-chain logic (staking vault, sinks, rewards) is implemented as **Anchor programs** (Rust). _(An earlier draft of this doc targeted an EVM L2 (Base/Arbitrum); that approach was deployed to Base Sepolia and then superseded by Solana.)_ Don't put hexes on-chain.
+**Decision (updated):** Launch on **Solana** for low fees + high throughput. `$HEXAR` is an **SPL token (Token-2022)** — in **beta** on Solana (mint set via `NEXT_PUBLIC_HEXAR_MINT`). Keep most gameplay **off-chain** (server-authoritative); use the chain only for **value events**: staking, market settlement of high-value/withdrawable assets, treasury, reward claims, governance, and economy checkpoints. On-chain logic (staking vault, sinks, rewards) is implemented as **Anchor programs** (Rust). _(An earlier draft of this doc targeted an EVM L2 (Base/Arbitrum); that approach was deployed to Base Sepolia and then superseded by Solana.)_ Don't put hexes on-chain.
 
 ### 20.2 Contract Suite
 

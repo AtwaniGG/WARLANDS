@@ -29,9 +29,9 @@ SOLANA_RPC=<YOUR_PAID_MAINNET_RPC>
 TREASURY_SECRET=<json byte array>                  # from a SECRET MANAGER, never disk/CI logs
 ```
 
-That's it for the code. Nothing is hardcoded to devnet anymore:
+That's it for the code. Nothing is hardcoded to a fixed network anymore:
 - [src/web3/solana.ts](../../src/web3/solana.ts) reads cluster/mint/RPC from env; mainnet has **no
-  default mint** (blank = "not configured"), so prod can never silently use the devnet token.
+  default mint** (blank = "not configured"), so prod can never silently use the beta/dev default token.
 - [src/components/TokenGate.tsx](../../src/components/TokenGate.tsx) gates on the configured mint.
 - [scripts/payout-war.mjs](../../scripts/payout-war.mjs) refuses to run without an explicit mint.
 

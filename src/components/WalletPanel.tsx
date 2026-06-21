@@ -58,13 +58,13 @@ export function WalletPanel() {
         <WalletButton />
       </div>
       <p className="mb-4" style={{ fontSize: "12px", color: "var(--text-muted)" }}>
-        $HEXAR is an SPL token on <b>Solana devnet</b>. Connect a Solana wallet (Phantom) set to devnet to see
+        $HEXAR is an SPL token on <b>Solana</b> (beta). Connect a Solana wallet (Phantom) to see
         your balance. This on-chain layer is separate from the in-browser mock economy.
       </p>
 
       <div className="mb-3 p-3" style={{ borderRadius: "var(--radius-lg)", border: "1px solid var(--hairline)", background: "var(--panel)", fontSize: "12px" }}>
         <Row label="Wallet" value={connected && publicKey ? publicKey.toBase58() : "not connected"} />
-        <Row label="Network" value="Solana devnet" />
+        <Row label="Network" value="Solana (beta)" />
         <Row label="$HEXAR mint" value={HEXAR_MINT} link={explorerAddress(HEXAR_MINT)} />
       </div>
 
@@ -73,18 +73,18 @@ export function WalletPanel() {
         <ChainStat label="Your SOL" value={connected ? fmt(sol) : "—"} accent="sky" />
       </div>
 
-      <Panel title="Solana devnet">
+      <Panel title="Solana (beta)">
         <div style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-          ${HEXAR_SYMBOL} is live on devnet — Token-2022, 9 decimals, 1,000,000,000 supply.{" "}
+          ${HEXAR_SYMBOL} is live (beta) — Token-2022, 9 decimals, 1,000,000,000 supply.{" "}
           <a href={explorerAddress(HEXAR_MINT)} target="_blank" rel="noreferrer" style={{ color: "var(--teal-text)" }}>View the mint ↗</a>
         </div>
         <p className="mt-3" style={{ fontSize: "11px", color: "var(--text-muted)" }}>
           On-chain staking (an Anchor program with a principal-safe vault) is the next step. For now this panel
-          reads your live devnet $HEXAR balance. {loading ? "Refreshing…" : ""}
+          reads your live $HEXAR balance. {loading ? "Refreshing…" : ""}
         </p>
         <p className="mt-2" style={{ fontSize: "11px", color: "var(--text-muted)" }}>
-          Need test $HEXAR? Send some to your address from the deployer wallet, or import the deployer key into
-          Phantom (it holds the supply). Get devnet SOL for gas from a faucet.
+          During beta, payouts settle to your linked wallet from the treasury. Keep some SOL in your
+          wallet for gas.
         </p>
       </Panel>
     </div>

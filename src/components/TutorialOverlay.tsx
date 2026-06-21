@@ -132,7 +132,7 @@ const STEPS: Step[] = [
     chapter: "On-Chain",
     title: "The $HEXAR token",
     view: "wallet",
-    body: "$HEXAR is a real SPL token on Solana (devnet today). Value events — staking, market settlement, treasury, reward claims — settle on-chain, while high-frequency gameplay stays off-chain and fast. Fixed 1,000,000,000 supply, deflationary via sinks. Connect a Phantom wallet here to see your on-chain balance.",
+    body: "$HEXAR is a real SPL token on Solana (beta). Value events — staking, market settlement, treasury, reward claims — settle on-chain, while high-frequency gameplay stays off-chain and fast. Fixed 1,000,000,000 supply, deflationary via sinks. Connect a Phantom wallet here to see your on-chain balance.",
   },
   {
     chapter: "Ready",

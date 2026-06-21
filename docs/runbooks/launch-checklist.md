@@ -5,9 +5,16 @@ Living checklist. Pairs with [mainnet-launch.md](mainnet-launch.md) (the how-to)
 
 Legend: ✅ done · 🟢 code I can do · 🔵 you/team · 🟣 external vendor
 
-## The one-step goal
-When you have the token mint, going live is: **set env (via `go-live.mjs`) → deploy**. Everything
-that can be prebuilt is prebuilt.
+## Deployed now — open BETA (non-custodial)
+- ✅ **Frontend** live on Vercel → **[warlands.xyz](https://warlands.xyz)** (apex DNS resolving)
+- ✅ **Game server** live on Railway (`warlands-server` / `warlands-app`), hardened build, world restored
+- ✅ **Trailer** rendered with ElevenLabs music + `warlands.xyz` CTA; **HEXAR honeycomb logo** is the favicon
+- 🔒 Beta is **non-custodial**: real payouts OFF (`AUTH_REQUIRED` off so the live client keeps working;
+  on-chain claims gated behind audit + multisig)
+
+## The one-step goal (real-money flip)
+When you have the token mint, going live for real is: **set env (via `go-live.mjs`) → deploy**.
+Everything that can be prebuilt is prebuilt.
 
 ```bash
 node scripts/go-live.mjs --mint <YOUR_MINT> --rpc <PAID_RPC> --write   # assembles env + preflight

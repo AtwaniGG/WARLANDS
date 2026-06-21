@@ -3,7 +3,7 @@
 ## Context
 
 WARLANDS is a deployed Web3 strategy MMO: a persistent **hex world** (Next.js 16 client on
-Vercel, Node+ws+Postgres authoritative server on Railway, **WAR SPL token on Solana devnet**).
+Vercel, Node+ws+Postgres authoritative server on Railway, **$HEXAR SPL token on Solana (beta)**).
 The user **does not like the current hex-economy gameplay** and wants to pivot it into a
 **Clash-of-Clans-style base-builder** while **keeping the infrastructure** (deploy pipeline,
 Solana token, multiplayer server, art/theme, and the server-authoritative deterministic-sim

@@ -45,17 +45,18 @@ src/
 
 Scene durations live in `Trailer.tsx` (`SCENE_FRAMES`). Tweak there to retime.
 
-## Adding music + SFX
+## Music + SFX
 
-No audio track is committed (licensing). To add sound:
+Background music is **included**: `public/audio/warlands-trailer.mp3` (ElevenLabs, 34s) is wired
+in `src/audio.ts` (`HAS_AUDIO = true`) at a low background level — `MUSIC_VOLUME = 0.25` — with a
+0.5s fade-in / 1s fade-out (see `Trailer.tsx`). Measured quiet: mean −31 dB, peak −17.5 dB.
 
-1. Drop a royalty-free track at `public/audio/track.mp3`.
-2. In `src/audio.ts`, set `HAS_AUDIO = true` (optionally tune `MUSIC_VOLUME`).
-3. Re-render. Beat-map for cuts (seconds @ 30fps):
-   S1→S2 ≈ 4.5s · S2→S3 ≈ 10.5s · S3→S4 ≈ 16.5s · S4→S5 ≈ 24s · S5→S6 ≈ 29.7s
+To swap the track: drop a new file in `public/audio/`, point `MUSIC_SRC` at it, tweak
+`MUSIC_VOLUME` if needed, re-render. Beat-map for cuts (seconds @ 30fps):
+S1→S2 ≈ 4.5s · S2→S3 ≈ 10.5s · S3→S4 ≈ 16.5s · S4→S5 ≈ 24s · S5→S6 ≈ 29.7s
 
-The trailer is designed to read fully with sound **off** (captions carry it), so
-it works in autoplay-muted feeds.
+The trailer also reads fully with sound **off** (captions carry it), so it works in
+autoplay-muted feeds.
 
 ## Making a vertical (9:16) cut
 

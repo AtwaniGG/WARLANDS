@@ -5,7 +5,9 @@ secure finite land on one shared live map, build economies, and wage war — sol
 **Allegiances**. Built directly from [`docs/GDD.md`](docs/GDD.md), the full 24-section design
 doc covering tokenomics, balancing math, architecture, and roadmap.
 
-> **Landing page** at `/` · **Single-player game** at `/play` · **Live shared world** at `/world`.
+> **Live in open beta: [warlands.xyz](https://warlands.xyz)** (Vercel frontend + Railway game server,
+> non-custodial — real payouts gated behind audit + multisig).
+> Routes: **Landing** at `/` · **game** at `/play` → `/world` · **live shared world** at `/world`.
 
 ```bash
 npm install
