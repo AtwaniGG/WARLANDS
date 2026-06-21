@@ -56,6 +56,6 @@ export function BaseTutorial({ base }: { base: CocBase | null }) {
   );
 }
 
-const wrap: CSSProperties = { position: "fixed", left: 12, right: 12, bottom: "max(12px, env(safe-area-inset-bottom))", maxWidth: 560, margin: "0 auto", zIndex: 50 };
+const wrap: CSSProperties = { position: "fixed", left: 12, right: 12, bottom: "calc(env(safe-area-inset-bottom) + 100px)", maxWidth: 560, margin: "0 auto", zIndex: 50 };
 const x: CSSProperties = { background: "transparent", border: 0, color: "var(--text-secondary)", cursor: "pointer", fontSize: 13 };
-const chip: CSSProperties = { position: "fixed", right: 12, bottom: "max(12px, env(safe-area-inset-bottom))", zIndex: 50, maxWidth: "calc(100vw - 24px)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", background: "var(--cta-bg)", color: "var(--cta-fg)", border: 0, borderRadius: "var(--radius-pill)", padding: "8px 14px", fontFamily: "var(--font-display)", fontWeight: 700, letterSpacing: "0.06em", fontSize: 12, cursor: "pointer", boxShadow: "var(--shadow-2)" };
+const chip: CSSProperties = { position: "fixed", right: 12, bottom: "calc(env(safe-area-inset-bottom) + 100px)", zIndex: 50, maxWidth: "calc(100vw - 24px)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", background: "var(--cta-bg)", color: "var(--cta-fg)", border: 0, borderRadius: "var(--radius-pill)", padding: "8px 14px", fontFamily: "var(--font-display)", fontWeight: 700, letterSpacing: "0.06em", fontSize: 12, cursor: "pointer", boxShadow: "var(--shadow-2)" };
