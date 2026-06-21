@@ -41,7 +41,7 @@ src/
 | 3 | Build | loop | "Build your economy." |
 | 4 | Raid | loop | "Raid rivals. Take their $HEXAR." |
 | 5 | Earn | payoff | "Real tokens. Real seasons." |
-| 6 | CTA | action | "Build. Raid. Earn. For real." → warlands.net |
+| 6 | CTA | action | "Build. Raid. Earn. For real." → warlands.xyz |
 
 Scene durations live in `Trailer.tsx` (`SCENE_FRAMES`). Tweak there to retime.
 

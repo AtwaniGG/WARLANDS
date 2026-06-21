@@ -38,7 +38,7 @@ node scripts/preflight-mainnet.mjs --env .env.mainnet                  # GO / NO
 ## C. Infrastructure & DevOps 🔵 (🟢 I can wire)
 - 🔵 **Paid mainnet RPC** (Helius/Triton) · **Prod Postgres** (Neon) + backups/PITR
 - 🔵 Vercel + Railway production tiers; set env from `go-live.mjs` output (incl. `AUTH_REQUIRED=1`, `PERSIST_EVERY=3`)
-- 🔵 Domain/DNS/TLS (warlands.net → Vercel; `wss://` server) · secrets manager · DDoS/WAF · uptime + status page
+- 🔵 Domain/DNS/TLS (warlands.xyz → Vercel; `wss://` server) · secrets manager · DDoS/WAF · uptime + status page
 
 ## D. Security 🟣🔵
 - 🟣 Smart-contract + app **audit**; optional pen test; bug bounty (Immunefi)

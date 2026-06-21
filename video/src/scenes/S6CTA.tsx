@@ -53,7 +53,7 @@ export const S6CTA: React.FC = () => {
             Play now
           </div>
           <div style={{ fontFamily: FONTS.mono, fontSize: 30, color: COLORS.textHi, letterSpacing: "0.06em" }}>
-            warlands.net
+            warlands.xyz
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 4 }}>
             <span style={{ width: 10, height: 10, borderRadius: 999, background: COLORS.toxic, boxShadow: `0 0 8px ${COLORS.toxic}` }} />
