@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  createWorld, addPlayer, storageCap, ccLevel, builderCount, freeBuilders, normalizeWorld,
+  createWorld, addPlayer, storageCap, ccLevel, builderCount, freeBuilders, normalizeWorld, validateWorld,
   footprintTiles, occupiedTiles, fitsInGrid, townHallKey,
 } from "./world";
 import { BASE_STORAGE_CAP, STARTING_HEXAR } from "./config";
@@ -122,5 +122,21 @@ describe("normalizeWorld", () => {
     expect(w.bases.old).toBeUndefined();
     expect(w.bases.nu).toBeDefined();
     expect(w.claimedHexes).toEqual({ "3,0": "nu" });
+  });
+  it("repairs the claimed>earned treasury invariant (and floors balances) so a bad record can't brick the world", () => {
+    const restored = {
+      seed: 1, radius: 9, tick: 5, hexes: {}, claimedHexes: {}, clans: {},
+      seasonPool: 1000, season: { id: 1, endsAtTick: 100 },
+      players: {
+        bad: { id: "bad", hexar: -50, earned: 100, claimed: 9999 }, // over-claimed + negative balance
+        ok: { id: "ok", hexar: 200, earned: 300, claimed: 120 },
+      },
+      bases: {},
+    } as never;
+    const w = normalizeWorld(restored);
+    expect(w.players.bad.claimed).toBe(100); // clamped down to earned (never pay more than earned)
+    expect(w.players.bad.hexar).toBe(0); // floored
+    expect(w.players.ok.claimed).toBe(120); // valid record untouched
+    expect(validateWorld(w).ok).toBe(true); // the repaired world now passes the boot safeguard
   });
 });

@@ -134,7 +134,7 @@ function randomCommand(rnd: () => number, w: CocWorld, pid: string): CocCommand 
       // merkle payout path over wallet-linked players that have claimed
       const entries = Object.values(w.players)
         .filter((p) => wallets.has(p.id) && (p.claimed ?? 0) > 0)
-        .map((p) => ({ wallet: wallets.get(p.id)!, amount: BigInt(Math.floor(p.claimed ?? 0)) * 1_000_000_000n }));
+        .map((p) => ({ wallet: wallets.get(p.id)!, amount: BigInt(Math.floor(p.claimed ?? 0)) * BigInt(1_000_000_000) }));
       if (entries.length > 0) {
         const dist = buildDistribution(entries);
         for (const l of dist.leaves) {

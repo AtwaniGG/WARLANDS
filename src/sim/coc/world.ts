@@ -151,8 +151,8 @@ export function normalizeWorld(state: CocWorld): CocWorld {
       buildings: b.buildings ?? {},
       walls: b.walls ?? {},
       traps: b.traps ?? {},
-      gold: b.gold ?? 0,
-      elixir: b.elixir ?? 0,
+      gold: Math.max(0, b.gold ?? 0),
+      elixir: Math.max(0, b.elixir ?? 0),
       jobs: b.jobs ?? [],
       army: b.army ?? {},
       garrison: b.garrison ?? {},
@@ -165,7 +165,13 @@ export function normalizeWorld(state: CocWorld): CocWorld {
   const players: CocWorld["players"] = {};
   for (const [id, p] of Object.entries(state.players ?? {})) {
     const legacyWar = (p as { war?: number }).war; // pre-rename snapshots stored the balance as `war`
-    const player = { ...p, objectives: p.objectives ?? (p.isBot ? undefined : makeObjectives(id)), claimed: p.claimed ?? 0, earned: p.earned ?? 0, hexar: p.hexar ?? legacyWar ?? STARTING_HEXAR };
+    // Conservatively repair $HEXAR invariants on load so one bad record can't brick the whole world.
+    // claimed can NEVER exceed earned (treasury solvency) — clamping down only reduces payout
+    // liability, never increases it; balances floor at 0.
+    const earned = Math.max(0, p.earned ?? 0);
+    const claimed = Math.min(Math.max(0, p.claimed ?? 0), earned);
+    const hexar = Math.max(0, p.hexar ?? legacyWar ?? STARTING_HEXAR);
+    const player = { ...p, objectives: p.objectives ?? (p.isBot ? undefined : makeObjectives(id)), claimed, earned, hexar };
     delete (player as { war?: number }).war; // drop the old field name
     players[id] = player;
   }
