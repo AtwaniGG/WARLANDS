@@ -10,6 +10,7 @@ function validIdentity(raw: string | null): string | null {
 import { applyCommand } from "@/sim/coc/commands";
 import { applyTick } from "@/sim/coc/tick";
 import type { CocWorld, CocCommand } from "@/sim/coc/types";
+import { buildAuthMessage, isValidPubkey, verifyAuthSignature } from "@/sim/coc/auth";
 import { initDb, loadLatest, saveSnapshot, logEvent, DB_CONFIGURED } from "./db";
 
 interface Options {
@@ -18,6 +19,8 @@ interface Options {
   tickMs?: number;
   persistEvery?: number;
   initial?: CocWorld;
+  /** Require wallet-signature identity (kills anonymous/sybil play). Defaults to env AUTH_REQUIRED. */
+  authRequired?: boolean;
 }
 
 export interface ServerHandle {
@@ -30,6 +33,8 @@ export function startServer(opts: Options = {}): ServerHandle {
   const tickMs = opts.tickMs ?? 1000;
   // Persist every few ticks (3s default) — a crash loses at most this window. Tunable via PERSIST_EVERY.
   const persistEvery = opts.persistEvery ?? Number(process.env.PERSIST_EVERY ?? 3);
+  // Require wallet-signature identity (kills anonymous/sybil play). On for mainnet.
+  const AUTH_REQUIRED = opts.authRequired ?? (process.env.AUTH_REQUIRED === "1" || process.env.AUTH_REQUIRED === "true");
   let state: CocWorld = opts.initial ?? createWorld(opts.seed ?? Number(process.env.WORLD_SEED ?? 1));
   const sockets = new Map<WebSocket, string>();
   const wss = new WebSocketServer({ port: opts.port ?? Number(process.env.PORT ?? 8080) });
@@ -81,51 +86,86 @@ export function startServer(opts: Options = {}): ServerHandle {
   }
 
   wss.on("connection", (ws, req) => {
-    // Stable identity: the client sends a persistent token (?id=…) so returning players reclaim
-    // their base; fall back to a fresh UUID for first-timers / invalid tokens.
     const q = new URLSearchParams((req.url ?? "").split("?")[1] ?? "");
-    const playerId = validIdentity(q.get("id")) ?? randomUUID();
-    state = addPlayer(state, playerId);
-    const wallet = q.get("wallet");
-    if (wallet) state = setWallet(state, playerId, wallet);
-    // Last-connection-wins: drop any stale socket for this identity (reconnect / second tab) so a
-    // player never has two live sockets — which would duplicate broadcasts and lose defense reports.
-    for (const [s, pid] of sockets) {
-      if (pid === playerId && s !== ws) { sockets.delete(s); try { s.close(4000, "superseded"); } catch { /* already closing */ } }
-    }
-    sockets.set(ws, playerId);
+    const nonce = randomUUID(); // single-use challenge for wallet-signature auth
+    let playerId: string | null = null; // assigned once identity is established
+    let authed = false;
+
     // A socket-level 'error' is fatal if unhandled (EventEmitter throws) — log and let 'close' clean up.
-    ws.on("error", (e) => console.error(`[ws_error ${playerId.slice(0, 8)}] ${(e as Error).message}`));
-    ws.send(JSON.stringify({ type: "welcome", playerId, state }));
-    flushReports();
-    broadcast();
-    logEvent("join", playerId, { wallet: !!wallet, players: sockets.size });
+    ws.on("error", (e) => console.error(`[ws_error ${(playerId ?? "anon").slice(0, 8)}] ${(e as Error).message}`));
+
+    // Bring a player into the world once identity is established (wallet pubkey, or legacy UUID).
+    function finishAuth(pid: string, walletPubkey?: string): void {
+      playerId = pid;
+      authed = true;
+      state = addPlayer(state, pid);
+      if (walletPubkey) state = setWallet(state, pid, walletPubkey);
+      // Last-connection-wins: drop any stale socket for this identity (reconnect / second tab) so a
+      // player never has two live sockets — which would duplicate broadcasts and lose defense reports.
+      for (const [s, other] of sockets) {
+        if (other === pid && s !== ws) { sockets.delete(s); try { s.close(4000, "superseded"); } catch { /* already closing */ } }
+      }
+      sockets.set(ws, pid);
+      ws.send(JSON.stringify({ type: "welcome", playerId: pid, state }));
+      flushReports();
+      broadcast();
+      logEvent("join", pid, { auth: walletPubkey ? "wallet" : "legacy", players: sockets.size });
+    }
+
+    const legacyId = validIdentity(q.get("id"));
+    if (AUTH_REQUIRED) {
+      // Production: only a wallet signature grants identity. Challenge the client to prove control.
+      ws.send(JSON.stringify({ type: "challenge", nonce }));
+    } else {
+      // Dev/anonymous: a returning player keeps their ?id= UUID; a first-timer gets a fresh one.
+      // A pubkey-shaped id is NEVER honored without a signature (it could impersonate a wallet
+      // identity) — fall back to a random id instead.
+      finishAuth(legacyId && !isValidPubkey(legacyId) ? legacyId : randomUUID());
+    }
 
     ws.on("message", (raw) => {
-      let parsed: { type?: string; cmd?: CocCommand; wallet?: string; message?: string };
+      let parsed: { type?: string; cmd?: CocCommand; wallet?: string; message?: string; pubkey?: string; signature?: string };
       try {
         parsed = JSON.parse(raw.toString());
       } catch {
         return;
       }
+
+      // ---- pre-auth: only the wallet-signature handshake is accepted ----
+      if (!authed) {
+        if (parsed.type === "auth" && typeof parsed.pubkey === "string" && typeof parsed.signature === "string") {
+          if (isValidPubkey(parsed.pubkey) && verifyAuthSignature(parsed.pubkey, parsed.signature, buildAuthMessage(nonce))) {
+            finishAuth(parsed.pubkey, parsed.pubkey); // the proven pubkey IS the identity AND the payout wallet
+          } else {
+            ws.send(JSON.stringify({ type: "error", message: "Wallet authentication failed." }));
+            try { ws.close(4001, "auth-failed"); } catch { /* already closing */ }
+          }
+        }
+        return; // ignore everything else until authenticated
+      }
+
+      const pid = playerId as string;
       if (parsed.type === "clientError" && typeof parsed.message === "string") {
-        console.error(`[client_error ${playerId.slice(0, 8)}] ${parsed.message.slice(0, 300)}`);
-        logEvent("client_error", playerId, { message: parsed.message.slice(0, 500) });
+        console.error(`[client_error ${pid.slice(0, 8)}] ${parsed.message.slice(0, 300)}`);
+        logEvent("client_error", pid, { message: parsed.message.slice(0, 500) });
         return;
       }
+      // Manual payout-wallet link: only for legacy (non-wallet) identities. A wallet-authed player's
+      // payout address is locked to the key they proved control of — it can't be reassigned.
       if (parsed.type === "link" && typeof parsed.wallet === "string") {
-        if (!allow(playerId)) return;
-        state = setWallet(state, playerId, parsed.wallet);
-        logEvent("link", playerId);
+        if (isValidPubkey(pid)) return; // wallet-authed → link is a no-op (locked to identity)
+        if (!allow(pid)) return;
+        state = setWallet(state, pid, parsed.wallet);
+        logEvent("link", pid);
         broadcast();
         return;
       }
       if (parsed.type !== "command" || !parsed.cmd) return;
-      if (!allow(playerId)) {
+      if (!allow(pid)) {
         ws.send(JSON.stringify({ type: "error", message: "Rate limit — slow down." }));
         return;
       }
-      const result = applyCommand(state, playerId, parsed.cmd);
+      const result = applyCommand(state, pid, parsed.cmd);
       if (result.error) {
         ws.send(JSON.stringify({ type: "error", message: result.error }));
         return;
@@ -134,14 +174,17 @@ export function startServer(opts: Options = {}): ServerHandle {
       if (result.report) ws.send(JSON.stringify({ type: "report", report: result.report }));
       // telemetry on notable actions
       const c = parsed.cmd;
-      if (c.type === "claimBase") logEvent("claim_base", playerId);
-      else if (c.type === "raid" && result.report) logEvent("raid", playerId, { stars: result.report.stars, loot: result.report.loot.gold + result.report.loot.elixir });
-      else if (c.type === "claimObjective") logEvent("objective", playerId);
-      else if (c.type === "claim") logEvent("war_claim", playerId, { amount: c.amount });
+      if (c.type === "claimBase") logEvent("claim_base", pid);
+      else if (c.type === "raid" && result.report) logEvent("raid", pid, { stars: result.report.stars, loot: result.report.loot.gold + result.report.loot.elixir });
+      else if (c.type === "claimObjective") logEvent("objective", pid);
+      else if (c.type === "claim") logEvent("war_claim", pid, { amount: c.amount });
       broadcast();
     });
 
-    ws.on("close", () => { sockets.delete(ws); buckets.delete(playerId); logEvent("leave", playerId, { players: sockets.size }); });
+    ws.on("close", () => {
+      sockets.delete(ws);
+      if (playerId) { buckets.delete(playerId); logEvent("leave", playerId, { players: sockets.size }); }
+    });
   });
 
   // A server-level error (e.g. EADDRINUSE, internal ws fault) must not throw unhandled.

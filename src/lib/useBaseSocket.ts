@@ -1,6 +1,15 @@
 "use client";
 import { useEffect, useRef, useState, useCallback } from "react";
+import bs58 from "bs58";
+import { buildAuthMessage } from "@/sim/coc/auth";
 import type { BattleReport, CocCommand, CocWorld } from "@/sim/coc";
+
+export interface WalletAuth {
+  /** base58 wallet pubkey, or null when no wallet is connected */
+  pubkey: string | null;
+  /** the wallet adapter's message signer (Phantom etc.) */
+  signMessage?: (message: Uint8Array) => Promise<Uint8Array>;
+}
 
 export interface BaseSocket {
   state: CocWorld | null;
@@ -13,7 +22,8 @@ export interface BaseSocket {
   clearReport: () => void;
 }
 
-/** A persistent per-browser identity so a returning player reclaims their existing base. */
+/** A persistent per-browser identity so a returning anonymous player reclaims their base (dev only;
+ *  in production the server requires wallet-signature auth and uses the wallet pubkey as identity). */
 function getIdentity(): string {
   if (typeof window === "undefined") return "";
   try {
@@ -25,23 +35,41 @@ function getIdentity(): string {
   }
 }
 
-export function useBaseSocket(url: string): BaseSocket {
+export function useBaseSocket(url: string, auth?: WalletAuth): BaseSocket {
   const [state, setState] = useState<CocWorld | null>(null);
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [report, setReport] = useState<BattleReport | null>(null);
   const ref = useRef<WebSocket | null>(null);
+  const authRef = useRef<WalletAuth | undefined>(auth);
+  authRef.current = auth; // always read the freshest wallet on the next challenge
+  const pendingNonce = useRef<string | null>(null);
+  const authedRef = useRef(false);
+
+  // Prove wallet control: sign the server's nonce and return the signature + pubkey.
+  const sendAuth = useCallback((nonce: string) => {
+    const a = authRef.current;
+    const ws = ref.current;
+    if (!a?.pubkey || !a.signMessage || !ws || ws.readyState !== ws.OPEN) return;
+    a.signMessage(new TextEncoder().encode(buildAuthMessage(nonce)))
+      .then((sig) => {
+        if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: "auth", pubkey: a.pubkey, signature: bs58.encode(sig) }));
+      })
+      .catch(() => setError("Wallet sign-in was rejected — approve the signature request to play."));
+  }, []);
 
   useEffect(() => {
     const id = getIdentity();
     const ws = new WebSocket(id ? `${url}?id=${encodeURIComponent(id)}` : url);
     ref.current = ws;
+    authedRef.current = false;
+    pendingNonce.current = null;
     let errTimer: ReturnType<typeof setTimeout> | undefined;
     ws.onopen = () => setConnected(true);
     ws.onclose = () => setConnected(false);
     ws.onmessage = (e) => {
-      let msg: { type?: string; playerId?: string; state?: CocWorld; message?: string; report?: BattleReport };
+      let msg: { type?: string; playerId?: string; state?: CocWorld; message?: string; report?: BattleReport; nonce?: string };
       try {
         msg = JSON.parse(e.data); // a malformed frame must not throw out of the handler (it would surface
                                   // as a window 'error' that we'd then forward back to the server)
@@ -49,8 +77,13 @@ export function useBaseSocket(url: string): BaseSocket {
         return;
       }
       if (msg.type === "welcome") {
+        authedRef.current = true;
+        pendingNonce.current = null;
         setPlayerId(msg.playerId ?? null);
         setState(msg.state ?? null);
+      } else if (msg.type === "challenge" && typeof msg.nonce === "string") {
+        pendingNonce.current = msg.nonce; // remember it in case the wallet connects a moment later
+        sendAuth(msg.nonce);
       } else if (msg.type === "state") {
         setState(msg.state ?? null);
       } else if (msg.type === "error") {
@@ -75,7 +108,12 @@ export function useBaseSocket(url: string): BaseSocket {
       window.removeEventListener("unhandledrejection", onRej);
       ws.close();
     };
-  }, [url]);
+  }, [url, sendAuth]);
+
+  // If the wallet becomes available AFTER the challenge arrived (e.g. token gate off), retry auth.
+  useEffect(() => {
+    if (!authedRef.current && pendingNonce.current && auth?.pubkey && auth.signMessage) sendAuth(pendingNonce.current);
+  }, [auth?.pubkey, auth?.signMessage, sendAuth]);
 
   const send = useCallback((cmd: CocCommand) => {
     ref.current?.send(JSON.stringify({ type: "command", cmd }));

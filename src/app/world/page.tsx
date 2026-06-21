@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useWallet } from "@solana/wallet-adapter-react";
 import { useBaseSocket } from "@/lib/useBaseSocket";
 import { axialToPixel } from "@/game/world";
 import { terrainArt } from "@/game/assets";
@@ -61,7 +62,11 @@ export default function WorldPage() {
 }
 
 function WorldGame() {
-  const { state, playerId, connected, error, report, send, link, clearReport } = useBaseSocket(SERVER_URL);
+  // Wallet-signature identity: the connected wallet signs the server's challenge, so the player's
+  // identity (and payout wallet) is the key they prove control of — not a spoofable typed address.
+  const { publicKey, signMessage } = useWallet();
+  const auth = useMemo(() => ({ pubkey: publicKey?.toBase58() ?? null, signMessage }), [publicKey, signMessage]);
+  const { state, playerId, connected, error, report, send, link, clearReport } = useBaseSocket(SERVER_URL, auth);
   const [screen, setScreen] = useState<"world" | "base">("base");
   const [mode, setMode] = useState<"view" | "build" | "wall">("view");
   const [selected, setSelected] = useState<string | null>(null);
@@ -851,6 +856,8 @@ function HexarPanel({ me, state, onClaim, onLink, onClose }: { me: CocPlayer; st
   const secsLeft = state.season ? Math.max(0, state.season.endsAtTick - state.tick) : 0;
   const validAddr = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(addr.trim());
   const linked = !!me.wallet;
+  // Wallet-authed identity ⇒ id === proven pubkey === payout wallet (locked, not editable).
+  const walletAuthed = !!me.wallet && me.wallet === me.id;
   const withdrawable = claimableHexar(me);
   return (
     <Panel title="$HEXAR · SEASON" accent padding="14px" headerRight={<button onClick={onClose} style={closeBtn}>✕</button>}>
@@ -867,12 +874,23 @@ function HexarPanel({ me, state, onClaim, onLink, onClose }: { me: CocPlayer; st
       <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "0 0 10px", lineHeight: 1.4 }}>
         Only $HEXAR <strong style={{ color: "var(--text-secondary)" }}>earned from raids &amp; objectives</strong> can be withdrawn on-chain (capped at {num(HEXAR_CLAIM_CAP)} per commander) — your starting balance is in-game spend only. Rewards come from the season pool, which fills from $HEXAR sinks; nothing is minted. The treasury settles claims to your Solana wallet.
       </p>
-      <span className="wl-label">PAYOUT WALLET (SOLANA)</span>
-      <div style={{ display: "flex", gap: 6, margin: "8px 0 12px" }}>
-        <input value={addr} onChange={(e) => setAddr(e.target.value)} placeholder="Your $HEXAR wallet address" style={{ ...input, fontFamily: "var(--font-mono)", fontSize: 11 }} />
-        <Button variant="secondary" disabled={!validAddr || addr.trim() === me.wallet} onClick={() => onLink(addr.trim())}>{linked ? "UPDATE" : "LINK"}</Button>
-      </div>
-      {linked && <div style={{ fontSize: 11, color: "var(--emerald-text)", marginBottom: 10 }}>✓ Linked — payouts settle to {me.wallet!.slice(0, 4)}…{me.wallet!.slice(-4)}</div>}
+      {walletAuthed ? (
+        <div style={{ marginBottom: 12 }}>
+          <span className="wl-label">PAYOUT WALLET (AUTHENTICATED)</span>
+          <div style={{ fontSize: 11, color: "var(--emerald-text)", marginTop: 6, fontFamily: "var(--font-mono)" }}>
+            ✓ {me.wallet!.slice(0, 6)}…{me.wallet!.slice(-6)} — proven by signature; payouts settle here.
+          </div>
+        </div>
+      ) : (
+        <>
+          <span className="wl-label">PAYOUT WALLET (SOLANA)</span>
+          <div style={{ display: "flex", gap: 6, margin: "8px 0 12px" }}>
+            <input value={addr} onChange={(e) => setAddr(e.target.value)} placeholder="Your $HEXAR wallet address" style={{ ...input, fontFamily: "var(--font-mono)", fontSize: 11 }} />
+            <Button variant="secondary" disabled={!validAddr || addr.trim() === me.wallet} onClick={() => onLink(addr.trim())}>{linked ? "UPDATE" : "LINK"}</Button>
+          </div>
+          {linked && <div style={{ fontSize: 11, color: "var(--emerald-text)", marginBottom: 10 }}>✓ Linked — payouts settle to {me.wallet!.slice(0, 4)}…{me.wallet!.slice(-4)}</div>}
+        </>
+      )}
       <Button variant="primary" full icon="💰" disabled={withdrawable <= 0 || !linked} onClick={() => onClaim(withdrawable)}>
         {!linked ? "LINK A WALLET TO CLAIM" : withdrawable <= 0 ? "NOTHING TO WITHDRAW YET" : `CLAIM ${num(withdrawable)} $HEXAR ON-CHAIN`}
       </Button>

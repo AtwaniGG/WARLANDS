@@ -9,11 +9,14 @@
  * RUN FROM A NO-SPACE PATH (the repo path has spaces, which breaks the Solana toolchain). Copy this
  * file somewhere like ~/warlands-payout/ and run it there.
  *
- *   npm i pg @solana/web3.js @solana/spl-token
+ *   npm i pg @solana/web3.js @solana/spl-token @noble/hashes bs58
  *   DATABASE_URL=... node payout-war.mjs --dry-run     # preview (no transfers, runs preflight)
  *   DATABASE_URL=... node payout-war.mjs               # execute
+ *   ... node payout-war.mjs --merkle dist.json         # only pay claims committed in a Merkle root
  *
- * Flags: --dry-run (no transfers) · --file <snapshot.json> (instead of DATABASE_URL)
+ * Flags: --dry-run (no transfers) · --file <snapshot.json> · --merkle <dist.json> (gate payouts to
+ *   a published Merkle distribution — verifies each wallet's proof + committed amount before paying;
+ *   build the file with build-merkle.mjs). Recommended for production: build → review root → pay.
  *
  * Env (key custody — prefer a secret manager over a disk file):
  *   TREASURY_SECRET   JSON array secret key, e.g. "[12,34,...]" (same bytes as a Solana id.json).
@@ -32,6 +35,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { hashLeaf, verifyProof, fromHex } from "./merkle.mjs";
 
 // Mint is env-driven so mainnet launch = paste your mint. No default → forces an explicit choice.
 const HEXAR_MINT = process.env.HEXAR_MINT || process.env.NEXT_PUBLIC_HEXAR_MINT || "";
@@ -48,6 +52,7 @@ const MIN_TREASURY_SOL = Number(process.env.MIN_TREASURY_SOL ?? 0.05);
 
 const DRY = process.argv.includes("--dry-run");
 const fileArg = process.argv[process.argv.indexOf("--file") + 1];
+const MERKLE_FILE = process.argv.includes("--merkle") ? process.argv[process.argv.indexOf("--merkle") + 1] : null;
 
 function die(msg) { console.error(`✗ ${msg}`); process.exit(1); }
 
@@ -119,6 +124,25 @@ const main = async () => {
   const state = await loadState();
   const ledger = readLedger();
 
+  // Optional Merkle gate: only settle claims committed in a published distribution root.
+  const scale = 10n ** BigInt(DECIMALS);
+  let merkle = null;
+  if (MERKLE_FILE) {
+    const m = JSON.parse(fs.readFileSync(MERKLE_FILE, "utf8"));
+    m.byWallet = new Map(m.leaves.map((l) => [l.wallet, l]));
+    m.rootBytes = fromHex(m.root);
+    merkle = m;
+    console.log(`Merkle gate ON — root ${m.root} (${m.count} committed claim(s)).`);
+  }
+  // True only if (wallet, committed amount) is in the tree with a valid proof AND the cumulative
+  // payout (already cleared + this run) does not exceed the committed entitlement.
+  function merkleOk(o) {
+    const l = merkle.byWallet.get(o.wallet);
+    if (!l) return false;
+    if (!verifyProof(hashLeaf(o.wallet, BigInt(l.amount)), l.proof.map(fromHex), merkle.rootBytes)) return false;
+    return BigInt(o.cleared + o.amount) <= BigInt(l.amount) / scale;
+  }
+
   // Compute owed, clamped to the lifetime cap and validated recipient — pure, no side effects.
   const owed = [];
   for (const p of Object.values(state.players ?? {})) {
@@ -130,14 +154,15 @@ const main = async () => {
     let pubkey;
     try { pubkey = new web3.PublicKey(p.wallet); } catch { console.warn(`  ! ${p.id.slice(0, 8)} — invalid wallet, skipped`); continue; }
     if (!web3.PublicKey.isOnCurve(pubkey.toBytes())) { console.warn(`  ! ${p.id.slice(0, 8)} — wallet not on-curve, skipped`); continue; }
-    owed.push({ id: p.id, wallet: p.wallet, pubkey, amount });
+    owed.push({ id: p.id, wallet: p.wallet, pubkey, amount, cleared });
   }
   owed.sort((a, b) => b.amount - a.amount);
 
-  // Apply the per-run total cap (largest-first), logging anything deferred.
+  // Apply the Merkle gate (if any) then the per-run total cap (largest-first), logging skips.
   const queued = [];
   let runTotal = 0;
   for (const o of owed) {
+    if (merkle && !merkleOk(o)) { console.warn(`  ! ${o.id.slice(0, 8)} — not in / exceeds Merkle commitment, skipped`); continue; }
     if (runTotal + o.amount > MAX_PER_RUN) { console.warn(`  ~ ${o.id.slice(0, 8)} — deferred (per-run cap ${MAX_PER_RUN})`); continue; }
     runTotal += o.amount;
     queued.push(o);

@@ -1,5 +1,8 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { WebSocket } from "ws";
+import { ed25519 } from "@noble/curves/ed25519";
+import bs58 from "bs58";
+import { buildAuthMessage } from "@/sim/coc/auth";
 import { startServer } from "./index";
 
 const srv = startServer({ port: 0, seed: 1, tickMs: 0, persistEvery: 0 });
@@ -80,5 +83,61 @@ describe("server", () => {
     expect(b.first.playerId).toBe(id);
     expect(await closedCode).toBe(4000); // server kicked the stale socket so only one stays live
     b.ws.close();
+  });
+});
+
+describe("wallet-signature auth (AUTH_REQUIRED)", () => {
+  const authSrv = startServer({ port: 0, seed: 1, tickMs: 0, persistEvery: 0, authRequired: true });
+  let authPort: number;
+  beforeAll(async () => { authPort = await authSrv.ready; });
+  afterAll(() => authSrv.close());
+
+  // Attach the message listener at creation so the synchronously-sent challenge is never missed.
+  const connectAuth = (): Promise<{ ws: WebSocket; challenge: any }> =>
+    new Promise((res) => {
+      const ws = new WebSocket(`ws://127.0.0.1:${authPort}`);
+      ws.once("message", (d) => res({ ws, challenge: JSON.parse(d.toString()) }));
+    });
+  const nextMsg = (ws: WebSocket): Promise<any> =>
+    new Promise((res) => ws.once("message", (d) => res(JSON.parse(d.toString()))));
+
+  it("challenges, then welcomes a wallet that signs the nonce (identity = pubkey)", async () => {
+    const priv = ed25519.utils.randomPrivateKey();
+    const pubkey = bs58.encode(ed25519.getPublicKey(priv));
+    const { ws, challenge } = await connectAuth();
+    expect(challenge.type).toBe("challenge");
+    expect(typeof challenge.nonce).toBe("string");
+    const sig = bs58.encode(ed25519.sign(new TextEncoder().encode(buildAuthMessage(challenge.nonce)), priv));
+    const welcomeP = nextMsg(ws);
+    ws.send(JSON.stringify({ type: "auth", pubkey, signature: sig }));
+    const welcome = await welcomeP;
+    expect(welcome.type).toBe("welcome");
+    expect(welcome.playerId).toBe(pubkey); // the proven pubkey becomes the identity
+    expect(welcome.state.players[pubkey]?.wallet).toBe(pubkey); // payout wallet locked to it
+    ws.close();
+  });
+
+  it("rejects a signature over the wrong message", async () => {
+    const priv = ed25519.utils.randomPrivateKey();
+    const pubkey = bs58.encode(ed25519.getPublicKey(priv));
+    const { ws } = await connectAuth();
+    const sig = bs58.encode(ed25519.sign(new TextEncoder().encode("not the nonce"), priv));
+    const replyP = nextMsg(ws);
+    ws.send(JSON.stringify({ type: "auth", pubkey, signature: sig }));
+    const reply = await replyP;
+    expect(reply.type).toBe("error");
+    expect(reply.message).toMatch(/auth/i);
+    ws.close();
+  });
+
+  it("ignores commands sent before authentication", async () => {
+    const { ws } = await connectAuth();
+    ws.send(JSON.stringify({ type: "command", cmd: { type: "claimBase", q: 0, r: 0 } }));
+    const got = await Promise.race([
+      nextMsg(ws),
+      new Promise<any>((res) => setTimeout(() => res({ type: "timeout" }), 300)),
+    ]);
+    expect(got.type).toBe("timeout"); // command ignored — no welcome, no state
+    ws.close();
   });
 });

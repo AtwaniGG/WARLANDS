@@ -40,32 +40,52 @@ real-money beta until ALL of these are true (none are solved by setting the mint
 
 | Precondition | Why | Status |
 |---|---|---|
+| **Wallet-signature identity** | Anonymous UUIDs → sybil/multi-account | ✅ DONE — set `AUTH_REQUIRED=1` |
+| **Merkle claim pipeline** | On-chain claims must be provable/tamper-evident | ✅ DONE — `build-merkle.mjs` + `--merkle` gate |
 | **Multisig treasury** (Squads/Realms) holds $HEXAR, not a hot key | Today the payout signer is a single hot key — one leak = total loss | ❌ TODO |
 | **Timelock** on treasury withdrawals | Lets a quorum cancel a malicious/erroneous payout | ❌ TODO |
+| **On-chain claim distributor** (Anchor) verifying the Merkle root | Today the root is verified off-chain by the payout script; full trustlessness needs the program | ❌ TODO |
 | **Contract/treasury audit** | No third-party review yet | ❌ TODO |
-| **Merkle claim pipeline** | On-chain claims must be provable; `rewardClaims.merkleProof` is unpopulated | ❌ TODO |
-| **Wallet-signature identity** | Identity is an anonymous client UUID today → sybil/multi-account | ❌ TODO |
 | **Paid mainnet RPC** | Public RPC will rate-limit/drop under load | ⚠️ set `NEXT_PUBLIC_SOLANA_RPC` |
 
-Until then, run mainnet as a **free / non-custodial** experience (token gate can stay on for
-holders; do not enable real payouts). The payout worker is gated behind `--dry-run` — keep it there.
+The two app-layer blockers are now closed (wallet-sig identity + Merkle commitment). The remaining
+items are treasury custody (multisig/timelock), the on-chain distributor, and an audit. Until those
+land, run mainnet as a **free / non-custodial** experience (token gate + `AUTH_REQUIRED=1` on; keep
+the payout worker in `--dry-run`).
 
 ---
 
+## Wallet-signature identity
+
+Set `AUTH_REQUIRED=1` on the world server (Railway). Then a player's identity is the Solana wallet
+they prove control of by signing a server-issued nonce (Phantom `signMessage`) — no anonymous UUIDs,
+no typed payout addresses. One token-gated wallet = one base, so sybil costs real capital. The
+client already signs automatically via the connected wallet; the token gate guarantees a wallet is
+present. (Leave `AUTH_REQUIRED` off only for local dev / anonymous playtests.)
+
 ## Payout worker (when preconditions are met)
 
-```bash
-# From a NO-SPACE path (the repo path has spaces, which breaks the Solana toolchain):
-cp scripts/payout-war.mjs ~/warlands-payout/ && cd ~/warlands-payout
-npm i pg @solana/web3.js @solana/spl-token
+Production flow: **build the Merkle commitment → review the root → pay against it.**
 
-DATABASE_URL=... HEXAR_MINT=<mint> SOLANA_RPC=<rpc> node payout-war.mjs --dry-run   # preview
-DATABASE_URL=... HEXAR_MINT=<mint> SOLANA_RPC=<rpc> node payout-war.mjs             # execute
+```bash
+# From a NO-SPACE path (the repo path has spaces, which breaks the Solana toolchain).
+# Copy BOTH scripts + the shared lib together:
+cp scripts/{payout-war,build-merkle,merkle}.mjs ~/warlands-payout/ && cd ~/warlands-payout
+npm i pg @solana/web3.js @solana/spl-token @noble/hashes bs58
+
+# 1) Commit entitlements to a Merkle root (tamper-evident; publish this root).
+DATABASE_URL=... node build-merkle.mjs                 # → merkle-distribution.json
+
+# 2) Pay only what the root commits (verifies each wallet's proof + amount before sending).
+DATABASE_URL=... HEXAR_MINT=<mint> SOLANA_RPC=<rpc> node payout-war.mjs --merkle merkle-distribution.json --dry-run
+DATABASE_URL=... HEXAR_MINT=<mint> SOLANA_RPC=<rpc> node payout-war.mjs --merkle merkle-distribution.json
 ```
 
 Built-in safety: per-wallet lifetime cap (`CLAIM_CAP`, keep in sync with `HEXAR_CLAIM_CAP` in
 [src/sim/coc/config.ts](../../src/sim/coc/config.ts)), `MAX_PER_RUN`, `MIN_TREASURY_SOL` preflight,
-and a durable signed ledger that prevents double-paying.
+a durable signed ledger that prevents double-paying, and — with `--merkle` — a keccak proof check so
+the operator can't pay an amount that isn't in the published, reviewable root. The same root/proofs
+are the seam for the future on-chain Anchor distributor.
 
 ---
 
