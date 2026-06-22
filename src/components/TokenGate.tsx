@@ -27,6 +27,21 @@ export function TokenGate({ children }: { children: ReactNode }) {
   const { publicKey, connected } = useWallet();
   const [bal, setBal] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
+  const [demo, setDemo] = useState(false);
+
+  // Restore an in-progress demo session on reload so a free-try player isn't bounced to the wall.
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot restore from sessionStorage
+  useEffect(() => { try { if (sessionStorage.getItem("warlands.demo") === "1") setDemo(true); } catch { /* no storage */ } }, []);
+
+  // A qualifying holder is always a FULL account — clear any stale demo flag so the socket connects real.
+  useEffect(() => {
+    if (connected && bal !== null && bal >= GATE_MIN) { try { sessionStorage.removeItem("warlands.demo"); } catch { /* no storage */ } }
+  }, [connected, bal]);
+
+  const enterDemo = useCallback(() => {
+    try { sessionStorage.setItem("warlands.demo", "1"); } catch { /* no storage */ }
+    setDemo(true);
+  }, []);
 
   // read the wallet's $HEXAR balance (program-agnostic: works for SPL & Token-2022)
   const refresh = useCallback(async () => {
@@ -55,9 +70,10 @@ export function TokenGate({ children }: { children: ReactNode }) {
   // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot balance fetch on connect
   useEffect(() => { refresh(); }, [refresh]);
 
-  // --- pass conditions (no bypass) ---
+  // --- pass conditions ---
   if (!GATE_ON) return <>{children}</>;
   if (connected && bal !== null && bal >= GATE_MIN) return <>{children}</>;
+  if (demo) return <>{children}</>; // free-try (Restricted Live Slice) — fenced server-side
 
   const insufficient = connected && bal !== null && bal < GATE_MIN;
 
@@ -117,6 +133,16 @@ export function TokenGate({ children }: { children: ReactNode }) {
               Get ${HEXAR_SYMBOL} ↗
             </a>
           </div>
+
+          {/* free-try path — play a fenced demo before committing $HEXAR */}
+          <div style={{ height: 1, background: "var(--hairline)", margin: "4px 0" }} />
+          <Button variant="outline" onClick={enterDemo} style={{ width: "100%" }}>
+            ▶ PLAY THE DEMO — NO ${HEXAR_SYMBOL} NEEDED
+          </Button>
+          <p style={{ margin: 0, fontSize: 11, lineHeight: 1.5, color: "var(--text-muted)", textAlign: "center" }}>
+            Try the full base-builder against bots. Trophies, clans, real ${HEXAR_SYMBOL} rewards and the
+            world map unlock when you hold {fmt(GATE_MIN)} ${HEXAR_SYMBOL}.
+          </p>
         </div>
       </div>
     </div>

@@ -19,6 +19,8 @@ export interface BaseSocket {
   report: BattleReport | null;
   send: (cmd: CocCommand) => void;
   link: (wallet: string) => void;
+  attachRef: (code: string) => void;
+  checkin: () => void;
   clearReport: () => void;
 }
 
@@ -30,6 +32,26 @@ function getIdentity(): string {
     let id = localStorage.getItem("warlands.id");
     if (!id) { id = (crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`).replace(/-/g, ""); localStorage.setItem("warlands.id", id); }
     return id;
+  } catch {
+    return "";
+  }
+}
+
+/** Free-try session flag — set by the token gate's "PLAY THE DEMO" button. */
+function isDemoSession(): boolean {
+  if (typeof window === "undefined") return false;
+  try { return sessionStorage.getItem("warlands.demo") === "1"; } catch { return false; }
+}
+
+/** Capture a `?ref=CODE` from the URL (first-touch wins) and return the stored referral code, if any. */
+export function capturedRef(): string {
+  if (typeof window === "undefined") return "";
+  try {
+    const fromUrl = new URL(window.location.href).searchParams.get("ref");
+    if (fromUrl && !localStorage.getItem("warlands.ref")) {
+      localStorage.setItem("warlands.ref", fromUrl.trim().toUpperCase().slice(0, 16));
+    }
+    return localStorage.getItem("warlands.ref") ?? "";
   } catch {
     return "";
   }
@@ -61,7 +83,11 @@ export function useBaseSocket(url: string, auth?: WalletAuth): BaseSocket {
 
   useEffect(() => {
     const id = getIdentity();
-    const ws = new WebSocket(id ? `${url}?id=${encodeURIComponent(id)}` : url);
+    const params = new URLSearchParams();
+    if (id) params.set("id", id);
+    if (isDemoSession()) params.set("demo", "1"); // free-try entry (Restricted Live Slice)
+    const qs = params.toString();
+    const ws = new WebSocket(qs ? `${url}?${qs}` : url);
     ref.current = ws;
     authedRef.current = false;
     pendingNonce.current = null;
@@ -81,6 +107,19 @@ export function useBaseSocket(url: string, auth?: WalletAuth): BaseSocket {
         pendingNonce.current = null;
         setPlayerId(msg.playerId ?? null);
         setState(msg.state ?? null);
+        // Retention + virality: claim the daily streak (server is idempotent per day) and, once,
+        // attribute a captured referral code (the server rejects self/duplicate/unknown codes).
+        try {
+          const pid = msg.playerId;
+          const me = pid ? msg.state?.players?.[pid] : undefined;
+          if (ws.readyState === ws.OPEN && pid) {
+            ws.send(JSON.stringify({ type: "command", cmd: { type: "dailyCheckin" } }));
+            const ref = capturedRef();
+            if (ref && me && !me.referredBy && me.refCode !== ref) {
+              ws.send(JSON.stringify({ type: "command", cmd: { type: "attachRef", code: ref } }));
+            }
+          }
+        } catch { /* non-fatal — referral/checkin are best-effort */ }
       } else if (msg.type === "challenge" && typeof msg.nonce === "string") {
         pendingNonce.current = msg.nonce; // remember it in case the wallet connects a moment later
         sendAuth(msg.nonce);
@@ -121,7 +160,13 @@ export function useBaseSocket(url: string, auth?: WalletAuth): BaseSocket {
   const link = useCallback((wallet: string) => {
     ref.current?.send(JSON.stringify({ type: "link", wallet }));
   }, []);
+  const attachRef = useCallback((code: string) => {
+    ref.current?.send(JSON.stringify({ type: "command", cmd: { type: "attachRef", code } }));
+  }, []);
+  const checkin = useCallback(() => {
+    ref.current?.send(JSON.stringify({ type: "command", cmd: { type: "dailyCheckin" } }));
+  }, []);
   const clearReport = useCallback(() => setReport(null), []);
 
-  return { state, playerId, connected, error, report, send, link, clearReport };
+  return { state, playerId, connected, error, report, send, link, attachRef, checkin, clearReport };
 }

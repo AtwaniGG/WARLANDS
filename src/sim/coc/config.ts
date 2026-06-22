@@ -430,6 +430,40 @@ export const STARTING_SEASON_POOL = 1_000_000;
 export const SEASON_LENGTH = 7 * 24 * 3600; // ticks (≈7 days at 1 Hz)
 export const SEASON_TROPHY_KEEP = 0.5; // soft trophy reset fraction at season rollover
 
+// ---- Restricted-Live-Slice DEMO (free-try acquisition) ----
+/** Town-Hall ceiling for demo accounts — hit it and the game prompts conversion to a full account. */
+export const DEMO_TH_CAP = 3;
+
+// ---- referrals (virality) ----
+/** Spend-only $HEXAR handed to a referee when they attach a referral code (never withdrawable). */
+export const REFERRAL_REFEREE_BONUS = 5_000;
+/** $HEXAR paid (from the season pool) to a referrer when their referee crosses the conversion milestone. */
+export const REFERRAL_REFERRER_REWARD = 2_000;
+/** Town-Hall level a referee must reach as a FULL (non-demo, wallet-linked) account to pay the referrer. */
+export const REFERRAL_MILESTONE_TH = 3;
+/**
+ * A short, URL-safe, deterministic referral code for a player id. Deterministic so it survives
+ * restarts without storage and so the same id always yields the same shareable code. base36(fnv1a).
+ */
+export function refCodeFor(id: string): string {
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < id.length; i++) { h ^= id.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return (h >>> 0).toString(36).toUpperCase().padStart(7, "0");
+}
+
+// ---- daily login streak (retention) ----
+/** Base spend-only $HEXAR for a daily check-in; scales with the streak up to DAILY_STREAK_MAX_MULT. */
+export const DAILY_STREAK_BASE = 150;
+export const DAILY_STREAK_MAX_MULT = 7;
+/** $HEXAR awarded for a check-in at the given (post-increment) streak length. */
+export function dailyReward(streak: number): number {
+  return DAILY_STREAK_BASE * Math.max(1, Math.min(DAILY_STREAK_MAX_MULT, streak));
+}
+
+// ---- season points (airdrop / allocation basis; full accounts only) ----
+export const POINTS_PER_STAR = 10;
+export const POINTS_PER_OBJECTIVE = 25;
+
 export function levelDef(id: CocBuildingId, level: number): BuildingLevel | undefined {
   return BUILDINGS[id].levels[level - 1];
 }

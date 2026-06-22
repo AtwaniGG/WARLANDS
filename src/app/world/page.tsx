@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useBaseSocket } from "@/lib/useBaseSocket";
+import { raidShare, rankShare, clanShare, inviteShare, inviteUrl } from "@/lib/share";
 import { axialToPixel } from "@/game/world";
 import { terrainArt } from "@/game/assets";
 import { Web3Provider } from "@/web3/Web3Provider";
@@ -15,7 +16,7 @@ import { useCountUp } from "@/components/useCountUp";
 const buzz = (p: number | number[]) => { try { (navigator as Navigator & { vibrate?: (p: number | number[]) => boolean }).vibrate?.(p); } catch { /* unsupported */ } };
 import {
   BUILDINGS, LOOT_PCT, MAX_BUILDERS, TRAPS, TRAP_IDS, UNITS, UNIT_IDS, WALL,
-  builderCost, builderCount, ccLevel, ccTier, claimableHexar, dailyClaimable, fitsInGrid, finishCost, freeBuilders, garrisonCap, garrisonUsed, housingCap, housingUsed, leagueFor, levelDef, maxLevelOf, objectiveLabel, occupiedTiles, resolveRaid, storageCap, HEXAR_DAILY_CLAIM_CAP, TICKS_PER_DAY,
+  builderCost, builderCount, ccLevel, ccTier, claimableHexar, dailyClaimable, fitsInGrid, finishCost, freeBuilders, garrisonCap, garrisonUsed, housingCap, housingUsed, leagueFor, levelDef, maxLevelOf, objectiveLabel, occupiedTiles, resolveRaid, storageCap, HEXAR_DAILY_CLAIM_CAP, TICKS_PER_DAY, DEMO_TH_CAP, dailyReward,
   type Army, type BattleFrame, type BattleReport, type CocBase, type CocBuildingId, type CocPlayer, type CocResource, type CocTrapId, type CocUnitId, type CocWorld, type Deployment, type PlacedBuilding,
 } from "@/sim/coc";
 
@@ -92,6 +93,11 @@ function WorldGame() {
   const [frameIdx, setFrameIdx] = useState(0);
   const [launching, setLaunching] = useState(false);
   const awaitingRaid = useRef(false);
+  // free-try + retention plumbing
+  const demoClaimSent = useRef(false);
+  const prevStreak = useRef<number | null>(null);
+  const [dailyToast, setDailyToast] = useState<{ streak: number; reward: number } | null>(null);
+  const [copied, setCopied] = useState(false);
 
   // When the raid report arrives, replay it deterministically from the captured snapshot.
   useEffect(() => {
@@ -115,6 +121,30 @@ function WorldGame() {
     const id = setTimeout(() => setFrameIdx((i) => i + 1), 80);
     return () => clearTimeout(id);
   }, [frames, frameIdx]);
+
+  // Demo players don't pick map territory — auto-found their fenced training base on entry.
+  useEffect(() => {
+    if (!state || !playerId) return;
+    const p = state.players[playerId];
+    if (p?.demo && !state.bases[playerId] && !demoClaimSent.current) {
+      demoClaimSent.current = true;
+      send({ type: "claimBase", q: 0, r: 0 });
+    }
+  }, [state, playerId, send]);
+
+  // Daily-streak toast: when the server bumps our streak (idempotent check-in on connect), celebrate it.
+  useEffect(() => {
+    if (!state || !playerId) return;
+    const s = state.players[playerId]?.streak;
+    if (typeof s !== "number") return;
+    if (prevStreak.current !== null && s > prevStreak.current) {
+      setDailyToast({ streak: s, reward: dailyReward(s) });
+      const t = setTimeout(() => setDailyToast(null), 5000);
+      prevStreak.current = s;
+      return () => clearTimeout(t);
+    }
+    prevStreak.current = s;
+  }, [state, playerId]);
 
   // smooth HUD counters (never jitter while ticking)
   const goldC = useCountUp(state && playerId ? state.bases[playerId]?.gold ?? 0 : 0);
@@ -147,8 +177,15 @@ function WorldGame() {
   const me = playerId ? state.players[playerId] ?? null : null;
   const view = myBase ? screen : "world";
   const claimableCount = me?.objectives?.filter((o) => o.progress >= o.target && !o.claimed).length ?? 0;
+  const refLink = me?.refCode ? inviteUrl(me.refCode) : "";
 
   function resetBaseUi() { setMode("view"); setPlacing(null); setPlacingTrap(null); setMoveFrom(null); setSelected(null); }
+  /** Leave the demo and return to the gate to connect a qualifying wallet (become a full account). */
+  function exitDemo() { try { sessionStorage.removeItem("warlands.demo"); } catch { /* no storage */ } window.location.reload(); }
+  function copyInvite() {
+    if (!refLink) return;
+    try { navigator.clipboard?.writeText(refLink); setCopied(true); setTimeout(() => setCopied(false), 1800); } catch { /* clipboard blocked */ }
+  }
 
   function onTile(key: string) {
     if (!myBase) return;
@@ -200,6 +237,28 @@ function WorldGame() {
 
   return (
     <main style={page}>
+      {/* ===================== DEMO BANNER (free-try) ===================== */}
+      {me?.demo && (
+        <div style={demoBanner}>
+          <span style={{ font: "700 10px var(--font-display)", letterSpacing: "0.14em", color: "#0c0a04", background: "var(--amber)", padding: "3px 7px", borderRadius: 5 }}>DEMO</span>
+          <span style={{ fontSize: 11, color: "var(--text-secondary)" }}>
+            Free-try · bots only · TH{DEMO_TH_CAP} cap · rewards aren&apos;t real $HEXAR
+          </span>
+          <button onClick={exitDemo} style={demoUnlockBtn}>UNLOCK FULL GAME →</button>
+        </div>
+      )}
+
+      {/* ===================== DAILY STREAK TOAST ===================== */}
+      {dailyToast && (
+        <div style={dailyToastStyle}>
+          <span style={{ fontSize: 18 }}>🔥</span>
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            <span style={{ font: "700 12px var(--font-display)", color: "var(--text-hi)", letterSpacing: "0.06em" }}>DAY {dailyToast.streak} STREAK</span>
+            <span style={{ fontSize: 11, color: "var(--amber-text)" }}>+{num(dailyToast.reward)} $HEXAR daily reward</span>
+          </div>
+        </div>
+      )}
+
       {/* ===================== PLAYFIELD (full-screen) ===================== */}
       {view === "base" && myBase ? (
         <div style={fieldWrap}>
@@ -405,7 +464,7 @@ function WorldGame() {
       )}
       {myBase && hexarOpen && me && (
         <Overlay onClose={() => setHexarOpen(false)}>
-          <HexarPanel me={me} state={state} onClaim={(amt) => { send({ type: "claim", amount: amt }); buzz(20); }} onLink={(a) => { link(a); buzz(8); }} onClose={() => setHexarOpen(false)} />
+          <HexarPanel me={me} state={state} refLink={refLink} copied={copied} onCopyInvite={copyInvite} onExitDemo={exitDemo} onClaim={(amt) => { send({ type: "claim", amount: amt }); buzz(20); }} onLink={(a) => { link(a); buzz(8); }} onClose={() => setHexarOpen(false)} />
         </Overlay>
       )}
       {scout && state.bases[scout] && myBase && (
@@ -466,7 +525,7 @@ function WorldGame() {
 
       {report && !raidTarget && (
         <Overlay onClose={clearReport}>
-          <ResultCard report={report} mine={report.attacker === playerId} onClose={clearReport}
+          <ResultCard report={report} mine={report.attacker === playerId} refCode={me?.refCode} onClose={clearReport}
             onRevenge={state.bases[report.attacker] ? () => { const atk = report.attacker; clearReport(); setScreen("world"); setScout(atk); } : undefined} />
         </Overlay>
       )}
@@ -696,7 +755,10 @@ function ClanPanel({ state, playerId, send, onClose }: { state: CocWorld; player
             </div>
           </>
         )}
-        <div style={{ marginTop: 14 }}><Button variant="danger" full onClick={() => { send({ type: "leaveClan" }); onClose(); }}>LEAVE CLAN</Button></div>
+        <div style={{ marginTop: 14, display: "flex", gap: 8 }}>
+          <Button variant="secondary" full icon="𝕏" onClick={() => { try { window.open(clanShare({ clan: myClan.name, members: myClan.members.length, ref: me?.refCode }).intent, "_blank", "noopener,noreferrer"); } catch { /* popup blocked */ } }}>RECRUIT</Button>
+          <Button variant="danger" full onClick={() => { send({ type: "leaveClan" }); onClose(); }}>LEAVE CLAN</Button>
+        </div>
       </Panel>
     );
   }
@@ -855,8 +917,30 @@ function ObjectivesPanel({ me, onClaim, onClose }: { me: CocPlayer; onClaim: (id
   );
 }
 
-function HexarPanel({ me, state, onClaim, onLink, onClose }: { me: CocPlayer; state: CocWorld; onClaim: (amt: number) => void; onLink: (addr: string) => void; onClose: () => void }) {
+function HexarPanel({ me, state, refLink, copied, onCopyInvite, onExitDemo, onClaim, onLink, onClose }: { me: CocPlayer; state: CocWorld; refLink: string; copied: boolean; onCopyInvite: () => void; onExitDemo: () => void; onClaim: (amt: number) => void; onLink: (addr: string) => void; onClose: () => void }) {
   const [addr, setAddr] = useState(me.wallet ?? "");
+  if (me.demo) {
+    return (
+      <Panel title="$HEXAR · DEMO" accent padding="14px" headerRight={<button onClick={onClose} style={closeBtn}>✕</button>}>
+        <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 12 }}>
+          <Stat label="💎 DEMO $HEXAR" value={num(me.hexar)} accent="amber" />
+          <Stat label="WITHDRAWABLE" value="0" accent="sky" />
+        </div>
+        <p style={{ fontSize: 12, color: "var(--text-secondary)", margin: "0 0 12px", lineHeight: 1.5 }}>
+          You&apos;re in the <strong style={{ color: "var(--amber-text)" }}>free demo</strong>. This $HEXAR is practice only — it can&apos;t be withdrawn. Raids hit bots, the world map &amp; clans are locked, and progress caps at Town Hall {DEMO_TH_CAP}.
+        </p>
+        <div style={{ background: "var(--surface-raised)", border: "1px solid var(--hairline)", borderRadius: "var(--radius-sm)", padding: "10px 12px", marginBottom: 12 }}>
+          <span className="wl-label" style={{ fontSize: 10, color: "var(--emerald-text)" }}>GO FULL TO UNLOCK</span>
+          <ul style={{ margin: "6px 0 0", paddingLeft: 18, fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.6 }}>
+            <li>Real, withdrawable $HEXAR rewards</li>
+            <li>The live world map &amp; PvP raids</li>
+            <li>Clans, trophies &amp; the season airdrop</li>
+          </ul>
+        </div>
+        <Button variant="primary" full icon="🔓" onClick={onExitDemo}>UNLOCK FULL GAME</Button>
+      </Panel>
+    );
+  }
   const pool = state.seasonPool ?? 0;
   const secsLeft = state.season ? Math.max(0, state.season.endsAtTick - state.tick) : 0;
   const validAddr = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(addr.trim());
@@ -877,6 +961,17 @@ function HexarPanel({ me, state, onClaim, onLink, onClose }: { me: CocPlayer; st
         <Stat label="💎 YOUR $HEXAR" value={num(me.hexar)} accent="amber" />
         <Stat label="WITHDRAWABLE" value={num(withdrawable)} accent="emerald" />
         <Stat label="TODAY" value={`${num(claimedToday)} / ${num(HEXAR_DAILY_CLAIM_CAP)}`} accent="sky" />
+      </div>
+      <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 10, alignItems: "center" }}>
+        <Stat label="✨ SEASON POINTS" value={num(me.points ?? 0)} accent="violet" />
+        {typeof me.streak === "number" && me.streak > 0 && <Stat label="🔥 STREAK" value={`${me.streak}d`} accent="amber" />}
+        {typeof me.referralsConverted === "number" && me.referralsConverted > 0 && <Stat label="🤝 REFERRALS" value={num(me.referralsConverted)} accent="emerald" />}
+        {me.refCode && (
+          <Button size="sm" variant="outline" icon="𝕏" style={{ marginLeft: "auto" }}
+            onClick={() => { try { window.open(rankShare({ league: leagueFor(state.bases[me.id]?.trophies ?? 0).name, trophies: state.bases[me.id]?.trophies ?? 0, ref: me.refCode }).intent, "_blank", "noopener,noreferrer"); } catch { /* popup blocked */ } }}>
+            FLEX RANK
+          </Button>
+        )}
       </div>
       <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "0 0 10px", lineHeight: 1.4 }}>
         Only $HEXAR <strong style={{ color: "var(--text-secondary)" }}>earned from raids &amp; objectives</strong> can be withdrawn on-chain (up to {num(HEXAR_DAILY_CLAIM_CAP)} $HEXAR/day per commander) — your starting balance is in-game spend only. Rewards come from the season pool, which fills from $HEXAR sinks; nothing is minted. The treasury settles claims to your Solana wallet.
@@ -910,11 +1005,38 @@ function HexarPanel({ me, state, onClaim, onLink, onClose }: { me: CocPlayer; st
           </p>
         </>
       )}
+
+      {/* ---- invite & earn (referrals) ---- */}
+      {me.refCode && (
+        <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid var(--hairline)" }}>
+          <span className="wl-label" style={{ fontSize: 10, color: "var(--emerald-text)" }}>INVITE &amp; EARN</span>
+          <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "6px 0 8px", lineHeight: 1.4 }}>
+            Share your link. Friends get a starter bonus, and you earn $HEXAR from the pool when they reach Town Hall {DEMO_TH_CAP} with a linked wallet.
+          </p>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            <input value={refLink} readOnly onFocus={(e) => e.currentTarget.select()} style={{ ...input, minWidth: 140, fontFamily: "var(--font-mono)", fontSize: 11 }} />
+            <Button variant="secondary" onClick={onCopyInvite}>{copied ? "COPIED" : "COPY"}</Button>
+            <Button variant="secondary" icon="𝕏" onClick={() => { try { window.open(inviteShare(me.refCode!).intent, "_blank", "noopener,noreferrer"); } catch { /* popup blocked */ } }}>SHARE</Button>
+          </div>
+        </div>
+      )}
     </Panel>
   );
 }
 
-function ResultCard({ report, mine, onClose, onRevenge }: { report: BattleReport; mine: boolean; onClose: () => void; onRevenge?: () => void }) {
+function ResultCard({ report, mine, refCode, onClose, onRevenge }: { report: BattleReport; mine: boolean; refCode?: string; onClose: () => void; onRevenge?: () => void }) {
+  const win = mine && report.stars > 0;
+  function share() {
+    const { intent } = raidShare({
+      stars: report.stars,
+      loot: report.loot.gold + report.loot.elixir,
+      dpct: Math.round(report.destructionPct * 100),
+      troph: report.trophies,
+      def: report.defender.slice(0, 6),
+      ref: refCode,
+    });
+    try { window.open(intent, "_blank", "noopener,noreferrer"); } catch { /* popup blocked */ }
+  }
   return (
     <Panel title={mine ? "RAID REPORT" : "UNDER ATTACK"} rim={mine ? undefined : "blood"} accent={mine} padding="16px" headerRight={<button onClick={onClose} style={closeBtn}>✕</button>}>
       <div style={{ textAlign: "center" }}>
@@ -927,7 +1049,10 @@ function ResultCard({ report, mine, onClose, onRevenge }: { report: BattleReport
         <Stat label="🧪 LOOT" value={num(report.loot.elixir)} accent="violet" align="stack" />
         <Stat label="🏆" value={`${report.trophies >= 0 ? "+" : ""}${report.trophies}`} accent={report.trophies >= 0 ? "emerald" : "blood"} align="stack" />
       </div>
-      <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+      {win && (
+        <Button variant="secondary" full icon="𝕏" onClick={share} style={{ marginTop: 14 }}>SHARE VICTORY</Button>
+      )}
+      <div style={{ display: "flex", gap: 8, marginTop: win ? 8 : 14 }}>
         {!mine && onRevenge && <Button variant="danger" full icon="⚔️" onClick={onRevenge}>REVENGE</Button>}
         <Button variant="primary" full onClick={onClose}>RETURN HOME</Button>
       </div>
@@ -954,6 +1079,9 @@ const hudBox: CSSProperties = { display: "inline-flex", alignItems: "center", ga
 const rowBtn: CSSProperties = { justifyContent: "space-between", textAlign: "left", fontWeight: 500 };
 const trayCard: CSSProperties = { display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left", background: "var(--surface-raised)", border: "1px solid var(--hairline)", borderRadius: "var(--radius-sm)", padding: "8px 10px", color: "var(--text-primary)" };
 const closeBtn: CSSProperties = { background: "transparent", color: "var(--text-secondary)", border: 0, cursor: "pointer", fontSize: 14, lineHeight: 1 };
+const demoBanner: CSSProperties = { position: "absolute", left: "50%", top: "max(8px, env(safe-area-inset-top))", transform: "translateX(-50%)", zIndex: 70, display: "flex", alignItems: "center", gap: 9, padding: "5px 10px", background: "var(--surface-card)", border: "1px solid var(--border-strong)", borderRadius: 999, boxShadow: "var(--shadow-modal)", maxWidth: "calc(100vw - 16px)", flexWrap: "wrap", justifyContent: "center" };
+const demoUnlockBtn: CSSProperties = { background: "var(--amber)", color: "#0c0a04", border: 0, borderRadius: 999, padding: "4px 10px", font: "700 10px var(--font-display)", letterSpacing: "0.06em", cursor: "pointer" };
+const dailyToastStyle: CSSProperties = { position: "absolute", left: "50%", top: "calc(max(8px, env(safe-area-inset-top)) + 44px)", transform: "translateX(-50%)", zIndex: 72, display: "flex", alignItems: "center", gap: 10, padding: "9px 14px", background: "var(--surface-card)", border: "1px solid var(--amber)", borderRadius: 12, boxShadow: "var(--shadow-modal)" };
 const overlay: CSSProperties = { position: "fixed", inset: 0, zIndex: 60, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 };
 const sheet: CSSProperties = { position: "fixed", left: 8, right: 8, bottom: "max(8px, env(safe-area-inset-bottom))", maxWidth: 560, margin: "0 auto", zIndex: 55, maxHeight: "46vh", overflowY: "auto" };
 const unitChip: CSSProperties = { display: "inline-flex", alignItems: "center", gap: 6, background: "var(--surface-raised)", border: "1px solid var(--hairline)", borderRadius: "var(--radius-sm)", padding: "6px 10px", color: "var(--text-primary)", fontSize: 12, cursor: "pointer" };

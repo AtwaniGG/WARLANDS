@@ -104,6 +104,29 @@ export interface CocPlayer {
   claimDay?: number;
   /** linked Solana wallet (base58 pubkey) — destination for on-chain $HEXAR payouts. */
   wallet?: string;
+  /**
+   * Restricted-Live-Slice DEMO account: a free-try player who never held $HEXAR. Fenced from the
+   * real economy — earns spend-only fake $HEXAR (never `earned`, never from/into `seasonPool`),
+   * can only raid bots, can't claim real hexes or join clans, and is capped at DEMO_TH_CAP. Cleared
+   * (promoted) once the player connects a qualifying wallet. Never withdraws anything on-chain.
+   */
+  demo?: boolean;
+  /** This player's own shareable referral code (deterministic from id; assigned on join). */
+  refCode?: string;
+  /** refCode of the player who referred this one — set ONCE at first real play, then immutable. */
+  referredBy?: string;
+  /** true once the referrer has been paid for this referee crossing the conversion milestone. */
+  refMilestonePaid?: boolean;
+  /** how many of this player's referees have converted (crossed the milestone) — for share/flex. */
+  referralsConverted?: number;
+  /** season points earned from real play (raids + objectives) — the airdrop/allocation basis. Full accounts only. */
+  points?: number;
+  /** day index of the most recent daily check-in (drives the login streak). */
+  lastLoginDay?: number;
+  /** current consecutive-day login streak. */
+  streak?: number;
+  /** opted-in Telegram chat id for re-engagement notifications (raid/shield/objective/season). */
+  tgChatId?: string;
 }
 
 export interface Clan {
@@ -129,6 +152,8 @@ export interface CocWorld {
   seasonPool?: number;
   /** current season id + when it rolls over (trophy soft-reset). */
   season?: { id: number; endsAtTick: number };
+  /** referral-code → playerId lookup, rebuilt on load; lets `?ref=CODE` resolve to a referrer. */
+  refCodes?: Record<string, string>;
 }
 
 export type CocCommand =
@@ -149,7 +174,9 @@ export type CocCommand =
   | { type: "leaveClan" }
   | { type: "donateTroops"; toOwner: string; army: Army }
   | { type: "claimObjective"; id: string }
-  | { type: "claim"; amount: number };
+  | { type: "claim"; amount: number }
+  | { type: "attachRef"; code: string }
+  | { type: "dailyCheckin" };
 
 /** Outcome of a raid, surfaced to the attacking client only. */
 export interface BattleReport {

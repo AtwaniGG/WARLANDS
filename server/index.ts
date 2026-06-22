@@ -1,6 +1,6 @@
 import { randomUUID, randomInt } from "node:crypto";
 import { WebSocketServer, WebSocket } from "ws";
-import { createWorld, addPlayer, normalizeWorld, setWallet, validateWorld } from "@/sim/coc/world";
+import { createWorld, addPlayer, normalizeWorld, setWallet, setDemo, setTgChat, validateWorld } from "@/sim/coc/world";
 import { ensureBots } from "@/sim/coc/bots";
 
 /** Accept only an unguessable, bot-safe client identity token; else issue a fresh one. */
@@ -11,7 +11,8 @@ import { applyCommand } from "@/sim/coc/commands";
 import { applyTick } from "@/sim/coc/tick";
 import type { CocWorld, CocCommand } from "@/sim/coc/types";
 import { buildAuthMessage, isValidPubkey, verifyAuthSignature } from "@/sim/coc/auth";
-import { initDb, loadLatest, saveSnapshot, logEvent, DB_CONFIGURED } from "./db";
+import { initDb, loadLatest, saveSnapshot, logEvent, getTgChatId, DB_CONFIGURED } from "./db";
+import { notify, raidedMessage, tgLinkToken } from "./notify";
 
 interface Options {
   port?: number;
@@ -61,6 +62,13 @@ export function startServer(opts: Options = {}): ServerHandle {
       try {
         for (const r of rs) ws.send(JSON.stringify({ type: "report", report: r }));
         delivered.push(pid);
+        // Best-effort Telegram raid alert (Feature 5): ping the victim's opted-in chat about the
+        // most recent raid. notify() is fire-and-forget, no-ops without a bot token, and rate-limits
+        // per chat — wrapped in try/catch so it can never break report delivery or the tick loop.
+        const chatId = state.players[pid]?.tgChatId;
+        if (chatId && rs.length > 0) {
+          try { notify(chatId, raidedMessage(rs[rs.length - 1])); } catch { /* never block delivery */ }
+        }
       } catch (e) {
         // leave this player's reports queued for the next flush
         console.error(`[report_flush ${pid.slice(0, 8)}] ${(e as Error).message}`);
@@ -98,10 +106,14 @@ export function startServer(opts: Options = {}): ServerHandle {
     ws.on("error", (e) => console.error(`[ws_error ${(playerId ?? "anon").slice(0, 8)}] ${(e as Error).message}`));
 
     // Bring a player into the world once identity is established (wallet pubkey, or legacy UUID).
-    function finishAuth(pid: string, walletPubkey?: string): void {
+    // `demo` enters the Restricted-Live-Slice trial; a wallet-authed identity is always a full account
+    // and a returning player who arrives without ?demo=1 is promoted out of demo.
+    function finishAuth(pid: string, walletPubkey?: string, demo = false): void {
       playerId = pid;
       authed = true;
-      state = addPlayer(state, pid);
+      const isDemo = demo && !walletPubkey;
+      state = addPlayer(state, pid, { demo: isDemo });
+      state = setDemo(state, pid, isDemo); // promote/demote a returning identity to match this session
       if (walletPubkey) state = setWallet(state, pid, walletPubkey);
       // Last-connection-wins: drop any stale socket for this identity (reconnect / second tab) so a
       // player never has two live sockets — which would duplicate broadcasts and lose defense reports.
@@ -113,17 +125,32 @@ export function startServer(opts: Options = {}): ServerHandle {
       flushReports();
       broadcast();
       logEvent("join", pid, { auth: walletPubkey ? "wallet" : "legacy", players: sockets.size });
+      // Best-effort Telegram opt-in binding (Feature 5): if this player tapped the bot's
+      // `/start <token>` deep-link, the webhook stored token→chatId; pick it up here and set
+      // tgChatId so raid alerts can reach them. Fully async + swallowed — never blocks connect.
+      if (!state.players[pid]?.tgChatId) {
+        getTgChatId(tgLinkToken(pid))
+          .then((chatId) => {
+            if (!chatId || sockets.get(ws) !== pid) return; // not linked, or socket already gone
+            const next = setTgChat(state, pid, chatId);
+            if (next !== state) { state = next; broadcast(); }
+          })
+          .catch((e) => console.error(`[tg_bind ${pid.slice(0, 8)}] ${(e as Error).message}`));
+      }
     }
 
     const legacyId = validIdentity(q.get("id"));
+    const wantDemo = q.get("demo") === "1"; // free-try entry (Restricted Live Slice)
     if (AUTH_REQUIRED) {
       // Production: only a wallet signature grants identity. Challenge the client to prove control.
-      ws.send(JSON.stringify({ type: "challenge", nonce }));
+      // Demo players never sign — they connect with a legacy UUID (token gate stays off for them).
+      if (wantDemo && legacyId && !isValidPubkey(legacyId)) finishAuth(legacyId, undefined, true);
+      else ws.send(JSON.stringify({ type: "challenge", nonce }));
     } else {
       // Dev/anonymous: a returning player keeps their ?id= UUID; a first-timer gets a fresh one.
       // A pubkey-shaped id is NEVER honored without a signature (it could impersonate a wallet
       // identity) — fall back to a random id instead.
-      finishAuth(legacyId && !isValidPubkey(legacyId) ? legacyId : randomUUID());
+      finishAuth(legacyId && !isValidPubkey(legacyId) ? legacyId : randomUUID(), undefined, wantDemo);
     }
 
     ws.on("message", (raw) => {
@@ -188,6 +215,8 @@ export function startServer(opts: Options = {}): ServerHandle {
       else if (c.type === "raid" && result.report) logEvent("raid", pid, { stars: result.report.stars, loot: result.report.loot.gold + result.report.loot.elixir });
       else if (c.type === "claimObjective") logEvent("objective", pid);
       else if (c.type === "claim") logEvent("war_claim", pid, { amount: c.amount });
+      else if (c.type === "attachRef") logEvent("referral_attach", pid, { code: c.code });
+      else if (c.type === "dailyCheckin") logEvent("daily_checkin", pid);
       broadcast();
     });
 

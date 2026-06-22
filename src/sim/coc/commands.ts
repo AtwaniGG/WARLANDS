@@ -1,8 +1,15 @@
 import { hexKey } from "@/game/world";
-import { builderCost, BUILDINGS, ccTier, claimableHexar, dailyClaimable, TICKS_PER_DAY, finishCost, levelDef, maxLevelOf, maxWallLevel, MAX_BUILDERS, nextObjective, SHIELD_MAX_SECS, SHIELD_SECS_PER_PCT, STARTING_ELIXIR, STARTING_GOLD, TRAPS, UNITS, WALL, HEXAR_RAID_REWARD_PER_STAR, HEXAR_SHIELD_PER_HOUR } from "./config";
-import { builderCount, ccLevel, fitsInGrid, footprintTiles, freeBuilders, garrisonCap, garrisonUsed, hasBarracks, housingCap, housingUsed, inGrid, occupiedTiles, parseTile, storageCap } from "./world";
+import { builderCost, BUILDINGS, ccTier, claimableHexar, dailyClaimable, TICKS_PER_DAY, finishCost, levelDef, maxLevelOf, maxWallLevel, MAX_BUILDERS, nextObjective, SHIELD_MAX_SECS, SHIELD_SECS_PER_PCT, STARTING_ELIXIR, STARTING_GOLD, TRAPS, UNITS, WALL, HEXAR_RAID_REWARD_PER_STAR, HEXAR_SHIELD_PER_HOUR, DEMO_TH_CAP, REFERRAL_REFEREE_BONUS, REFERRAL_REFERRER_REWARD, REFERRAL_MILESTONE_TH, POINTS_PER_STAR, POINTS_PER_OBJECTIVE, dailyReward } from "./config";
+import { builderCount, ccLevel, fitsInGrid, footprintTiles, freeBuilders, garrisonCap, garrisonUsed, hasBarracks, housingCap, housingUsed, inGrid, occupiedTiles, parseTile, playerByRefCode, storageCap } from "./world";
 import { resolveRaid } from "./battle";
-import type { Army, Clan, CocBase, CocBuildingId, CocCommand, CocResource, CocTrapId, CocUnitId, CocWorld, CommandResult, Deployment, ObjectiveKind, PlacedBuilding } from "./types";
+import type { Army, Clan, CocBase, CocBuildingId, CocCommand, CocPlayer, CocResource, CocTrapId, CocUnitId, CocWorld, CommandResult, Deployment, ObjectiveKind, PlacedBuilding } from "./types";
+
+/** Conversion nudge surfaced when a demo account hits a fenced-off feature. */
+const DEMO_LOCKED = "That's a full-game feature — connect a wallet holding $HEXAR to unlock it.";
+/** A demo player's village lives off the contested map at this synthetic, per-player location. */
+function demoLocation(playerId: string): string {
+  return `demo:${playerId}`;
+}
 
 const CLAN_MAX_MEMBERS = 10;
 /** Starting village layout on the 20×20 grid: a centered Town Hall flanked by two Builder's Huts. */
@@ -36,6 +43,28 @@ function payFromPool(state: CocWorld, playerId: string, want: number): { state: 
   // Track pool earnings separately — only this is withdrawable on-chain (see claim()).
   return { state: { ...state, seasonPool: pool - paid, players: { ...state.players, [playerId]: { ...player, hexar: player.hexar + paid, earned: (player.earned ?? 0) + paid } } }, paid };
 }
+/** New season-pool balance after a $HEXAR sink — but DEMO spending is fake and must never inflate
+ *  the real treasury (else demo players could pump a pool that real players then withdraw). */
+function sinkToPool(state: CocWorld, player: CocPlayer | undefined, amount: number): number {
+  if (player?.demo) return state.seasonPool ?? 0;
+  return (state.seasonPool ?? 0) + amount;
+}
+/**
+ * Pay a $HEXAR reward (raid/objective). DEMO accounts get fake, spend-only $HEXAR — never from/into
+ * the season pool, never added to `earned` (so it's never withdrawable) and they accrue no season
+ * points. FULL accounts are paid from the pool (withdrawable) and accrue `points` for the airdrop.
+ */
+function payReward(state: CocWorld, playerId: string, want: number, points = 0): CocWorld {
+  const player = state.players[playerId];
+  if (!player || want <= 0) return state;
+  if (player.demo) {
+    return { ...state, players: { ...state.players, [playerId]: { ...player, hexar: player.hexar + want } } };
+  }
+  const next = payFromPool(state, playerId, want).state;
+  if (points <= 0) return next;
+  const p = next.players[playerId];
+  return { ...next, players: { ...next.players, [playerId]: { ...p, points: (p.points ?? 0) + points } } };
+}
 function bumpObjectives(state: CocWorld, playerId: string, kind: ObjectiveKind, amount: number): CocWorld {
   const player = state.players[playerId];
   if (!player?.objectives || amount <= 0) return state;
@@ -54,11 +83,16 @@ function collides(base: CocBase, anchorKey: string, id: CocBuildingId, exclude?:
 }
 
 function claimBase(state: CocWorld, playerId: string, q: number, r: number): CommandResult {
-  if (!state.players[playerId]) return fail(state, "Unknown player.");
+  const claimer = state.players[playerId];
+  if (!claimer) return fail(state, "Unknown player.");
   if (state.bases[playerId]) return fail(state, "You already have a base.");
-  const key = hexKey(q, r);
-  if (!state.hexes[key]) return fail(state, "No such hex.");
-  if (state.claimedHexes[key]) return fail(state, "That land is already claimed.");
+  // Demo accounts can't claim contested map territory — they get a fenced, off-map "training grounds"
+  // base at a synthetic per-player location, so the live world map stays clean of trial bases.
+  const key = claimer.demo ? demoLocation(playerId) : hexKey(q, r);
+  if (!claimer.demo) {
+    if (!state.hexes[key]) return fail(state, "No such hex.");
+    if (state.claimedHexes[key]) return fail(state, "That land is already claimed.");
+  }
   const buildings: Record<string, PlacedBuilding> = {
     [TH_ANCHOR]: { id: "commandCenter", level: 1 },
   };
@@ -105,7 +139,7 @@ function placeBuilding(state: CocWorld, playerId: string, anchorKey: string, bui
         ...state,
         players: { ...state.players, [playerId]: { ...player, hexar: player.hexar - cost } },
         bases: { ...state.bases, [playerId]: newBase },
-        seasonPool: (state.seasonPool ?? 0) + cost, // $HEXAR sink → treasury
+        seasonPool: sinkToPool(state, player, cost), // $HEXAR sink → treasury (no-op for demo)
       },
     };
   }
@@ -140,6 +174,9 @@ function upgradeBuilding(state: CocWorld, playerId: string, key: string): Comman
   if (hasJobOn(base, key)) return fail(state, "That building is busy.");
   const nextLevel = b.level + 1;
   if (nextLevel > maxLevelOf(b.id)) return fail(state, "Already at max level.");
+  if (b.id === "commandCenter" && state.players[playerId]?.demo && nextLevel > DEMO_TH_CAP) {
+    return fail(state, `Demo is capped at Town Hall ${DEMO_TH_CAP} — connect a wallet holding $HEXAR to keep climbing.`);
+  }
   if (b.id !== "commandCenter") {
     const cap = ccTier(ccLevel(base)).caps[b.id];
     if (!cap || nextLevel > cap.maxLevel) return fail(state, "Upgrade the Town Hall to raise the level cap.");
@@ -284,6 +321,12 @@ function raid(state: CocWorld, playerId: string, targetOwner: string, deploy: De
   if (targetOwner === playerId) return fail(state, "You cannot raid your own base.");
   const defender = state.bases[targetOwner];
   if (!defender) return fail(state, "No such base.");
+  // Demo fences: a demo account may only raid bots; full accounts can never raid (or even see) a
+  // demo base. Keeps the trial slice and the real competitive economy completely separated.
+  const me = state.players[playerId];
+  const targetPlayer = state.players[targetOwner];
+  if (me?.demo && !targetPlayer?.isBot) return fail(state, "Demo battles are against bots only — connect a wallet to raid real players.");
+  if (!me?.demo && targetPlayer?.demo) return fail(state, "No such base.");
   if (defender.shieldUntil > state.tick) return fail(state, "That base is shielded.");
   if (!Array.isArray(deploy) || deploy.length === 0) return fail(state, "Select an army to deploy.");
 
@@ -332,9 +375,10 @@ function raid(state: CocWorld, playerId: string, targetOwner: string, deploy: De
     shieldUntil: result.destructionPct > 0 ? state.tick + shieldSecs : defender.shieldUntil,
   };
 
-  // $HEXAR reward for the attacker, scaled by stars — PAID FROM THE SEASON POOL (never minted).
+  // $HEXAR reward for the attacker, scaled by stars — PAID FROM THE SEASON POOL (never minted), plus
+  // season points (full accounts only). Demo accounts get fake spend-only $HEXAR and no points.
   let next: CocWorld = { ...state, bases: { ...state.bases, [playerId]: newAttacker, [targetOwner]: newDefender } };
-  next = payFromPool(next, playerId, result.stars * HEXAR_RAID_REWARD_PER_STAR).state;
+  next = payReward(next, playerId, result.stars * HEXAR_RAID_REWARD_PER_STAR, result.stars * POINTS_PER_STAR);
   if (result.stars > 0) next = bumpObjectives(next, playerId, "raidWins", 1);
 
   return {
@@ -369,7 +413,7 @@ function finishNow(state: CocWorld, playerId: string, key: string): CommandResul
       ...state,
       players: { ...state.players, [playerId]: { ...player, hexar: player.hexar - cost } },
       bases: { ...state.bases, [playerId]: newBase },
-      seasonPool: (state.seasonPool ?? 0) + cost, // $HEXAR sink → treasury
+      seasonPool: sinkToPool(state, player, cost), // $HEXAR sink → treasury (no-op for demo)
     },
   };
 }
@@ -387,7 +431,7 @@ function extendShield(state: CocWorld, playerId: string, hours: number): Command
       ...state,
       players: { ...state.players, [playerId]: { ...player, hexar: player.hexar - cost } },
       bases: { ...state.bases, [playerId]: { ...base, shieldUntil: from + hours * 3600 } },
-      seasonPool: (state.seasonPool ?? 0) + cost, // $HEXAR sink → treasury
+      seasonPool: sinkToPool(state, player, cost), // $HEXAR sink → treasury (no-op for demo)
     },
   };
 }
@@ -395,6 +439,7 @@ function extendShield(state: CocWorld, playerId: string, hours: number): Command
 function createClan(state: CocWorld, playerId: string, name: string): CommandResult {
   const player = state.players[playerId];
   if (!player) return fail(state, "Unknown player.");
+  if (player.demo) return fail(state, DEMO_LOCKED);
   if (player.clanId) return fail(state, "Leave your current clan first.");
   const clean = name.trim();
   if (clean.length < 3 || clean.length > 24) return fail(state, "Clan name must be 3–24 characters.");
@@ -413,6 +458,7 @@ function createClan(state: CocWorld, playerId: string, name: string): CommandRes
 function joinClan(state: CocWorld, playerId: string, clanId: string): CommandResult {
   const player = state.players[playerId];
   if (!player) return fail(state, "Unknown player.");
+  if (player.demo) return fail(state, DEMO_LOCKED);
   if (player.clanId) return fail(state, "Leave your current clan first.");
   const clan = state.clans[clanId];
   if (!clan) return fail(state, "No such clan.");
@@ -487,8 +533,8 @@ function claimObjective(state: CocWorld, playerId: string, id: string): CommandR
   if (!obj) return fail(state, "No such objective.");
   if (obj.progress < obj.target) return fail(state, "Objective not complete.");
   if (obj.claimed) return fail(state, "Already claimed.");
-  // pay the reward from the season pool, then rotate the slot to a fresh objective
-  let next = payFromPool(state, playerId, obj.reward).state;
+  // pay the reward (pool + points for full accounts; fake spend-only for demo), then rotate the slot
+  let next = payReward(state, playerId, obj.reward, POINTS_PER_OBJECTIVE);
   const p2 = next.players[playerId];
   const objectives = p2.objectives!.map((o) => (o.id === id ? nextObjective(o) : o));
   next = { ...next, players: { ...next.players, [playerId]: { ...p2, objectives } } };
@@ -506,6 +552,74 @@ function claim(state: CocWorld, playerId: string, amount: number): CommandResult
   const amt = Math.min(dailyClaimable(player, state.tick), Math.max(0, Math.floor(amount)));
   if (amt <= 0) return fail(state, "Nothing to withdraw right now — only earned $HEXAR is claimable, up to 1,000 $HEXAR/day.");
   return { state: { ...state, players: { ...state.players, [playerId]: { ...player, hexar: player.hexar - amt, claimed: (player.claimed ?? 0) + amt, claimedToday: claimedToday + amt, claimDay: day } } } };
+}
+
+/**
+ * Attribute a referral. Called the first time a referred player really starts playing (has a base),
+ * not on pageview — anti-fraud. Sets `referredBy` ONCE (immutable), rejects self-referral / unknown
+ * codes, and grants the referee a spend-only $HEXAR starter bonus (never `earned` → not withdrawable,
+ * so it can't be Sybil-farmed). The referrer is paid later, only on a real conversion milestone.
+ */
+function attachRef(state: CocWorld, playerId: string, code: string): CommandResult {
+  const player = state.players[playerId];
+  if (!player) return fail(state, "Unknown player.");
+  if (player.referredBy) return fail(state, "Referral already set.");
+  const clean = (code ?? "").trim().toUpperCase();
+  if (!clean || clean === player.refCode) return fail(state, "Invalid referral code.");
+  const referrerId = playerByRefCode(state, clean);
+  if (!referrerId || referrerId === playerId) return fail(state, "Invalid referral code.");
+  return {
+    state: {
+      ...state,
+      players: { ...state.players, [playerId]: { ...player, referredBy: clean, hexar: player.hexar + REFERRAL_REFEREE_BONUS } },
+    },
+  };
+}
+
+/** True when a referee has crossed the anti-Sybil conversion milestone (a real, wallet-linked, TH-N account). */
+function refereeConverted(player: CocPlayer, base: CocBase | undefined): boolean {
+  return !player.demo && !!player.wallet && !!base && ccLevel(base) >= REFERRAL_MILESTONE_TH;
+}
+
+/**
+ * Pay referrers whose referees have crossed the conversion milestone (full, wallet-linked, TH-N).
+ * Runs periodically from the tick loop. Reward comes from the season pool (bounded → never inflates
+ * supply) and lands in the referrer's withdrawable `earned`. Marked paid-once so it never repeats.
+ */
+export function settleReferrals(state: CocWorld): CocWorld {
+  let next = state;
+  for (const [id, p] of Object.entries(state.players)) {
+    if (!p.referredBy || p.refMilestonePaid) continue;
+    if (!refereeConverted(p, next.bases[id])) continue;
+    const referrerId = playerByRefCode(next, p.referredBy);
+    // Mark paid regardless of whether a referrer still exists, so we don't re-scan this referee forever.
+    next = { ...next, players: { ...next.players, [id]: { ...next.players[id], refMilestonePaid: true } } };
+    if (!referrerId || referrerId === id) continue;
+    next = payFromPool(next, referrerId, REFERRAL_REFERRER_REWARD).state;
+    const ref = next.players[referrerId];
+    next = { ...next, players: { ...next.players, [referrerId]: { ...ref, referralsConverted: (ref.referralsConverted ?? 0) + 1 } } };
+  }
+  return next;
+}
+
+/**
+ * Daily login streak (retention). Idempotent within a day: the first check-in of a new day grants a
+ * streak-scaled, spend-only $HEXAR reward (never withdrawable → Sybil-safe). Consecutive days extend
+ * the streak; a gap resets it to 1.
+ */
+function dailyCheckin(state: CocWorld, playerId: string): CommandResult {
+  const player = state.players[playerId];
+  if (!player) return fail(state, "Unknown player.");
+  const day = Math.floor(state.tick / TICKS_PER_DAY);
+  if (player.lastLoginDay === day) return fail(state, "Daily reward already claimed today.");
+  const streak = player.lastLoginDay === day - 1 ? (player.streak ?? 0) + 1 : 1;
+  const reward = dailyReward(streak);
+  return {
+    state: {
+      ...state,
+      players: { ...state.players, [playerId]: { ...player, lastLoginDay: day, streak, hexar: player.hexar + reward } },
+    },
+  };
 }
 
 export function applyCommand(state: CocWorld, playerId: string, cmd: CocCommand, entropy = 0): CommandResult {
@@ -546,6 +660,10 @@ export function applyCommand(state: CocWorld, playerId: string, cmd: CocCommand,
       return claimObjective(state, playerId, cmd.id);
     case "claim":
       return claim(state, playerId, cmd.amount);
+    case "attachRef":
+      return attachRef(state, playerId, cmd.code);
+    case "dailyCheckin":
+      return dailyCheckin(state, playerId);
     default:
       return fail(state, "Unknown command.");
   }

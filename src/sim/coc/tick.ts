@@ -1,9 +1,12 @@
 import { BUILDINGS, SEASON_LENGTH, SEASON_TROPHY_KEEP, SHIELD_MAX_SECS, SHIELD_SECS_PER_PCT } from "./config";
 import { resolveRaid } from "./battle";
+import { settleReferrals } from "./commands";
 import type { Army, BattleReport, BuildJob, CocBase, CocWorld, Deployment, PlacedBuilding, TrainOrder } from "./types";
 
 /** How often (ticks) the AI mounts a wave of raids on undefended live players. */
 const RAID_INTERVAL = 200;
+/** How often (ticks) we settle referral payouts for referees who crossed the conversion milestone. */
+const REFERRAL_INTERVAL = 60;
 const MAX_PENDING_REPORTS = 5;
 
 function mulberry32(a: number): () => number {
@@ -95,6 +98,8 @@ export function applyTick(state: CocWorld): CocWorld {
     const wave = botRaidWave(state, bases, nextTick);
     next = { ...next, bases: wave.bases, pendingReports: wave.pendingReports };
   }
+  // Pay out referral rewards for any referee who has crossed the conversion milestone.
+  if (nextTick % REFERRAL_INTERVAL === 0) next = settleReferrals(next);
   // season rollover: soft-reset trophies + start the next season
   if (next.season && nextTick >= next.season.endsAtTick) {
     const rolled: CocWorld["bases"] = {};

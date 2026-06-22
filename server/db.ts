@@ -56,6 +56,22 @@ export function logEvent(type: string, player?: string | null, meta?: unknown): 
   pool.query("INSERT INTO events (type, player, meta) VALUES ($1, $2, $3)", [type, player ?? null, meta == null ? null : JSON.stringify(meta)]).catch(() => {});
 }
 
+/**
+ * Telegram opt-in lookup (Feature 5): return the chat id a player linked via the bot's
+ * `/start <token>` deep-link, or null if they haven't opted in. The webhook (Next app,
+ * src/app/api/tg/route.ts) writes the `tg_links` table; we only read it here. Best-effort:
+ * resolves null on any error or without a DB so binding never blocks/throws into the WS server.
+ */
+export async function getTgChatId(token: string): Promise<string | null> {
+  if (!pool) return null;
+  try {
+    const { rows } = await pool.query("SELECT chat_id FROM tg_links WHERE token = $1 LIMIT 1", [token]);
+    return rows[0]?.chat_id ?? null;
+  } catch {
+    return null; // table may not exist yet (no one has opted in) — treat as "not linked"
+  }
+}
+
 export async function loadLatest(): Promise<CocWorld | null> {
   if (!pool) return null;
   const { rows } = await pool.query("SELECT state FROM world_snapshots ORDER BY id DESC LIMIT 1");

@@ -1,5 +1,5 @@
 import { generateWorld, hexKey } from "@/game/world";
-import { BASE_STORAGE_CAP, BUILDINGS, GRID_H, GRID_W, SEASON_LENGTH, STARTING_SEASON_POOL, STARTING_HEXAR, UNITS, makeObjectives } from "./config";
+import { BASE_STORAGE_CAP, BUILDINGS, GRID_H, GRID_W, SEASON_LENGTH, STARTING_SEASON_POOL, STARTING_HEXAR, UNITS, makeObjectives, refCodeFor } from "./config";
 import type { CocBase, CocBuildingId, CocPlayer, CocResource, CocWorld } from "./types";
 
 export const WORLD_RADIUS = 9;
@@ -13,10 +13,11 @@ export function createWorld(seed: number): CocWorld {
   return { seed, radius, tick: 0, hexes: hexRecord, bases: {}, claimedHexes: {}, players: {}, clans: {}, nextClanId: 1, pendingReports: {}, seasonPool: STARTING_SEASON_POOL, season: { id: 1, endsAtTick: SEASON_LENGTH } };
 }
 
-export function addPlayer(state: CocWorld, id: string): CocWorld {
+export function addPlayer(state: CocWorld, id: string, opts?: { demo?: boolean }): CocWorld {
   if (state.players[id]) return state;
-  const player: CocPlayer = { id, hexar: STARTING_HEXAR, joinedTick: state.tick, objectives: makeObjectives(id), claimed: 0, earned: 0 };
-  return { ...state, players: { ...state.players, [id]: player } };
+  const refCode = refCodeFor(id);
+  const player: CocPlayer = { id, hexar: STARTING_HEXAR, joinedTick: state.tick, objectives: makeObjectives(id), claimed: 0, earned: 0, refCode, ...(opts?.demo ? { demo: true } : {}) };
+  return { ...state, players: { ...state.players, [id]: player }, refCodes: { ...(state.refCodes ?? {}), [refCode]: id } };
 }
 
 /** Link a Solana wallet (base58 pubkey) to a player so the treasury can pay out on-chain. */
@@ -26,6 +27,32 @@ export function setWallet(state: CocWorld, id: string, wallet: string): CocWorld
   const clean = wallet.trim();
   if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(clean) || player.wallet === clean) return state; // base58 pubkey
   return { ...state, players: { ...state.players, [id]: { ...player, wallet: clean } } };
+}
+
+/** Bind an opted-in Telegram chat id to a player (re-engagement alerts). Idempotent; no-op if unchanged. */
+export function setTgChat(state: CocWorld, id: string, tgChatId: string): CocWorld {
+  const player = state.players[id];
+  if (!player || player.tgChatId === tgChatId) return state;
+  return { ...state, players: { ...state.players, [id]: { ...player, tgChatId } } };
+}
+
+/**
+ * Promote/demote a player's DEMO status. A wallet-authed or token-holding player is a FULL account;
+ * promotion clears the flag so they begin earning real (pool-funded, withdrawable) $HEXAR. Idempotent.
+ */
+export function setDemo(state: CocWorld, id: string, demo: boolean): CocWorld {
+  const player = state.players[id];
+  if (!player || !!player.demo === demo) return state;
+  return { ...state, players: { ...state.players, [id]: { ...player, demo } } };
+}
+
+/** Resolve a referral code to the referrer's playerId (lookup-table first, scan as a fallback). */
+export function playerByRefCode(state: CocWorld, code: string): string | undefined {
+  const clean = code.trim().toUpperCase();
+  const hit = state.refCodes?.[clean];
+  if (hit && state.players[hit]) return hit;
+  for (const [id, p] of Object.entries(state.players)) if (p.refCode === clean) return id;
+  return undefined;
 }
 
 // ---- village grid geometry ----
@@ -163,6 +190,7 @@ export function normalizeWorld(state: CocWorld): CocWorld {
     claimedHexes[loc] = owner;
   }
   const players: CocWorld["players"] = {};
+  const refCodes: CocWorld["refCodes"] = {};
   for (const [id, p] of Object.entries(state.players ?? {})) {
     const legacyWar = (p as { war?: number }).war; // pre-rename snapshots stored the balance as `war`
     // Conservatively repair $HEXAR invariants on load so one bad record can't brick the whole world.
@@ -171,9 +199,12 @@ export function normalizeWorld(state: CocWorld): CocWorld {
     const earned = Math.max(0, p.earned ?? 0);
     const claimed = Math.min(Math.max(0, p.claimed ?? 0), earned);
     const hexar = Math.max(0, p.hexar ?? legacyWar ?? STARTING_HEXAR);
-    const player = { ...p, objectives: p.objectives ?? (p.isBot ? undefined : makeObjectives(id)), claimed, earned, hexar };
+    // Backfill the referral code for any pre-referral player so old accounts can be referrers.
+    const refCode = p.isBot ? p.refCode : (p.refCode ?? refCodeFor(id));
+    const player = { ...p, objectives: p.objectives ?? (p.isBot ? undefined : makeObjectives(id)), claimed, earned, hexar, ...(refCode ? { refCode } : {}) };
     delete (player as { war?: number }).war; // drop the old field name
     players[id] = player;
+    if (refCode) refCodes[refCode] = id;
   }
   return {
     ...state,
@@ -185,6 +216,7 @@ export function normalizeWorld(state: CocWorld): CocWorld {
     pendingReports: state.pendingReports ?? {},
     seasonPool: state.seasonPool ?? STARTING_SEASON_POOL,
     season: state.season ?? { id: 1, endsAtTick: (state.tick ?? 0) + SEASON_LENGTH },
+    refCodes,
   };
 }
 
@@ -214,6 +246,7 @@ export function validateWorld(state: unknown): { ok: boolean; errors: string[] }
     if (!Number.isFinite(p.claimed ?? 0) || (p.claimed ?? 0) < 0) push(`player ${id} has invalid claimed`);
     if (!Number.isFinite(p.earned ?? 0) || (p.earned ?? 0) < 0) push(`player ${id} has invalid earned`);
     if ((p.claimed ?? 0) > (p.earned ?? 0) + 1e-6) push(`player ${id} claimed > earned (treasury invariant)`);
+    if (!Number.isFinite(p.points ?? 0) || (p.points ?? 0) < 0) push(`player ${id} has invalid points`);
   }
   for (const [owner, b] of Object.entries(s.bases ?? {})) {
     if (!b || typeof b !== "object") { push(`base ${owner} is not an object`); continue; }
