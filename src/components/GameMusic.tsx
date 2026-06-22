@@ -6,7 +6,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 
 const SRC = "/audio/warlands-theme.mp3";
-const VOLUME = 0.15; // intentionally quiet — ambient, never loud
+const VOLUME = 0.1125; // intentionally quiet — ambient, never loud (lowered 25% from 0.15)
 
 export function GameMusic() {
   const ref = useRef<HTMLAudioElement | null>(null);
