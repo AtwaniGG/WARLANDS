@@ -19,9 +19,25 @@ const oswald = Oswald({
   weight: ["400", "500", "600", "700"],
 });
 
+// Absolute base for all URL-based metadata (OG/Twitter images on share pages resolve against this).
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://warlands-nine.vercel.app";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: "WARLANDS — Web3 Strategy MMO",
   description: "Stake. Claim land. Build your empire. Wage war on a persistent live world map.",
+  openGraph: {
+    type: "website",
+    siteName: "WARLANDS",
+    title: "WARLANDS — Web3 Strategy MMO",
+    description: "Stake. Claim land. Build your empire. Wage war on a persistent live world map.",
+    url: "/",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "WARLANDS — Web3 Strategy MMO",
+    description: "Stake. Claim land. Build your empire. Wage war on a persistent live world map.",
+  },
 };
 
 // Mobile: device-width scaling, cover notches/safe-areas, dark theme chrome.
