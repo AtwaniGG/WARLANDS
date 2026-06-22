@@ -5,7 +5,7 @@
 //
 // Knobs (all optional, NEXT_PUBLIC_* so they reach the browser):
 //   NEXT_PUBLIC_TOKEN_GATE      "off" disables the gate entirely (default: on)
-//   NEXT_PUBLIC_TOKEN_GATE_MIN  required balance (default: 1000)
+//   NEXT_PUBLIC_TOKEN_GATE_MIN  required balance (default: 100)
 //   NEXT_PUBLIC_HEXAR_MINT        the SPL mint to check (see src/web3/solana.ts)
 
 import { useCallback, useEffect, useState, type CSSProperties, type ReactNode } from "react";
@@ -15,7 +15,7 @@ import { HEXAR_MINT, HEXAR_SYMBOL, SOLANA_CONFIGURED, explorerAddress } from "@/
 import { WalletButton } from "./WalletButton";
 import { Button } from "./ui";
 
-export const GATE_MIN = Number(process.env.NEXT_PUBLIC_TOKEN_GATE_MIN ?? 1000);
+export const GATE_MIN = Number(process.env.NEXT_PUBLIC_TOKEN_GATE_MIN ?? 100);
 const GATE_ON = (process.env.NEXT_PUBLIC_TOKEN_GATE ?? "on").toLowerCase() !== "off";
 
 function fmt(n: number): string {
